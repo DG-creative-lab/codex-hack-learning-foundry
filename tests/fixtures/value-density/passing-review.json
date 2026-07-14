@@ -1,0 +1,32 @@
+{
+  "audience": "Experienced support operations leads",
+  "outcome": "Resolve urgent customer cases accurately with fewer repeated actions",
+  "observations": [
+    "Each case requires separate open, resolve, and confirmation actions.",
+    "Urgency is repeated through color, text, and a dedicated status column."
+  ],
+  "lenses": [
+    { "id": "visual", "diagnosis": "The queue is visually moderate and not the primary constraint.", "evidenceRefs": ["artifact:support-queue"], "confidence": 0.8 },
+    { "id": "information", "diagnosis": "Status is communicated redundantly while actionable age is understated.", "evidenceRefs": ["artifact:support-queue"], "confidence": 0.85 },
+    { "id": "meaning", "diagnosis": "Urgency and ownership are separated despite being read together during triage.", "evidenceRefs": ["artifact:support-queue"], "confidence": 0.7 },
+    { "id": "time", "diagnosis": "Repeated confirmation creates avoidable time cost for low-risk resolutions.", "evidenceRefs": ["artifact:resolution-flow"], "confidence": 0.9 },
+    { "id": "value", "diagnosis": "The highest value change is faster safe resolution, not tighter row spacing.", "evidenceRefs": ["artifact:resolution-flow", "source:ui-density"], "confidence": 0.85 }
+  ],
+  "recommendations": [
+    {
+      "change": "Offer a reversible bulk resolution action for cases with the same low-risk disposition.",
+      "dimension": "time",
+      "expectedValue": "Support leads can clear routine work while preserving attention for urgent exceptions.",
+      "evidenceRefs": ["artifact:resolution-flow", "source:ui-density"],
+      "tradeoff": "Batch actions can amplify mistakes if unlike cases are grouped.",
+      "verification": "Measure completion time and reversal rate on a representative fixture set."
+    }
+  ],
+  "constraints": [
+    "Preserve readable type and accessible target sizes.",
+    "Require confirmation when a resolution is irreversible or affects unlike cases."
+  ],
+  "preferences": ["Prefer compact operational layouts when hierarchy remains clear."],
+  "uncertainties": ["No production timing or error-rate data was supplied."]
+}
+

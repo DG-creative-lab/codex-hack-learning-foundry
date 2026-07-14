@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/capability.schema.json",
+  "id": "capability-value-density-reviewer",
+  "type": "skill",
+  "name": "value-density-reviewer",
+  "version": "0.1.0",
+  "status": "evaluated",
+  "createdAt": "2026-07-14T15:30:00.000Z",
+  "sourceIds": ["source-ui-density-2024"],
+  "assumptions": [
+    "The reviewer can inspect the interface or a faithful representation.",
+    "The target audience and valuable outcome can be established.",
+    "Value-density recommendations remain bounded by accessibility and product constraints."
+  ],
+  "limitations": [
+    "The prepared evaluation validates report structure and reasoning boundaries, not educational efficacy.",
+    "Timing and outcome claims require empirical validation when runtime data is unavailable."
+  ],
+  "evaluationFixture": "../../tests/fixtures/value-density/passing-review.json",
+  "skillPath": "../../skills/value-density-reviewer"
+}
+

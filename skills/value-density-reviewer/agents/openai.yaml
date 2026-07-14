@@ -1,0 +1,4 @@
+interface:
+  display_name: "Value Density Reviewer"
+  short_description: "Review interfaces for value, time, and meaning"
+  default_prompt: "Use $value-density-reviewer to review this interface for value density and propose evidence-based improvements."

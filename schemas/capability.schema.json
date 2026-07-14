@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://learning-foundry.local/schemas/capability.schema.json",
+  "title": "Learning Foundry Capability",
+  "type": "object",
+  "required": ["id", "type", "name", "version", "status", "createdAt", "sourceIds", "assumptions", "limitations", "skillPath"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": { "enum": ["knowledge-module", "skill", "tool", "plugin"] },
+    "name": { "type": "string" },
+    "version": { "type": "string" },
+    "status": { "enum": ["captured", "synthesized", "drafted", "sandboxed", "evaluated", "approved", "active", "revised", "deprecated"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "sourceIds": { "type": "array", "items": { "type": "string" } },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "evaluationFixture": { "type": "string" },
+    "skillPath": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+
