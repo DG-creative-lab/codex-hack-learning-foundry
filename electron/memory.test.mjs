@@ -46,6 +46,18 @@ describe("Electron memory persistence", () => {
     expect(await readFile(`${path}.rejected.jsonl`, "utf8")).toContain("{truncated");
   });
 
+  it("streams a larger ledger without changing event order", async () => {
+    const path = await temporaryMemoryPath();
+    const events = Array.from({ length: 2_000 }, (_, index) => validEvent(`evt-${index}`));
+    await writeFile(path, `${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
+
+    const loaded = await loadMemoryFile(path);
+    expect(loaded.rejectedCount).toBe(0);
+    expect(loaded.events).toHaveLength(events.length);
+    expect(loaded.events[0]?.id).toBe("evt-0");
+    expect(loaded.events.at(-1)?.id).toBe("evt-1999");
+  });
+
   it("validates entries before appending them", async () => {
     const path = await temporaryMemoryPath();
     await expect(appendMemoryEntry(path, { ...validEvent(), actor: "intruder" })).rejects.toThrow();
