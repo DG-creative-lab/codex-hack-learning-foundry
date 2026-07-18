@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   type EvidenceEvent,
   evidenceEventSchema,
@@ -12,12 +13,16 @@ import {
 
 const elementEventTypes = new Set(["theory.element_recorded", "theory.element_revised"]);
 
-export interface LivingTheoryMetadata {
-  id: string;
-  title: string;
-  summary?: string;
-  sourceIds: readonly string[];
-}
+export const livingTheoryMetadataSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string().optional(),
+    sourceIds: z.array(z.string().min(1))
+  })
+  .strict();
+
+export type LivingTheoryMetadata = z.infer<typeof livingTheoryMetadataSchema>;
 
 function unique(values: string[]): string[] {
   return [...new Set(values)];

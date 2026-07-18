@@ -108,6 +108,7 @@ export const learningArtifacts = learningArtifactSchema.array().parse([
     state: "in-progress",
     statusLabel: "In progress",
     evidence: "2 sources / 12 atoms",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
     progress: 64
   },
   {
@@ -117,6 +118,7 @@ export const learningArtifacts = learningArtifactSchema.array().parse([
     state: "ready",
     statusLabel: "Ready",
     evidence: "1 transfer task",
+    sourceIds: ["source-ui-density-2024"],
     progress: 0
   },
   {
@@ -126,6 +128,7 @@ export const learningArtifacts = learningArtifactSchema.array().parse([
     state: "due",
     statusLabel: "Due tomorrow",
     evidence: "5 recall items",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
     progress: 20
   },
   {
@@ -135,6 +138,7 @@ export const learningArtifacts = learningArtifactSchema.array().parse([
     state: "ready",
     statusLabel: "Ready",
     evidence: "Personal preference",
+    sourceIds: [],
     progress: 0
   }
 ]);
