@@ -50,19 +50,89 @@ export const workspaceSources: SourceRecord[] = [
 ];
 
 export const knowledgeAtoms: KnowledgeAtom[] = [
-  { id: "atom-visual", title: "Visual density is perceptual, not evaluative", epistemicKind: "source_fact", confidence: 0.94, sourceIds: ["source-ui-density-2024", "source-dense-by-design"], relation: "defines" },
-  { id: "atom-information", title: "Useful information and visible marks are not equivalent", epistemicKind: "source_fact", confidence: 0.91, sourceIds: ["source-ui-density-2024"], relation: "supports" },
-  { id: "atom-meaning", title: "Arrangement can add meaning without adding content", epistemicKind: "agent_synthesis", confidence: 0.83, sourceIds: ["source-ui-density-2024", "source-dense-by-design"], relation: "generalizes-to" },
-  { id: "atom-time", title: "Workflow time is a design material", epistemicKind: "source_fact", confidence: 0.89, sourceIds: ["source-ui-density-2024"], relation: "applies-to" },
-  { id: "atom-taste", title: "Prefer compact operational layouts with explicit hierarchy", epistemicKind: "user_interpretation", confidence: 0.72, sourceIds: [], relation: "preference-for" },
-  { id: "atom-access", title: "Density changes remain bounded by target-size constraints", epistemicKind: "validated_behavior", confidence: 0.96, sourceIds: ["source-wcag-target-size"], relation: "constrained-by" }
+  {
+    id: "atom-visual",
+    title: "Visual density is perceptual, not evaluative",
+    epistemicKind: "source_fact",
+    confidence: 0.94,
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+    relation: "defines"
+  },
+  {
+    id: "atom-information",
+    title: "Useful information and visible marks are not equivalent",
+    epistemicKind: "source_fact",
+    confidence: 0.91,
+    sourceIds: ["source-ui-density-2024"],
+    relation: "supports"
+  },
+  {
+    id: "atom-meaning",
+    title: "Arrangement can add meaning without adding content",
+    epistemicKind: "agent_synthesis",
+    confidence: 0.83,
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+    relation: "generalizes-to"
+  },
+  {
+    id: "atom-time",
+    title: "Workflow time is a design material",
+    epistemicKind: "source_fact",
+    confidence: 0.89,
+    sourceIds: ["source-ui-density-2024"],
+    relation: "applies-to"
+  },
+  {
+    id: "atom-taste",
+    title: "Prefer compact operational layouts with explicit hierarchy",
+    epistemicKind: "user_interpretation",
+    confidence: 0.72,
+    sourceIds: [],
+    relation: "preference-for"
+  },
+  {
+    id: "atom-access",
+    title: "Density changes remain bounded by target-size constraints",
+    epistemicKind: "validated_behavior",
+    confidence: 0.96,
+    sourceIds: ["source-wcag-target-size"],
+    relation: "constrained-by"
+  }
 ];
 
 export const learningArtifacts = [
-  { id: "lesson-density", type: "Lesson", title: "Five lenses of interface density", status: "In progress", evidence: "2 sources / 12 atoms", progress: 64 },
-  { id: "exercise-queue", type: "Exercise", title: "Diagnose an operational queue", status: "Ready", evidence: "1 transfer task", progress: 0 },
-  { id: "review-density", type: "Review set", title: "Density distinctions", status: "Due tomorrow", evidence: "5 recall items", progress: 20 },
-  { id: "reflection-taste", type: "Reflection", title: "Separate taste from observed value", status: "Ready", evidence: "Personal preference", progress: 0 }
+  {
+    id: "lesson-density",
+    type: "Lesson",
+    title: "Five lenses of interface density",
+    status: "In progress",
+    evidence: "2 sources / 12 atoms",
+    progress: 64
+  },
+  {
+    id: "exercise-queue",
+    type: "Exercise",
+    title: "Diagnose an operational queue",
+    status: "Ready",
+    evidence: "1 transfer task",
+    progress: 0
+  },
+  {
+    id: "review-density",
+    type: "Review set",
+    title: "Density distinctions",
+    status: "Due tomorrow",
+    evidence: "5 recall items",
+    progress: 20
+  },
+  {
+    id: "reflection-taste",
+    type: "Reflection",
+    title: "Separate taste from observed value",
+    status: "Ready",
+    evidence: "Personal preference",
+    progress: 0
+  }
 ];
 
 interface CapabilityRecord {
@@ -77,7 +147,34 @@ interface CapabilityRecord {
 }
 
 export const capabilities: CapabilityRecord[] = [
-  { id: "value-density-reviewer", name: "value-density-reviewer", type: "Skill", version: "0.1.0", status: "evaluated", sources: 3, evaluations: "8 / 8", executions: 1 },
-  { id: "design-knowledge", name: "design-density-knowledge", type: "Knowledge module", version: "0.1.0", status: "synthesized", sources: 3, evaluations: "—", executions: 0 },
-  { id: "density-linter", name: "density-constraint-linter", type: "Tool", version: "proposal", status: "captured", sources: 1, evaluations: "—", executions: 0 }
+  {
+    id: "value-density-reviewer",
+    name: "value-density-reviewer",
+    type: "Skill",
+    version: "0.1.0",
+    status: "evaluated",
+    sources: 3,
+    evaluations: "8 / 8",
+    executions: 1
+  },
+  {
+    id: "design-knowledge",
+    name: "design-density-knowledge",
+    type: "Knowledge module",
+    version: "0.1.0",
+    status: "synthesized",
+    sources: 3,
+    evaluations: "—",
+    executions: 0
+  },
+  {
+    id: "density-linter",
+    name: "density-constraint-linter",
+    type: "Tool",
+    version: "proposal",
+    status: "captured",
+    sources: 1,
+    evaluations: "—",
+    executions: 0
+  }
 ];

@@ -19,7 +19,9 @@
     "preview": "vite preview",
     "test": "vitest run && node skills/value-density-reviewer/scripts/evaluate-review.mjs tests/fixtures/value-density/passing-review.json",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit && node scripts/generate-capability-schema.mjs --check"
+    "lint": "biome check src electron shared scripts vite.config.ts && tsc --noEmit && node scripts/generate-capability-schema.mjs --check",
+    "format": "biome format --write src electron shared scripts vite.config.ts",
+    "format:check": "biome format src electron shared scripts vite.config.ts"
   },
   "dependencies": {
     "lucide-react": "^0.454.0",
@@ -28,6 +30,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.4",
     "@types/node": "^24.13.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

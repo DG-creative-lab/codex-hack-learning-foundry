@@ -6,9 +6,16 @@ class MemoryStorage implements LedgerStorage {
   readonly values = new Map<string, string>();
   readonly writes: string[] = [];
 
-  getItem(key: string) { return this.values.get(key) ?? null; }
-  setItem(key: string, value: string) { this.writes.push(key); this.values.set(key, value); }
-  removeItem(key: string) { this.values.delete(key); }
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+  setItem(key: string, value: string) {
+    this.writes.push(key);
+    this.values.set(key, value);
+  }
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
 }
 
 function runtimeEvent(id = "evt-runtime"): EvidenceEvent {

@@ -4,7 +4,7 @@ import { capabilityStatusValues } from "../../shared/capability-status.js";
 import { designDensityTheoryMetadata, principles, seedEvents } from "../data/sample";
 import { deriveLivingTheory } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
-import { capabilityStatusSchema, evidenceEventSchema, livingTheorySchema, type EvidenceEvent } from "./types";
+import { capabilityStatusSchema, type EvidenceEvent, evidenceEventSchema, livingTheorySchema } from "./types";
 
 const livingTheory = deriveLivingTheory(seedEvents, designDensityTheoryMetadata);
 
@@ -69,30 +69,35 @@ describe("living theory projection", () => {
     expect(unresolvedQuestion).toMatchObject({ epistemicKind: "hypothesis", status: "unresolved", sourceIds: [] });
 
     const sourceFacts = livingTheory.elements.filter((element) => element.epistemicKind === "source_fact");
-    expect(sourceFacts.every((element) => element.sourceIds.length > 0 && element.evidenceEventIds.length > 0)).toBe(true);
+    expect(sourceFacts.every((element) => element.sourceIds.length > 0 && element.evidenceEventIds.length > 0)).toBe(
+      true
+    );
   });
 
   it("rejects duplicate evidence event IDs", () => {
-    expect(() => deriveLivingTheory([seedEvents[0], seedEvents[0]], designDensityTheoryMetadata))
-      .toThrow(`Evidence event ID ${seedEvents[0]?.id} is duplicated`);
+    expect(() => deriveLivingTheory([seedEvents[0], seedEvents[0]], designDensityTheoryMetadata)).toThrow(
+      `Evidence event ID ${seedEvents[0]?.id} is duplicated`
+    );
   });
 
   it("rejects duplicate theory element IDs", () => {
     const original = seedEvents.find((event) => event.type === "theory.element_recorded");
-    expect(original).toBeDefined();
-    const duplicate = { ...original!, id: "evt-duplicate-theory-element" };
+    if (!original) throw new Error("Theory element fixture is missing");
+    const duplicate = { ...original, id: "evt-duplicate-theory-element" };
 
-    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata))
-      .toThrow("Theory element ID theory-purpose-review-value is duplicated");
+    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata)).toThrow(
+      "Theory element ID theory-purpose-review-value is duplicated"
+    );
   });
 
   it("rejects duplicate theory relationship IDs", () => {
     const original = seedEvents.find((event) => event.type === "theory.relationship_recorded");
-    expect(original).toBeDefined();
-    const duplicate = { ...original!, id: "evt-duplicate-theory-relationship" };
+    if (!original) throw new Error("Theory relationship fixture is missing");
+    const duplicate = { ...original, id: "evt-duplicate-theory-relationship" };
 
-    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata))
-      .toThrow("Theory relationship ID theory-relation-purpose-accessibility is duplicated");
+    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata)).toThrow(
+      "Theory relationship ID theory-relation-purpose-accessibility is duplicated"
+    );
   });
 
   it("requires a revision to use a different element ID", () => {
@@ -119,8 +124,9 @@ describe("living theory projection", () => {
       }
     };
 
-    expect(() => deriveLivingTheory([...seedEvents, invalidRevision], designDensityTheoryMetadata))
-      .toThrow("must use a new element ID");
+    expect(() => deriveLivingTheory([...seedEvents, invalidRevision], designDensityTheoryMetadata)).toThrow(
+      "must use a new element ID"
+    );
   });
 
   it("rejects source facts without merged provenance", () => {
@@ -146,11 +152,13 @@ describe("living theory projection", () => {
       }
     };
 
-    expect(() => deriveLivingTheory([ungroundedFact], {
-      id: "theory-ungrounded-test",
-      title: "Ungrounded test",
-      sourceIds: []
-    })).toThrow("Source facts must reference at least one source");
+    expect(() =>
+      deriveLivingTheory([ungroundedFact], {
+        id: "theory-ungrounded-test",
+        title: "Ungrounded test",
+        sourceIds: []
+      })
+    ).toThrow("Source facts must reference at least one source");
   });
 
   it("accepts source-fact provenance supplied by the evidence envelope", () => {
@@ -186,10 +194,12 @@ describe("living theory projection", () => {
   });
 
   it("rejects provenance outside the approved source registry", () => {
-    expect(() => deriveLivingTheory(seedEvents, {
-      ...designDensityTheoryMetadata,
-      sourceIds: ["source-ui-density-2024"]
-    })).toThrow("references unknown source source-wcag-target-size");
+    expect(() =>
+      deriveLivingTheory(seedEvents, {
+        ...designDensityTheoryMetadata,
+        sourceIds: ["source-ui-density-2024"]
+      })
+    ).toThrow("references unknown source source-wcag-target-size");
   });
 
   it("preserves the prior element when a revision supersedes it", () => {
@@ -227,7 +237,9 @@ describe("living theory projection", () => {
 
     expect(revised.revision).toBe(1);
     expect(revised.elements.find((element) => element.id === original?.id)?.status).toBe("superseded");
-    expect(revised.elements.find((element) => element.id === "theory-purpose-review-value-v2")?.revisesElementId).toBe(original?.id);
+    expect(revised.elements.find((element) => element.id === "theory-purpose-review-value-v2")?.revisesElementId).toBe(
+      original?.id
+    );
   });
 
   it("preserves contradictory elements as distinct evidence", () => {
@@ -329,11 +341,13 @@ describe("living theory projection", () => {
       }
     };
 
-    expect(() => deriveLivingTheory([mismatchedEvent], {
-      id: "theory-mismatched-kind-test",
-      title: "Mismatched kind test",
-      sourceIds: ["source-a"]
-    })).toThrow("must use the epistemic kind of its evidence event");
+    expect(() =>
+      deriveLivingTheory([mismatchedEvent], {
+        id: "theory-mismatched-kind-test",
+        title: "Mismatched kind test",
+        sourceIds: ["source-a"]
+      })
+    ).toThrow("must use the epistemic kind of its evidence event");
   });
 
   it("rejects relationships to missing theory elements", () => {
@@ -357,30 +371,38 @@ describe("living theory projection", () => {
       }
     };
 
-    expect(() => deriveLivingTheory([...seedEvents, invalidRelationship], {
-      id: livingTheory.id,
-      title: livingTheory.title,
-      sourceIds: designDensityTheoryMetadata.sourceIds
-    })).toThrow("references an unknown element");
+    expect(() =>
+      deriveLivingTheory([...seedEvents, invalidRelationship], {
+        id: livingTheory.id,
+        title: livingTheory.title,
+        sourceIds: designDensityTheoryMetadata.sourceIds
+      })
+    ).toThrow("references an unknown element");
   });
 
   it("does not expose independently mutable element or relationship ID arrays", () => {
-    expect(livingTheorySchema.safeParse({
-      ...livingTheory,
-      elementIds: ["missing"],
-      relationshipIds: ["missing"]
-    }).success).toBe(false);
+    expect(
+      livingTheorySchema.safeParse({
+        ...livingTheory,
+        elementIds: ["missing"],
+        relationshipIds: ["missing"]
+      }).success
+    ).toBe(false);
   });
 
   it("rejects duplicate identities at the public aggregate boundary", () => {
-    expect(livingTheorySchema.safeParse({
-      ...livingTheory,
-      elements: [...livingTheory.elements, livingTheory.elements[0]]
-    }).success).toBe(false);
-    expect(livingTheorySchema.safeParse({
-      ...livingTheory,
-      relationships: [...livingTheory.relationships, livingTheory.relationships[0]]
-    }).success).toBe(false);
+    expect(
+      livingTheorySchema.safeParse({
+        ...livingTheory,
+        elements: [...livingTheory.elements, livingTheory.elements[0]]
+      }).success
+    ).toBe(false);
+    expect(
+      livingTheorySchema.safeParse({
+        ...livingTheory,
+        relationships: [...livingTheory.relationships, livingTheory.relationships[0]]
+      }).success
+    ).toBe(false);
   });
 });
 

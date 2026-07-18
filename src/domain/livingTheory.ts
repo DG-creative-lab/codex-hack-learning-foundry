@@ -1,13 +1,13 @@
 import {
+  type EvidenceEvent,
   evidenceEventSchema,
+  type LivingTheory,
   livingTheorySchema,
+  type TheoryElement,
+  type TheoryRelationship,
   theoryElementPayloadSchema,
   theoryElementSchema,
-  theoryRelationshipSchema,
-  type EvidenceEvent,
-  type LivingTheory,
-  type TheoryElement,
-  type TheoryRelationship
+  theoryRelationshipSchema
 } from "./types";
 
 const elementEventTypes = new Set(["theory.element_recorded", "theory.element_revised"]);

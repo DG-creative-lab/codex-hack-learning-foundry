@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { seedEvents } from "../data/sample";
 import { workspaceSources } from "../data/workspace";
-import type { EvidenceEvent } from "./types";
 import { deriveSources, type SourceRecord } from "./sourceProjection";
+import type { EvidenceEvent } from "./types";
 
 const capturedSource: SourceRecord = {
   id: "source-runtime",

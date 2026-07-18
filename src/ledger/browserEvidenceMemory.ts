@@ -1,4 +1,4 @@
-import { evidenceEventSchema, type EvidenceEvent } from "../domain/types";
+import { type EvidenceEvent, evidenceEventSchema } from "../domain/types";
 import type { EvidenceMemory, StoredEvents } from "./evidenceLedger";
 
 export const browserLedgerKey = "learning-foundry-events";
@@ -29,7 +29,15 @@ export function createBrowserEvidenceMemory(
     try {
       const value = JSON.parse(raw) as Partial<LedgerMetadata>;
       const { generation, length } = value;
-      if (value.version === 1 && typeof generation === "number" && typeof length === "number" && Number.isSafeInteger(generation) && Number.isSafeInteger(length) && generation >= 0 && length >= 0) {
+      if (
+        value.version === 1 &&
+        typeof generation === "number" &&
+        typeof length === "number" &&
+        Number.isSafeInteger(generation) &&
+        Number.isSafeInteger(length) &&
+        generation >= 0 &&
+        length >= 0
+      ) {
         return { version: 1, generation, length };
       }
     } catch {
@@ -39,8 +47,13 @@ export function createBrowserEvidenceMemory(
   }
 
   function writeJournal(events: EvidenceEvent[], generation: number) {
-    events.forEach((event, index) => storage.setItem(entryKey(generation, index), JSON.stringify(event)));
-    storage.setItem(metadataKey, JSON.stringify({ version: 1, generation, length: events.length } satisfies LedgerMetadata));
+    for (const [index, event] of events.entries()) {
+      storage.setItem(entryKey(generation, index), JSON.stringify(event));
+    }
+    storage.setItem(
+      metadataKey,
+      JSON.stringify({ version: 1, generation, length: events.length } satisfies LedgerMetadata)
+    );
   }
 
   function removeGeneration(metadata: LedgerMetadata) {

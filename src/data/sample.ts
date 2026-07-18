@@ -56,16 +56,18 @@ export const principles: DensityPrinciple[] = [
 ];
 
 export const seedEvents: EvidenceEvent[] = [
-  ...workspaceSources.map((workspaceSource, index): EvidenceEvent => ({
-    id: `evt-source-${String(index + 1).padStart(3, "0")}`,
-    type: "source.registered",
-    kind: "source_fact",
-    createdAt: `2026-07-14T10:00:0${index}.000Z`,
-    actor: "system",
-    summary: `${workspaceSource.title} registered with provenance metadata.`,
-    sourceIds: [workspaceSource.id],
-    payload: { source: workspaceSource }
-  })),
+  ...workspaceSources.map(
+    (workspaceSource, index): EvidenceEvent => ({
+      id: `evt-source-${String(index + 1).padStart(3, "0")}`,
+      type: "source.registered",
+      kind: "source_fact",
+      createdAt: `2026-07-14T10:00:0${index}.000Z`,
+      actor: "system",
+      summary: `${workspaceSource.title} registered with provenance metadata.`,
+      sourceIds: [workspaceSource.id],
+      payload: { source: workspaceSource }
+    })
+  ),
   {
     id: "evt-synthesis-001",
     type: "module.synthesized",
@@ -89,7 +91,8 @@ export const seedEvents: EvidenceEvent[] = [
         id: "theory-purpose-review-value",
         kind: "purpose",
         title: "Review for user value",
-        statement: "Evaluate interface density by the useful outcome achieved for a specific user, not by compactness alone.",
+        statement:
+          "Evaluate interface density by the useful outcome achieved for a specific user, not by compactness alone.",
         epistemicKind: "agent_synthesis",
         status: "active",
         sourceIds: [source.id],
@@ -97,27 +100,29 @@ export const seedEvents: EvidenceEvent[] = [
       }
     }
   },
-  ...principles.map((principle, index): EvidenceEvent => ({
-    id: `evt-theory-concept-${String(index + 1).padStart(3, "0")}`,
-    type: "theory.element_recorded",
-    kind: "source_fact",
-    createdAt: `2026-07-14T10:0${index + 3}:00.000Z`,
-    actor: "system",
-    summary: `Recorded the ${principle.title.toLowerCase()} density concept.`,
-    sourceIds: [source.id],
-    payload: {
-      element: {
-        id: `theory-concept-${principle.id}`,
-        kind: "concept",
-        title: `${principle.title} density`,
-        statement: principle.definition,
-        epistemicKind: "source_fact",
-        status: "active",
-        sourceIds: [source.id],
-        evidenceEventIds: []
+  ...principles.map(
+    (principle, index): EvidenceEvent => ({
+      id: `evt-theory-concept-${String(index + 1).padStart(3, "0")}`,
+      type: "theory.element_recorded",
+      kind: "source_fact",
+      createdAt: `2026-07-14T10:0${index + 3}:00.000Z`,
+      actor: "system",
+      summary: `Recorded the ${principle.title.toLowerCase()} density concept.`,
+      sourceIds: [source.id],
+      payload: {
+        element: {
+          id: `theory-concept-${principle.id}`,
+          kind: "concept",
+          title: `${principle.title} density`,
+          statement: principle.definition,
+          epistemicKind: "source_fact",
+          status: "active",
+          sourceIds: [source.id],
+          evidenceEventIds: []
+        }
       }
-    }
-  })),
+    })
+  ),
   {
     id: "evt-theory-boundary-001",
     type: "theory.element_recorded",
@@ -184,7 +189,8 @@ export const seedEvents: EvidenceEvent[] = [
 export const designDensityTheoryMetadata: LivingTheoryMetadata = {
   id: "theory-design-density",
   title: "Design density",
-  summary: "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
+  summary:
+    "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
   sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
 };
 

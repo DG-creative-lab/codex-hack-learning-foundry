@@ -41,18 +41,23 @@ export function useEvidenceLedger() {
       }
     }
     void load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [ledger]);
 
-  const append = useCallback(async (event: EvidenceEvent) => {
-    try {
-      setEvents(await ledger.append(event));
-      setError(undefined);
-    } catch (appendError) {
-      setError(errorMessage(appendError));
-      throw appendError;
-    }
-  }, [ledger]);
+  const append = useCallback(
+    async (event: EvidenceEvent) => {
+      try {
+        setEvents(await ledger.append(event));
+        setError(undefined);
+      } catch (appendError) {
+        setError(errorMessage(appendError));
+        throw appendError;
+      }
+    },
+    [ledger]
+  );
 
   const reset = useCallback(async () => {
     try {

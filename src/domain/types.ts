@@ -66,29 +66,48 @@ function hasDuplicates(values: string[]): boolean {
   return new Set(values).size !== values.length;
 }
 
-export const livingTheorySchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  summary: z.string(),
-  revision: z.number().int().nonnegative(),
-  elements: z.array(theoryElementSchema),
-  relationships: z.array(theoryRelationshipSchema),
-  sourceIds: z.array(z.string()),
-  evidenceEventIds: z.array(z.string())
-}).strict().superRefine((theory, context) => {
-  if (hasDuplicates(theory.elements.map((element) => element.id))) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Theory element IDs must be unique.", path: ["elements"] });
-  }
-  if (hasDuplicates(theory.relationships.map((relationship) => relationship.id))) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Theory relationship IDs must be unique.", path: ["relationships"] });
-  }
-  if (hasDuplicates(theory.sourceIds)) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Theory source IDs must be unique.", path: ["sourceIds"] });
-  }
-  if (hasDuplicates(theory.evidenceEventIds)) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Theory evidence event IDs must be unique.", path: ["evidenceEventIds"] });
-  }
-});
+export const livingTheorySchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string(),
+    revision: z.number().int().nonnegative(),
+    elements: z.array(theoryElementSchema),
+    relationships: z.array(theoryRelationshipSchema),
+    sourceIds: z.array(z.string()),
+    evidenceEventIds: z.array(z.string())
+  })
+  .strict()
+  .superRefine((theory, context) => {
+    if (hasDuplicates(theory.elements.map((element) => element.id))) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Theory element IDs must be unique.",
+        path: ["elements"]
+      });
+    }
+    if (hasDuplicates(theory.relationships.map((relationship) => relationship.id))) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Theory relationship IDs must be unique.",
+        path: ["relationships"]
+      });
+    }
+    if (hasDuplicates(theory.sourceIds)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Theory source IDs must be unique.",
+        path: ["sourceIds"]
+      });
+    }
+    if (hasDuplicates(theory.evidenceEventIds)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Theory evidence event IDs must be unique.",
+        path: ["evidenceEventIds"]
+      });
+    }
+  });
 
 export type TheoryElementKind = z.infer<typeof theoryElementKindSchema>;
 export type TheoryElementStatus = z.infer<typeof theoryElementStatusSchema>;
