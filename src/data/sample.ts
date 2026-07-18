@@ -1,5 +1,6 @@
 import type { LivingTheoryMetadata } from "../domain/livingTheory";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
+import { workspaceSources } from "./workspace";
 
 export const source = {
   id: "source-ui-density-2024",
@@ -55,16 +56,16 @@ export const principles: DensityPrinciple[] = [
 ];
 
 export const seedEvents: EvidenceEvent[] = [
-  {
-    id: "evt-source-001",
-    type: "source.imported",
+  ...workspaceSources.map((workspaceSource, index): EvidenceEvent => ({
+    id: `evt-source-${String(index + 1).padStart(3, "0")}`,
+    type: "source.registered",
     kind: "source_fact",
-    createdAt: "2026-07-14T10:00:00.000Z",
+    createdAt: `2026-07-14T10:00:0${index}.000Z`,
     actor: "system",
-    summary: "Primary source registered with author, publication date, and URL.",
-    sourceIds: [source.id],
-    payload: { title: source.title, url: source.url }
-  },
+    summary: `${workspaceSource.title} registered with provenance metadata.`,
+    sourceIds: [workspaceSource.id],
+    payload: { source: workspaceSource }
+  })),
   {
     id: "evt-synthesis-001",
     type: "module.synthesized",

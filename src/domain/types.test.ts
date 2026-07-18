@@ -25,6 +25,21 @@ describe("evidence ledger contract", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("rejects source facts without provenance", () => {
+    const result = evidenceEventSchema.safeParse({
+      id: "evt-ungrounded",
+      type: "source.imported",
+      kind: "source_fact",
+      createdAt: new Date().toISOString(),
+      actor: "system",
+      summary: "A fact with no source.",
+      sourceIds: [],
+      payload: {}
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("living theory projection", () => {

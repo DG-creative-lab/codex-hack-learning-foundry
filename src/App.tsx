@@ -28,9 +28,10 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { designDensityTheoryMetadata } from "./data/sample";
-import { capabilities, learningArtifacts, workspaceSources, type SourceOrigin, type SourceRecord } from "./data/workspace";
+import { capabilities, learningArtifacts } from "./data/workspace";
 import { deriveLivingTheory } from "./domain/livingTheory";
 import { deriveMemoryProjections, type MemoryProjections } from "./domain/memoryProjections";
+import { deriveSources, type SourceOrigin, type SourceRecord } from "./domain/sourceProjection";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "./domain/types";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 
@@ -45,7 +46,7 @@ const kindLabels: Record<EvidenceKind, string> = {
   validated_behavior: "Validated behavior"
 };
 
-function makeEvent(type: string, kind: EvidenceKind, actor: EvidenceEvent["actor"], summary: string, sourceIds: string[] = []): EvidenceEvent {
+function makeEvent(type: string, kind: EvidenceKind, actor: EvidenceEvent["actor"], summary: string, sourceIds: string[] = [], payload: Record<string, unknown> = {}): EvidenceEvent {
   return {
     id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type,
@@ -54,18 +55,18 @@ function makeEvent(type: string, kind: EvidenceKind, actor: EvidenceEvent["actor
     createdAt: new Date().toISOString(),
     summary,
     sourceIds,
-    payload: {}
+    payload
   };
 }
 
 function App() {
-  const { events, append } = useEvidenceLedger();
+  const { events, append, error: ledgerError, rejectedCount } = useEvidenceLedger();
   const [view, setView] = useState<ViewId>("sources");
-  const [sources, setSources] = useState<SourceRecord[]>(workspaceSources);
-  const [selectedSourceId, setSelectedSourceId] = useState(workspaceSources[0].id);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<"url" | "local">("url");
   const [sourceInput, setSourceInput] = useState("");
+  const sources = useMemo(() => deriveSources(events), [events]);
 
   const livingTheory = useMemo(() => deriveLivingTheory(events, {
     ...designDensityTheoryMetadata,
@@ -109,20 +110,21 @@ function App() {
       provenance: sourceInput,
       outputs: { atoms: 0, lessons: 0, capabilities: 0 }
     };
-    setSources((current) => [record, ...current]);
+    await append(makeEvent("source.registered", "source_fact", "system", `Captured ${title}; extraction is queued.`, [id], { source: record }));
     setSelectedSourceId(id);
-    await append(makeEvent("source.captured", "source_fact", "system", `Captured ${title}; extraction is queued.`, [id]));
     setSourceInput("");
     setShowAddSource(false);
   }
 
   async function processSelectedSource() {
     if (!selectedSource || selectedSource.status === "ready") return;
-    setSources((current) => current.map((source) => source.id === selectedSource.id ? { ...source, status: "processing", progress: 42 } : source));
-    await append(makeEvent("source.processing_started", "practical_observation", "system", `Extraction and provenance capture started for ${selectedSource.title}.`, [selectedSource.id]));
+    await append(makeEvent("source.processing_started", "practical_observation", "system", `Extraction and provenance capture started for ${selectedSource.title}.`, [selectedSource.id], { sourceId: selectedSource.id, progress: 42 }));
     window.setTimeout(() => {
-      setSources((current) => current.map((source) => source.id === selectedSource.id ? { ...source, status: "ready", progress: 100, author: "Extracted source", outputs: { atoms: 7, lessons: 1, capabilities: 0 } } : source));
-      void append(makeEvent("source.processing_completed", "agent_synthesis", "agent", `Structured knowledge and a learning-module proposal were produced from ${selectedSource.title}.`, [selectedSource.id]));
+      void append(makeEvent("source.processing_completed", "agent_synthesis", "agent", `Structured knowledge and a learning-module proposal were produced from ${selectedSource.title}.`, [selectedSource.id], {
+        sourceId: selectedSource.id,
+        author: "Extracted source",
+        outputs: { atoms: 7, lessons: 1, capabilities: 0 }
+      })).catch(() => undefined);
     }, 900);
   }
 
@@ -148,12 +150,18 @@ function App() {
           </div>
         </header>
 
+        {(ledgerError || rejectedCount > 0) && (
+          <p className="ledger-alert" role="status">
+            {ledgerError ?? `${rejectedCount} malformed memory ${rejectedCount === 1 ? "record was" : "records were"} quarantined.`}
+          </p>
+        )}
+
         {view === "sources" && (
           <SourcesView
             sources={sources}
             selectedSource={selectedSource}
             setSelectedSourceId={setSelectedSourceId}
-            onProcess={() => void processSelectedSource()}
+            onProcess={() => void processSelectedSource().catch(() => undefined)}
           />
         )}
         {view === "learn" && <LearnView />}
@@ -169,7 +177,7 @@ function App() {
           value={sourceInput}
           setValue={setSourceInput}
           onClose={() => setShowAddSource(false)}
-          onAdd={() => void addSource()}
+          onAdd={() => void addSource().catch(() => undefined)}
         />
       )}
     </div>
