@@ -1,22 +1,29 @@
 import { createReadStream } from "node:fs";
-import { appendFile, mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, open, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { evidenceEventSchema } from "../shared/evidence-event.js";
 
-export async function ensureMemoryFile(path) {
+async function openMemoryFile(path, flags) {
   await mkdir(dirname(path), { recursive: true });
+  const handle = await open(path, flags, 0o600);
   try {
-    const file = await stat(path);
+    const file = await handle.stat();
     if (!file.isFile()) {
       const error = new Error(`Memory path is not a file: ${path}`);
       error.code = file.isDirectory() ? "EISDIR" : "EINVAL";
       throw error;
     }
+    return handle;
   } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    await writeFile(path, "", "utf8");
+    await handle.close();
+    throw error;
   }
+}
+
+export async function ensureMemoryFile(path) {
+  const handle = await openMemoryFile(path, "a");
+  await handle.close();
   return path;
 }
 
@@ -38,10 +45,13 @@ export function parseMemoryContents(contents) {
   return { events, rejected };
 }
 
-async function streamMemoryFile(path) {
+async function streamMemoryFile(handle) {
   const events = [];
   const rejected = [];
-  const lines = createInterface({ input: createReadStream(path, { encoding: "utf8" }), crlfDelay: Infinity });
+  const lines = createInterface({
+    input: createReadStream("", { fd: handle.fd, autoClose: false, encoding: "utf8", start: 0 }),
+    crlfDelay: Infinity
+  });
   let line = 0;
   for await (const raw of lines) {
     line += 1;
@@ -51,8 +61,13 @@ async function streamMemoryFile(path) {
 }
 
 export async function loadMemoryFile(path) {
-  await ensureMemoryFile(path);
-  const result = await streamMemoryFile(path);
+  const handle = await openMemoryFile(path, "a+");
+  let result;
+  try {
+    result = await streamMemoryFile(handle);
+  } finally {
+    await handle.close();
+  }
 
   if (result.rejected.length > 0) {
     const rejectedPath = `${path}.rejected.jsonl`;
@@ -75,11 +90,19 @@ export async function loadMemoryFile(path) {
 
 export async function appendMemoryEntry(path, entry) {
   const event = evidenceEventSchema.parse(entry);
-  await ensureMemoryFile(path);
-  await appendFile(path, `${JSON.stringify(event)}\n`, "utf8");
+  const handle = await openMemoryFile(path, "a");
+  try {
+    await handle.appendFile(`${JSON.stringify(event)}\n`, "utf8");
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function resetMemoryFile(path) {
-  await ensureMemoryFile(path);
-  await writeFile(path, "", "utf8");
+  const handle = await openMemoryFile(path, "a");
+  try {
+    await handle.truncate(0);
+  } finally {
+    await handle.close();
+  }
 }

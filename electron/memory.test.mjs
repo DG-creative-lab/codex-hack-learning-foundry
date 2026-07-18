@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { appendMemoryEntry, ensureMemoryFile, loadMemoryFile, parseMemoryContents } from "./memory.mjs";
+import { appendMemoryEntry, ensureMemoryFile, loadMemoryFile, parseMemoryContents, resetMemoryFile } from "./memory.mjs";
 
 const temporaryDirectories = [];
 
@@ -62,6 +62,28 @@ describe("Electron memory persistence", () => {
     const path = await temporaryMemoryPath();
     await expect(appendMemoryEntry(path, { ...validEvent(), actor: "intruder" })).rejects.toThrow();
     await expect(stat(path)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("appends and resets through the validated file handle", async () => {
+    const path = await temporaryMemoryPath();
+    await appendMemoryEntry(path, validEvent());
+    expect(await readFile(path, "utf8")).toBe(`${JSON.stringify(validEvent())}\n`);
+
+    await resetMemoryFile(path);
+    expect(await readFile(path, "utf8")).toBe("");
+  });
+
+  it("atomically creates an absent memory file", async () => {
+    const path = await temporaryMemoryPath();
+    await expect(ensureMemoryFile(path)).resolves.toBe(path);
+    expect(await readFile(path, "utf8")).toBe("");
+  });
+
+  it("does not truncate an existing memory file", async () => {
+    const path = await temporaryMemoryPath();
+    await writeFile(path, "existing event\n", "utf8");
+    await ensureMemoryFile(path);
+    expect(await readFile(path, "utf8")).toBe("existing event\n");
   });
 
   it("does not replace a path that fails for a reason other than absence", async () => {
