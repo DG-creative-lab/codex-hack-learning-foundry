@@ -12,6 +12,8 @@ Canonical memory is an append-only JSONL evidence ledger stored locally by the E
 
 The interface derives learner state, review items, capability state, and association views from this ledger. Prepared sample events are source-controlled; personal runtime events live in Electron's user-data directory and are excluded from Git.
 
+Electron reads JSONL as a stream and validates one line at a time. The browser-only fallback uses a generation-indexed local journal: each append writes one event record and constant-size metadata instead of rewriting the complete event array. Existing browser arrays migrate into the journal on first load, and malformed records are quarantined before compaction.
+
 ## Why JSONL first
 
 - Inspectable during the demo.
@@ -23,3 +25,4 @@ The interface derives learner state, review items, capability state, and associa
 
 We must validate every event at the boundary and design explicit compaction proposals. Slow consolidation may create summaries, but cannot erase source events or contradictory evidence.
 
+Incremental persistence removes append-time growth and avoids buffering the Electron file as one string. Current projections still materialize the complete validated event set; snapshotting or paged projections remain a later concern when real ledger size justifies that complexity.

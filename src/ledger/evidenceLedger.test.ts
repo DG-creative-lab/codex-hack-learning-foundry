@@ -74,6 +74,27 @@ describe("evidence ledger integration", () => {
     expect(ledger.events.map((event) => event.id)).toEqual(["evt-seed", "evt-first", "evt-second"]);
   });
 
+  it("waits for rehydration before accepting an append", async () => {
+    let releaseLoad!: () => void;
+    const loadGate = new Promise<void>((resolve) => { releaseLoad = resolve; });
+    const storedEvent = makeEvent("evt-stored");
+    const appendedIds: string[] = [];
+    const ledger = new EvidenceLedger(memory({
+      load: async () => { await loadGate; return { events: [storedEvent], rejectedCount: 0 }; },
+      append: async (event) => { appendedIds.push(event.id); }
+    }), [seedEvent]);
+
+    const loading = ledger.load();
+    const appending = ledger.append(makeEvent("evt-appended"));
+    await Promise.resolve();
+    expect(appendedIds).toEqual([]);
+
+    releaseLoad();
+    await Promise.all([loading, appending]);
+    expect(appendedIds).toEqual(["evt-appended"]);
+    expect(ledger.events.map((event) => event.id)).toEqual(["evt-seed", "evt-stored", "evt-appended"]);
+  });
+
   it("does not mutate state on persistence failure and recovers the queue", async () => {
     let failNext = true;
     const ledger = new EvidenceLedger(memory({

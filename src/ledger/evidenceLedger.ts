@@ -7,13 +7,13 @@ export interface StoredEvents {
 
 export interface EvidenceMemory {
   load: () => Promise<StoredEvents>;
-  append: (event: EvidenceEvent, runtimeEvents: EvidenceEvent[]) => Promise<unknown>;
+  append: (event: EvidenceEvent) => Promise<unknown>;
   reset: () => Promise<unknown>;
 }
 
 export class EvidenceLedger {
   private currentEvents: EvidenceEvent[];
-  private appendQueue: Promise<void> = Promise.resolve();
+  private operationQueue: Promise<void> = Promise.resolve();
   private readonly seedEvents: EvidenceEvent[];
   private readonly seedIds: Set<string>;
 
@@ -28,22 +28,23 @@ export class EvidenceLedger {
     return [...this.currentEvents];
   }
 
-  async load(): Promise<StoredEvents> {
-    await this.appendQueue;
-    const stored = await this.memory.load();
-    const runtimeEvents = evidenceEventSchema.array().parse(stored.events);
-    this.assertUniqueIds(runtimeEvents);
+  load(): Promise<StoredEvents> {
+    return this.enqueue(async () => {
+      const stored = await this.memory.load();
+      const runtimeEvents = evidenceEventSchema.array().parse(stored.events);
+      this.assertUniqueIds(runtimeEvents);
 
-    const seedCollision = runtimeEvents.find((event) => this.seedIds.has(event.id));
-    if (seedCollision) throw new Error(`Stored evidence event ID ${seedCollision.id} collides with a seed event`);
+      const seedCollision = runtimeEvents.find((event) => this.seedIds.has(event.id));
+      if (seedCollision) throw new Error(`Stored evidence event ID ${seedCollision.id} collides with a seed event`);
 
-    this.currentEvents = [...this.seedEvents, ...runtimeEvents];
-    return { events: this.events, rejectedCount: stored.rejectedCount };
+      this.currentEvents = [...this.seedEvents, ...runtimeEvents];
+      return { events: this.events, rejectedCount: stored.rejectedCount };
+    });
   }
 
   append(event: EvidenceEvent): Promise<EvidenceEvent[]> {
     const parsed = evidenceEventSchema.parse(event);
-    const operation = this.appendQueue.then(async () => {
+    return this.enqueue(async () => {
       if (this.currentEvents.some((current) => current.id === parsed.id)) {
         throw new Error(`Evidence event ID ${parsed.id} already exists`);
       }
@@ -52,20 +53,24 @@ export class EvidenceLedger {
         ...this.currentEvents.filter((current) => !this.seedIds.has(current.id)),
         parsed
       ];
-      await this.memory.append(parsed, runtimeEvents);
+      await this.memory.append(parsed);
       this.currentEvents = [...this.seedEvents, ...runtimeEvents];
       return this.events;
     });
-
-    this.appendQueue = operation.then(() => undefined, () => undefined);
-    return operation;
   }
 
-  async reset(): Promise<EvidenceEvent[]> {
-    await this.appendQueue;
-    await this.memory.reset();
-    this.currentEvents = [...this.seedEvents];
-    return this.events;
+  reset(): Promise<EvidenceEvent[]> {
+    return this.enqueue(async () => {
+      await this.memory.reset();
+      this.currentEvents = [...this.seedEvents];
+      return this.events;
+    });
+  }
+
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.operationQueue.then(operation);
+    this.operationQueue = result.then(() => undefined, () => undefined);
+    return result;
   }
 
   private assertUniqueIds(events: EvidenceEvent[]) {

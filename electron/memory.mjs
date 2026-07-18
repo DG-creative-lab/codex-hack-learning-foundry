@@ -1,40 +1,73 @@
-import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { appendFile, mkdir, open, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { createInterface } from "node:readline";
 import { evidenceEventSchema } from "../shared/evidence-event.js";
 
-export async function ensureMemoryFile(path) {
+async function openMemoryFile(path, flags) {
   await mkdir(dirname(path), { recursive: true });
+  const handle = await open(path, flags, 0o600);
   try {
-    await readFile(path, "utf8");
+    const file = await handle.stat();
+    if (!file.isFile()) {
+      const error = new Error(`Memory path is not a file: ${path}`);
+      error.code = file.isDirectory() ? "EISDIR" : "EINVAL";
+      throw error;
+    }
+    return handle;
   } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    await writeFile(path, "", "utf8");
+    await handle.close();
+    throw error;
   }
+}
+
+export async function ensureMemoryFile(path) {
+  const handle = await openMemoryFile(path, "a");
+  await handle.close();
   return path;
+}
+
+function parseMemoryLine(raw, line, events, rejected) {
+  if (!raw.trim()) return;
+  try {
+    const result = evidenceEventSchema.safeParse(JSON.parse(raw));
+    if (result.success) events.push(result.data);
+    else rejected.push({ line, raw, reason: result.error.message });
+  } catch (error) {
+    rejected.push({ line, raw, reason: error instanceof Error ? error.message : String(error) });
+  }
 }
 
 export function parseMemoryContents(contents) {
   const events = [];
   const rejected = [];
+  contents.split("\n").forEach((raw, index) => parseMemoryLine(raw, index + 1, events, rejected));
+  return { events, rejected };
+}
 
-  contents.split("\n").forEach((raw, index) => {
-    if (!raw.trim()) return;
-    try {
-      const result = evidenceEventSchema.safeParse(JSON.parse(raw));
-      if (result.success) events.push(result.data);
-      else rejected.push({ line: index + 1, raw, reason: result.error.message });
-    } catch (error) {
-      rejected.push({ line: index + 1, raw, reason: error instanceof Error ? error.message : String(error) });
-    }
+async function streamMemoryFile(handle) {
+  const events = [];
+  const rejected = [];
+  const lines = createInterface({
+    input: createReadStream("", { fd: handle.fd, autoClose: false, encoding: "utf8", start: 0 }),
+    crlfDelay: Infinity
   });
-
+  let line = 0;
+  for await (const raw of lines) {
+    line += 1;
+    parseMemoryLine(raw, line, events, rejected);
+  }
   return { events, rejected };
 }
 
 export async function loadMemoryFile(path) {
-  await ensureMemoryFile(path);
-  const contents = await readFile(path, "utf8");
-  const result = parseMemoryContents(contents);
+  const handle = await openMemoryFile(path, "a+");
+  let result;
+  try {
+    result = await streamMemoryFile(handle);
+  } finally {
+    await handle.close();
+  }
 
   if (result.rejected.length > 0) {
     const rejectedPath = `${path}.rejected.jsonl`;
@@ -57,11 +90,19 @@ export async function loadMemoryFile(path) {
 
 export async function appendMemoryEntry(path, entry) {
   const event = evidenceEventSchema.parse(entry);
-  await ensureMemoryFile(path);
-  await appendFile(path, `${JSON.stringify(event)}\n`, "utf8");
+  const handle = await openMemoryFile(path, "a");
+  try {
+    await handle.appendFile(`${JSON.stringify(event)}\n`, "utf8");
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function resetMemoryFile(path) {
-  await ensureMemoryFile(path);
-  await writeFile(path, "", "utf8");
+  const handle = await openMemoryFile(path, "a");
+  try {
+    await handle.truncate(0);
+  } finally {
+    await handle.close();
+  }
 }
