@@ -1,6 +1,6 @@
 import type { LivingTheoryMetadata } from "../domain/livingTheory";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
-import { workspaceSources } from "./workspace";
+import { capabilities, learningArtifacts, workspaceSources } from "./workspace";
 
 export const source = {
   id: "source-ui-density-2024",
@@ -55,6 +55,73 @@ export const principles: DensityPrinciple[] = [
   }
 ];
 
+export const designDensityTheoryMetadata: LivingTheoryMetadata = {
+  id: "theory-design-density",
+  title: "Design density",
+  summary:
+    "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
+  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
+};
+
+function learningSeedEvents(): EvidenceEvent[] {
+  return learningArtifacts.map((artifact, index) => ({
+    id: `evt-learning-${String(index + 1).padStart(3, "0")}`,
+    type: "learning.artifact_registered",
+    kind: "agent_synthesis",
+    createdAt: `2026-07-14T11:00:0${index}.000Z`,
+    actor: "agent",
+    summary: `${artifact.title} registered as a human learning artifact.`,
+    sourceIds: artifact.sourceIds,
+    payload: { artifact }
+  }));
+}
+
+function capabilitySeedEvents(): EvidenceEvent[] {
+  return capabilities.flatMap(({ manifest, evaluation, executions }, index) => {
+    const createdAt = `2026-07-14T11:01:0${index}.000Z`;
+    const events: EvidenceEvent[] = [
+      {
+        id: `evt-capability-${String(index + 1).padStart(3, "0")}`,
+        type: "capability.registered",
+        kind: "agent_synthesis",
+        createdAt,
+        actor: "agent",
+        summary: `${manifest.name} registered as a controlled capability manifest.`,
+        sourceIds: manifest.sourceIds,
+        payload: { manifest }
+      }
+    ];
+
+    if (evaluation) {
+      events.push({
+        id: `evt-capability-evaluation-${String(index + 1).padStart(3, "0")}`,
+        type: "capability.evaluation_recorded",
+        kind: "validated_behavior",
+        createdAt,
+        actor: "system",
+        summary: `${manifest.name} passed ${evaluation.passed} of ${evaluation.total} evaluation checks.`,
+        sourceIds: manifest.sourceIds,
+        payload: { capabilityId: manifest.id, evaluation }
+      });
+    }
+
+    for (let execution = 0; execution < executions; execution += 1) {
+      events.push({
+        id: `evt-capability-execution-${String(index + 1).padStart(3, "0")}-${execution + 1}`,
+        type: "capability.executed",
+        kind: "practical_observation",
+        createdAt,
+        actor: "system",
+        summary: `${manifest.name} execution recorded.`,
+        sourceIds: manifest.sourceIds,
+        payload: { capabilityId: manifest.id }
+      });
+    }
+
+    return events;
+  });
+}
+
 export const seedEvents: EvidenceEvent[] = [
   ...workspaceSources.map(
     (workspaceSource, index): EvidenceEvent => ({
@@ -68,6 +135,16 @@ export const seedEvents: EvidenceEvent[] = [
       payload: { source: workspaceSource }
     })
   ),
+  {
+    id: "evt-workspace-configuration-001",
+    type: "workspace.configured",
+    kind: "user_interpretation",
+    createdAt: "2026-07-14T10:00:30.000Z",
+    actor: "human",
+    summary: "Configured the source-grounded design-density workspace.",
+    sourceIds: designDensityTheoryMetadata.sourceIds,
+    payload: { theory: designDensityTheoryMetadata }
+  },
   {
     id: "evt-synthesis-001",
     type: "module.synthesized",
@@ -183,16 +260,10 @@ export const seedEvents: EvidenceEvent[] = [
         evidenceEventIds: []
       }
     }
-  }
+  },
+  ...learningSeedEvents(),
+  ...capabilitySeedEvents()
 ];
-
-export const designDensityTheoryMetadata: LivingTheoryMetadata = {
-  id: "theory-design-density",
-  title: "Design density",
-  summary:
-    "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
-  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
-};
 
 export const evaluationCases: EvaluationCase[] = [
   {

@@ -40,6 +40,7 @@ export const learningArtifactSchema = z
     state: z.enum(["in-progress", "ready", "due"]),
     statusLabel: z.string().min(1),
     evidence: z.string().min(1),
+    sourceIds: z.array(z.string().min(1)),
     progress: z.number().min(0).max(100)
   })
   .strict();
