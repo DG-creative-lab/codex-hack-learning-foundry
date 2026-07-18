@@ -1,30 +1,16 @@
 import { z } from "zod";
 import type { EvidenceEvent } from "./types";
+import { type SourceRecord, sourceOutputsSchema, sourceRecordSchema } from "./workspaceEntities";
 
-export const sourceStatusSchema = z.enum(["ready", "processing", "queued"]);
-export const sourceOriginSchema = z.enum(["web", "local", "paper"]);
-export const sourceOutputsSchema = z
-  .object({
-    atoms: z.number().int().nonnegative(),
-    lessons: z.number().int().nonnegative(),
-    capabilities: z.number().int().nonnegative()
-  })
-  .strict();
-
-export const sourceRecordSchema = z
-  .object({
-    id: z.string().min(1),
-    title: z.string().min(1),
-    author: z.string().min(1),
-    origin: sourceOriginSchema,
-    format: z.string().min(1),
-    status: sourceStatusSchema,
-    progress: z.number().min(0).max(100),
-    addedAt: z.string().min(1),
-    provenance: z.string().min(1),
-    outputs: sourceOutputsSchema
-  })
-  .strict();
+export {
+  type SourceOrigin,
+  type SourceRecord,
+  type SourceStatus,
+  sourceOriginSchema,
+  sourceOutputsSchema,
+  sourceRecordSchema,
+  sourceStatusSchema
+} from "./workspaceEntities";
 
 const registeredPayloadSchema = z.object({ source: sourceRecordSchema }).strict();
 const processingPayloadSchema = z
@@ -37,10 +23,6 @@ const completedPayloadSchema = z
     outputs: sourceOutputsSchema
   })
   .strict();
-
-export type SourceStatus = z.infer<typeof sourceStatusSchema>;
-export type SourceOrigin = z.infer<typeof sourceOriginSchema>;
-export type SourceRecord = z.infer<typeof sourceRecordSchema>;
 
 export function deriveSources(events: EvidenceEvent[]): SourceRecord[] {
   const sources = new Map<string, SourceRecord>();

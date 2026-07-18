@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { capabilityStatusSchema } from "../../shared/capability-status.js";
+import { capabilityStatusSchema } from "../../shared/capability-contract.js";
 import { evidenceEventSchema, evidenceKindSchema } from "../../shared/evidence-event.js";
 
 export { capabilityStatusSchema, evidenceEventSchema, evidenceKindSchema };

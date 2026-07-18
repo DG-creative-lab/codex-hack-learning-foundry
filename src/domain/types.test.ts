@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import capabilitySchema from "../../schemas/capability.schema.json";
-import { capabilityStatusValues } from "../../shared/capability-status.js";
+import { capabilityStatusValues } from "../../shared/capability-contract.js";
 import { designDensityTheoryMetadata, principles, seedEvents } from "../data/sample";
 import { deriveLivingTheory } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";

@@ -1,5 +1,5 @@
-import type { SourceRecord } from "../domain/sourceProjection";
-import type { CapabilityStatus, EvidenceKind } from "../domain/types";
+import type { EvidenceKind } from "../domain/types";
+import { foundryCapabilitySchema, learningArtifactSchema, sourceRecordSchema } from "../domain/workspaceEntities";
 
 export interface KnowledgeAtom {
   id: string;
@@ -10,7 +10,7 @@ export interface KnowledgeAtom {
   relation: string;
 }
 
-export const workspaceSources: SourceRecord[] = [
+export const workspaceSources = sourceRecordSchema.array().parse([
   {
     id: "source-ui-density-2024",
     title: "UI Density",
@@ -47,7 +47,7 @@ export const workspaceSources: SourceRecord[] = [
     provenance: "w3.org/WAI/WCAG22",
     outputs: { atoms: 6, lessons: 0, capabilities: 1 }
   }
-];
+]);
 
 export const knowledgeAtoms: KnowledgeAtom[] = [
   {
@@ -100,81 +100,93 @@ export const knowledgeAtoms: KnowledgeAtom[] = [
   }
 ];
 
-export const learningArtifacts = [
+export const learningArtifacts = learningArtifactSchema.array().parse([
   {
     id: "lesson-density",
-    type: "Lesson",
+    type: "lesson",
     title: "Five lenses of interface density",
-    status: "In progress",
+    state: "in-progress",
+    statusLabel: "In progress",
     evidence: "2 sources / 12 atoms",
     progress: 64
   },
   {
     id: "exercise-queue",
-    type: "Exercise",
+    type: "exercise",
     title: "Diagnose an operational queue",
-    status: "Ready",
+    state: "ready",
+    statusLabel: "Ready",
     evidence: "1 transfer task",
     progress: 0
   },
   {
     id: "review-density",
-    type: "Review set",
+    type: "review",
     title: "Density distinctions",
-    status: "Due tomorrow",
+    state: "due",
+    statusLabel: "Due tomorrow",
     evidence: "5 recall items",
     progress: 20
   },
   {
     id: "reflection-taste",
-    type: "Reflection",
+    type: "reflection",
     title: "Separate taste from observed value",
-    status: "Ready",
+    state: "ready",
+    statusLabel: "Ready",
     evidence: "Personal preference",
     progress: 0
   }
-];
+]);
 
-interface CapabilityRecord {
-  id: string;
-  name: string;
-  type: string;
-  version: string;
-  status: CapabilityStatus;
-  sources: number;
-  evaluations: string;
-  executions: number;
-}
-
-export const capabilities: CapabilityRecord[] = [
+export const capabilities = foundryCapabilitySchema.array().parse([
   {
-    id: "value-density-reviewer",
-    name: "value-density-reviewer",
-    type: "Skill",
-    version: "0.1.0",
-    status: "evaluated",
-    sources: 3,
-    evaluations: "8 / 8",
+    manifest: {
+      id: "value-density-reviewer",
+      name: "value-density-reviewer",
+      type: "skill",
+      version: "0.1.0",
+      status: "evaluated",
+      createdAt: "2026-07-14T10:00:00.000Z",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+      assumptions: ["The reviewed interface has an identifiable user objective."],
+      limitations: ["The review does not replace usability testing."],
+      evaluationFixture: "tests/fixtures/value-density/passing-review.json",
+      skillPath: "skills/value-density-reviewer"
+    },
+    evaluation: { passed: 8, total: 8 },
     executions: 1
   },
   {
-    id: "design-knowledge",
-    name: "design-density-knowledge",
-    type: "Knowledge module",
-    version: "0.1.0",
-    status: "synthesized",
-    sources: 3,
-    evaluations: "—",
+    manifest: {
+      id: "design-knowledge",
+      name: "design-density-knowledge",
+      type: "knowledge-module",
+      version: "0.1.0",
+      status: "synthesized",
+      createdAt: "2026-07-14T10:05:00.000Z",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+      assumptions: ["Source claims remain traceable to their evidence."],
+      limitations: ["The module covers interface density only."],
+      skillPath: "knowledge/design-density"
+    },
+    evaluation: null,
     executions: 0
   },
   {
-    id: "density-linter",
-    name: "density-constraint-linter",
-    type: "Tool",
-    version: "proposal",
-    status: "captured",
-    sources: 1,
-    evaluations: "—",
+    manifest: {
+      id: "density-linter",
+      name: "density-constraint-linter",
+      type: "tool",
+      version: "proposal",
+      status: "captured",
+      createdAt: "2026-07-14T10:10:00.000Z",
+      sourceIds: ["source-wcag-target-size"],
+      assumptions: ["Machine-readable constraints can supplement design review."],
+      limitations: ["The proposal has not been sandboxed or evaluated."],
+      skillPath: "tools/density-constraint-linter"
+    },
+    evaluation: null,
     executions: 0
   }
-];
+]);

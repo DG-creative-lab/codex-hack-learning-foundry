@@ -2,6 +2,13 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { learningArtifacts } from "../data/workspace";
 
+const artifactTypeLabels = {
+  lesson: "Lesson",
+  exercise: "Exercise",
+  review: "Review set",
+  reflection: "Reflection"
+} as const;
+
 export function LearnView() {
   const [selectedArtifact, setSelectedArtifact] = useState(learningArtifacts[0].id);
   const artifact = learningArtifacts.find((item) => item.id === selectedArtifact) ?? learningArtifacts[0];
@@ -49,19 +56,19 @@ export function LearnView() {
             >
               <span className="artifact-index">0{index + 1}</span>
               <span>
-                <small>{item.type}</small>
+                <small>{artifactTypeLabels[item.type]}</small>
                 <strong>{item.title}</strong>
                 <i>
                   <b style={{ width: `${item.progress}%` }} />
                 </i>
               </span>
-              <span>{item.status}</span>
+              <span>{item.statusLabel}</span>
             </button>
           ))}
         </div>
         <div className="artifact-preview">
           <div className="preview-meta">
-            <span>{artifact.type}</span>
+            <span>{artifactTypeLabels[artifact.type]}</span>
             <span>{artifact.evidence}</span>
           </div>
           <p className="eyebrow">Active learning unit</p>
