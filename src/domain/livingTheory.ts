@@ -36,6 +36,7 @@ function elementFromEvent(event: EvidenceEvent): TheoryElement {
   return theoryElementSchema.parse({
     ...rawElement,
     sourceIds: unique([...rawElement.sourceIds, ...event.sourceIds]),
+    fragmentIds: unique(rawElement.fragmentIds),
     evidenceEventIds: unique([...rawElement.evidenceEventIds, event.id])
   });
 }
@@ -45,6 +46,7 @@ function relationshipFromEvent(event: EvidenceEvent): TheoryRelationship {
   return {
     ...rawRelationship,
     sourceIds: unique([...rawRelationship.sourceIds, ...event.sourceIds]),
+    fragmentIds: unique(rawRelationship.fragmentIds),
     evidenceEventIds: unique([...rawRelationship.evidenceEventIds, event.id])
   };
 }

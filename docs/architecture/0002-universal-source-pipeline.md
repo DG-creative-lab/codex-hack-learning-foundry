@@ -27,3 +27,16 @@ Practical outcomes and user feedback append new evidence to the canonical layer.
 - Source adapters may vary, but must produce the same fragment and provenance contract.
 - Human confidence, agent synthesis, source fact, practical observation, and validated behavior remain distinct epistemic classes.
 - The design-density sample can be replaced by another source collection without restructuring the application.
+
+## MVP implementation
+
+The desktop boundary supports approved HTTPS pages and local `.txt`, `.md`, `.markdown`, and `.pdf` files. Cheerio extracts meaningful HTML blocks and PDF.js extracts page text. The online adapter rejects credentials, custom ports, loopback hosts, and private-network addresses, follows at most three validated redirects, and limits source size.
+
+Every adapter returns the same extracted-document contract. The domain layer then emits:
+
+1. `source.processing_completed` with an immutable content-addressed source version and normalized fragments.
+2. `theory.synthesis_proposed` with candidate elements, relationships, confidence, support state, and fragment IDs.
+3. `theory.synthesis_reviewed` with an explicit human approval or rejection.
+4. Theory element and relationship events only after approval.
+
+Source changes produce a new version linked by `previousVersionId`. Candidates at a stable source position revise the previously approved element with a new theory ID; the earlier element remains superseded in the Living Theory projection.

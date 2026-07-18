@@ -1,14 +1,46 @@
-import { ArrowRight, BookOpen, Bot, FileText, Globe2, RefreshCw, Search, Sparkles, UserRound } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Bot,
+  Check,
+  FileText,
+  Globe2,
+  MapPin,
+  RefreshCw,
+  Search,
+  Sparkles,
+  UserRound
+} from "lucide-react";
+import type { NormalizedSourceFragment, SourceSynthesisProposal } from "../domain/sourcePipeline";
 import type { SourceOrigin, SourceRecord } from "../domain/sourceProjection";
 
 interface SourcesViewProps {
   sources: SourceRecord[];
   selectedSource: SourceRecord;
+  fragments: NormalizedSourceFragment[];
+  proposals: SourceSynthesisProposal[];
   setSelectedSourceId: (id: string) => void;
   onProcess: () => void;
+  onApprove: (proposalId: string) => void;
+  onReject: (proposalId: string) => void;
 }
 
-export function SourcesView({ sources, selectedSource, setSelectedSourceId, onProcess }: SourcesViewProps) {
+export function SourcesView({
+  sources,
+  selectedSource,
+  fragments,
+  proposals,
+  setSelectedSourceId,
+  onProcess,
+  onApprove,
+  onReject
+}: SourcesViewProps) {
+  const selectedFragments = fragments.filter((fragment) => fragment.versionId === selectedSource.currentVersionId);
+  const proposal = proposals.find(
+    (candidate) => candidate.sourceId === selectedSource.id && candidate.versionId === selectedSource.currentVersionId
+  );
+
   return (
     <div className="page-scroll sources-view">
       <section className="pipeline-section">
@@ -120,7 +152,84 @@ export function SourcesView({ sources, selectedSource, setSelectedSourceId, onPr
             <div className="progress-track">
               <i style={{ width: `${selectedSource.progress}%` }} />
             </div>
-            {selectedSource.status === "ready" ? (
+            {selectedSource.error && (
+              <div className="source-error" role="alert">
+                <AlertTriangle size={15} />
+                <p>
+                  <strong>{selectedSource.error.code.replaceAll("_", " ")}</strong>
+                  <span>{selectedSource.error.message}</span>
+                </p>
+              </div>
+            )}
+            {proposal ? (
+              <div className="synthesis-review">
+                <div className="review-heading">
+                  <span>Living Theory proposal</span>
+                  <strong>{proposal.status}</strong>
+                </div>
+                <p>
+                  {proposal.elements.length} elements · {proposal.relationships.length} relationships
+                </p>
+                <div className="candidate-list">
+                  {proposal.elements.slice(0, 5).map((candidate) => {
+                    const fragment = selectedFragments.find((item) => candidate.element.fragmentIds.includes(item.id));
+                    return (
+                      <details key={candidate.id}>
+                        <summary>
+                          <span>{candidate.element.kind.replaceAll("_", " ")}</span>
+                          <strong>{Math.round(candidate.confidence * 100)}%</strong>
+                        </summary>
+                        <p>{candidate.element.statement}</p>
+                        {fragment && (
+                          <blockquote>
+                            <span>
+                              <MapPin size={11} /> {fragment.location.label}
+                            </span>
+                            {fragment.content}
+                          </blockquote>
+                        )}
+                        {candidate.reviewReason && <small>{candidate.reviewReason}</small>}
+                      </details>
+                    );
+                  })}
+                  {proposal.relationships.slice(0, 3).map((candidate) => {
+                    const supportingFragments = selectedFragments.filter((fragment) =>
+                      candidate.relationship.fragmentIds.includes(fragment.id)
+                    );
+                    return (
+                      <details key={candidate.id}>
+                        <summary>
+                          <span>relation · {candidate.relationship.kind}</span>
+                          <strong>{Math.round(candidate.confidence * 100)}%</strong>
+                        </summary>
+                        <p>
+                          {candidate.relationship.fromElementId} -&gt; {candidate.relationship.toElementId}
+                        </p>
+                        {supportingFragments.map((fragment) => (
+                          <blockquote key={fragment.id}>
+                            <span>
+                              <MapPin size={11} /> {fragment.location.label}
+                            </span>
+                            {fragment.content}
+                          </blockquote>
+                        ))}
+                        {candidate.reviewReason && <small>{candidate.reviewReason}</small>}
+                      </details>
+                    );
+                  })}
+                </div>
+                {proposal.status === "pending" && (
+                  <div className="review-actions">
+                    <button type="button" className="text-button" onClick={() => onReject(proposal.id)}>
+                      Reject
+                    </button>
+                    <button type="button" className="primary-button" onClick={() => onApprove(proposal.id)}>
+                      <Check size={15} /> Approve into theory
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : selectedSource.status === "ready" ? (
               <div className="output-summary">
                 <p>
                   <strong>{selectedSource.outputs.atoms}</strong>
@@ -143,11 +252,18 @@ export function SourcesView({ sources, selectedSource, setSelectedSourceId, onPr
                   </>
                 ) : (
                   <>
-                    <Sparkles size={15} /> Process source
+                    <Sparkles size={15} /> {selectedSource.status === "failed" ? "Retry extraction" : "Process source"}
                   </>
                 )}
               </button>
             )}
+            {selectedSource.status === "ready" &&
+              selectedSource.currentVersionId &&
+              (selectedSource.origin === "web" || selectedSource.provenance.startsWith("/")) && (
+                <button type="button" className="text-button reprocess-button" onClick={onProcess}>
+                  <RefreshCw size={13} /> Check for source changes
+                </button>
+              )}
           </aside>
         </div>
       </section>

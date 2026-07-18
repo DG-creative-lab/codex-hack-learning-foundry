@@ -7,7 +7,7 @@ import {
 
 export { capabilityManifestSchema, capabilityStatusSchema, capabilityTypeSchema };
 
-export const sourceStatusSchema = z.enum(["ready", "processing", "queued"]);
+export const sourceStatusSchema = z.enum(["ready", "review", "failed", "processing", "queued"]);
 export const sourceOriginSchema = z.enum(["web", "local", "paper"]);
 export const sourceOutputsSchema = z
   .object({
@@ -28,6 +28,16 @@ export const sourceRecordSchema = z
     progress: z.number().min(0).max(100),
     addedAt: z.string().min(1),
     provenance: z.string().min(1),
+    currentVersionId: z.string().min(1).optional(),
+    previousVersionId: z.string().min(1).optional(),
+    error: z
+      .object({
+        code: z.string().min(1),
+        message: z.string().min(1),
+        retryable: z.boolean()
+      })
+      .strict()
+      .optional(),
     outputs: sourceOutputsSchema
   })
   .strict();
