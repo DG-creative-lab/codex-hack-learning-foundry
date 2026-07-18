@@ -1,12 +1,20 @@
 import { Check, ExternalLink, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { capabilityStatusValues } from "../../shared/capability-status.js";
+import { capabilityStatusValues } from "../../shared/capability-contract.js";
 import { capabilities } from "../data/workspace";
 
+const capabilityTypeLabels = {
+  "knowledge-module": "Knowledge module",
+  skill: "Skill",
+  tool: "Tool",
+  plugin: "Plugin"
+} as const;
+
 export function FoundryView() {
-  const [selectedId, setSelectedId] = useState(capabilities[0].id);
-  const capability = capabilities.find((item) => item.id === selectedId) ?? capabilities[0];
-  const currentStep = capabilityStatusValues.indexOf(capability.status);
+  const [selectedId, setSelectedId] = useState(capabilities[0].manifest.id);
+  const capability = capabilities.find((item) => item.manifest.id === selectedId) ?? capabilities[0];
+  const { manifest } = capability;
+  const currentStep = capabilityStatusValues.indexOf(manifest.status);
 
   return (
     <div className="page-scroll foundry-view">
@@ -27,34 +35,36 @@ export function FoundryView() {
           {capabilities.map((item) => (
             <button
               type="button"
-              key={item.id}
-              className={selectedId === item.id ? "selected" : ""}
-              onClick={() => setSelectedId(item.id)}
+              key={item.manifest.id}
+              className={selectedId === item.manifest.id ? "selected" : ""}
+              onClick={() => setSelectedId(item.manifest.id)}
             >
               <span>
-                <small>{item.type}</small>
-                <strong>{item.name}</strong>
+                <small>{capabilityTypeLabels[item.manifest.type]}</small>
+                <strong>{item.manifest.name}</strong>
               </span>
-              <span>{item.version}</span>
-              <span>{item.status}</span>
+              <span>{item.manifest.version}</span>
+              <span>{item.manifest.status}</span>
             </button>
           ))}
         </div>
         <div className="capability-detail">
           <div className="detail-title">
             <div>
-              <p className="eyebrow">{capability.type}</p>
-              <h2>{capability.name}</h2>
+              <p className="eyebrow">{capabilityTypeLabels[manifest.type]}</p>
+              <h2>{manifest.name}</h2>
             </div>
-            <span className="status-stamp">{capability.status}</span>
+            <span className="status-stamp">{manifest.status}</span>
           </div>
           <div className="capability-stats">
             <p>
-              <strong>{capability.sources}</strong>
+              <strong>{manifest.sourceIds.length}</strong>
               <span>sources</span>
             </p>
             <p>
-              <strong>{capability.evaluations}</strong>
+              <strong>
+                {capability.evaluation ? `${capability.evaluation.passed} / ${capability.evaluation.total}` : "—"}
+              </strong>
               <span>evaluations</span>
             </p>
             <p>
@@ -78,7 +88,7 @@ export function FoundryView() {
             <button type="button" className="secondary-button">
               <ExternalLink size={14} /> Inspect artifact
             </button>
-            <button type="button" className="primary-button" disabled={capability.status !== "evaluated"}>
+            <button type="button" className="primary-button" disabled={manifest.status !== "evaluated"}>
               <ShieldCheck size={14} /> Approve activation
             </button>
           </div>
