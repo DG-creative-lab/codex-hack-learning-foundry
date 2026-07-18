@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lookup as dnsLookup } from "node:dns/promises";
-import { readFile, stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { basename, extname } from "node:path";
@@ -69,12 +69,18 @@ export async function extractLocalSource(path) {
   if (extension !== ".pdf" && !allowedTextExtensions.has(extension)) {
     throw extractionError("unsupported_file", "Use a PDF, plain-text, or Markdown file.", false);
   }
-  const file = await stat(path);
-  if (!file.isFile()) throw extractionError("invalid_source", "The selected source is not a file.", false);
-  if (file.size > maxSourceBytes) throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
-  const buffer = await readFile(path);
-  if (buffer.byteLength > maxSourceBytes)
-    throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
+  const handle = await open(path, "r");
+  let buffer;
+  try {
+    const file = await handle.stat();
+    if (!file.isFile()) throw extractionError("invalid_source", "The selected source is not a file.", false);
+    if (file.size > maxSourceBytes) throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
+    buffer = await handle.readFile();
+    if (buffer.byteLength > maxSourceBytes)
+      throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
+  } finally {
+    await handle.close();
+  }
   const units = extension === ".pdf" ? await pdfUnits(buffer) : textUnits(buffer.toString("utf8"));
   if (units.length === 0) throw extractionError("empty_source", "No readable text was found in this source.");
   return {
