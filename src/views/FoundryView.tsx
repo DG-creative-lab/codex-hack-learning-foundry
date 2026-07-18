@@ -1,7 +1,7 @@
 import { Check, ExternalLink, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { capabilityStatusValues } from "../../shared/capability-contract.js";
-import { capabilities } from "../data/workspace";
+import type { FoundryCapability } from "../domain/workspaceEntities";
 
 const capabilityTypeLabels = {
   "knowledge-module": "Knowledge module",
@@ -10,9 +10,22 @@ const capabilityTypeLabels = {
   plugin: "Plugin"
 } as const;
 
-export function FoundryView() {
-  const [selectedId, setSelectedId] = useState(capabilities[0].manifest.id);
+interface FoundryViewProps {
+  capabilities: FoundryCapability[];
+}
+
+export function FoundryView({ capabilities }: FoundryViewProps) {
+  const [selectedId, setSelectedId] = useState(capabilities[0]?.manifest.id);
   const capability = capabilities.find((item) => item.manifest.id === selectedId) ?? capabilities[0];
+
+  if (!capability) {
+    return (
+      <div className="page-scroll foundry-view">
+        <p className="eyebrow">No capabilities have been recorded.</p>
+      </div>
+    );
+  }
+
   const { manifest } = capability;
   const currentStep = capabilityStatusValues.indexOf(manifest.status);
 
@@ -36,7 +49,7 @@ export function FoundryView() {
             <button
               type="button"
               key={item.manifest.id}
-              className={selectedId === item.manifest.id ? "selected" : ""}
+              className={manifest.id === item.manifest.id ? "selected" : ""}
               onClick={() => setSelectedId(item.manifest.id)}
             >
               <span>
