@@ -20,15 +20,15 @@ The current vertical slice includes:
 ## Run locally
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 ## Verify
 
 ```bash
-npm test
-npm run build
+pnpm test
+pnpm build
 ```
 
 ## Repository boundaries
