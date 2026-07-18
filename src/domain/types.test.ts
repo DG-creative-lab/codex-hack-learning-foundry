@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import capabilitySchema from "../../schemas/capability.schema.json";
+import { capabilityStatusValues } from "../../shared/capability-status.js";
 import { designDensityTheoryMetadata, principles, seedEvents } from "../data/sample";
 import { deriveLivingTheory } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
-import { evidenceEventSchema, livingTheorySchema, type EvidenceEvent } from "./types";
+import { capabilityStatusSchema, evidenceEventSchema, livingTheorySchema, type EvidenceEvent } from "./types";
 
 const livingTheory = deriveLivingTheory(seedEvents, designDensityTheoryMetadata);
 
@@ -39,6 +41,17 @@ describe("evidence ledger contract", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("capability status contract", () => {
+  it("keeps runtime validation and the JSON Schema aligned with the ordered lifecycle", () => {
+    expect(capabilityStatusSchema.options).toEqual(capabilityStatusValues);
+    expect(capabilitySchema.properties.status.enum).toEqual(capabilityStatusValues);
+  });
+
+  it("includes revision and retirement in the lifecycle", () => {
+    expect(capabilityStatusValues.slice(-2)).toEqual(["revised", "deprecated"]);
   });
 });
 
