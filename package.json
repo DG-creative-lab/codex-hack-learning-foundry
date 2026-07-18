@@ -3,17 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "description": "A local-first shared learning environment for humans and Codex.",
+  "packageManager": "pnpm@11.14.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:web": "node node_modules/vite/bin/vite.js --host 127.0.0.1",
-    "start": "node node_modules/electron/cli.js .",
-    "build": "node node_modules/typescript/bin/tsc --noEmit && node node_modules/vite/bin/vite.js build",
-    "preview": "node node_modules/vite/bin/vite.js preview",
-    "test": "node node_modules/vitest/vitest.mjs run && node skills/value-density-reviewer/scripts/evaluate-review.mjs tests/fixtures/value-density/passing-review.json",
-    "test:watch": "node node_modules/vitest/vitest.mjs",
-    "lint": "node node_modules/typescript/bin/tsc --noEmit"
+    "dev:web": "vite --host 127.0.0.1",
+    "start": "electron .",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run && node skills/value-density-reviewer/scripts/evaluate-review.mjs tests/fixtures/value-density/passing-review.json",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.454.0",
@@ -22,13 +26,13 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "electron": "^42.0.1",
     "typescript": "^5.8.3",
-    "vite": "^6.3.2",
-    "vitest": "^2.1.8"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
   }
 }

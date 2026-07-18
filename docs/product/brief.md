@@ -2,15 +2,18 @@
 
 ## Product thesis
 
-Learning Foundry turns what a person learns into capabilities their Codex agent can use, test, and improve alongside them.
+Learning Foundry is a shared understanding environment that keeps humans and agents able to think, create, and make changes together as systems evolve. It turns what a person learns into capabilities their Codex agent can use, test, and improve alongside them.
 
 The human and agent share an inspectable evidence layer, but retain distinct learning states. Human confidence is not treated as factual truth, agent synthesis is not treated as a validated capability, and activation always requires approval.
+
+The evidence layer derives a Living Theory: a source-grounded and revisable representation of purpose, concepts, causal relationships, decisions, assumptions, boundaries, contradictions, and unresolved questions. Sources remain canonical; the theory is an inspectable lens rather than a replacement for them.
 
 ## Product scope
 
 The application is domain-independent. It accepts approved local or online literature, papers, studies, talks, documentation, and practical evidence. It transforms those sources into:
 
 - Shared source-grounded knowledge with provenance and epistemic classification.
+- A Living Theory that links sources, human understanding, agent memory, decisions, uncertainty, and capability revisions.
 - Human learning artifacts including objectives, lessons, exercises, recall, review, reflection, and progress evidence.
 - Agent learning state including durable knowledge, assumptions, associations, evaluations, failures, and capability versions.
 - Practical capabilities expressed first as Codex skills, and later as tools and plugins.

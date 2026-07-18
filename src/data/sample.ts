@@ -1,3 +1,4 @@
+import type { LivingTheoryMetadata } from "../domain/livingTheory";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
 
 export const source = {
@@ -73,8 +74,118 @@ export const seedEvents: EvidenceEvent[] = [
     summary: "Five density lenses synthesized into a transferable review method.",
     sourceIds: [source.id],
     payload: { principleIds: principles.map((principle) => principle.id) }
+  },
+  {
+    id: "evt-theory-purpose-001",
+    type: "theory.element_recorded",
+    kind: "agent_synthesis",
+    createdAt: "2026-07-14T10:02:00.000Z",
+    actor: "agent",
+    summary: "Recorded the practical purpose of the design-density theory.",
+    sourceIds: [source.id],
+    payload: {
+      element: {
+        id: "theory-purpose-review-value",
+        kind: "purpose",
+        title: "Review for user value",
+        statement: "Evaluate interface density by the useful outcome achieved for a specific user, not by compactness alone.",
+        epistemicKind: "agent_synthesis",
+        status: "active",
+        sourceIds: [source.id],
+        evidenceEventIds: []
+      }
+    }
+  },
+  ...principles.map((principle, index): EvidenceEvent => ({
+    id: `evt-theory-concept-${String(index + 1).padStart(3, "0")}`,
+    type: "theory.element_recorded",
+    kind: "source_fact",
+    createdAt: `2026-07-14T10:0${index + 3}:00.000Z`,
+    actor: "system",
+    summary: `Recorded the ${principle.title.toLowerCase()} density concept.`,
+    sourceIds: [source.id],
+    payload: {
+      element: {
+        id: `theory-concept-${principle.id}`,
+        kind: "concept",
+        title: `${principle.title} density`,
+        statement: principle.definition,
+        epistemicKind: "source_fact",
+        status: "active",
+        sourceIds: [source.id],
+        evidenceEventIds: []
+      }
+    }
+  })),
+  {
+    id: "evt-theory-boundary-001",
+    type: "theory.element_recorded",
+    kind: "validated_behavior",
+    createdAt: "2026-07-14T10:08:00.000Z",
+    actor: "system",
+    summary: "Recorded an accessibility boundary on density changes.",
+    sourceIds: ["source-wcag-target-size"],
+    payload: {
+      element: {
+        id: "theory-boundary-accessibility",
+        kind: "boundary",
+        title: "Accessibility constraints survive",
+        statement: "Density changes must preserve declared target-size and legibility constraints.",
+        epistemicKind: "validated_behavior",
+        status: "active",
+        sourceIds: ["source-wcag-target-size"],
+        evidenceEventIds: []
+      }
+    }
+  },
+  {
+    id: "evt-theory-question-001",
+    type: "theory.element_recorded",
+    kind: "hypothesis",
+    createdAt: "2026-07-14T10:09:00.000Z",
+    actor: "human",
+    summary: "Recorded an unresolved transfer question.",
+    sourceIds: [],
+    payload: {
+      element: {
+        id: "theory-question-audience",
+        kind: "question",
+        title: "How does expertise change the recommendation?",
+        statement: "The appropriate density may differ materially between novice and expert workflows.",
+        epistemicKind: "hypothesis",
+        status: "unresolved",
+        sourceIds: [],
+        evidenceEventIds: []
+      }
+    }
+  },
+  {
+    id: "evt-theory-relationship-001",
+    type: "theory.relationship_recorded",
+    kind: "agent_synthesis",
+    createdAt: "2026-07-14T10:10:00.000Z",
+    actor: "agent",
+    summary: "Linked the value-density purpose to its accessibility boundary.",
+    sourceIds: [source.id, "source-wcag-target-size"],
+    payload: {
+      relationship: {
+        id: "theory-relation-purpose-accessibility",
+        kind: "constrained-by",
+        fromElementId: "theory-purpose-review-value",
+        toElementId: "theory-boundary-accessibility",
+        sourceIds: [source.id, "source-wcag-target-size"],
+        evidenceEventIds: []
+      }
+    }
   }
 ];
+
+export const designDensityTheoryMetadata: LivingTheoryMetadata = {
+  id: "theory-design-density",
+  title: "Design density",
+  summary: "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
+  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
+};
 
 export const evaluationCases: EvaluationCase[] = [
   {
@@ -110,4 +221,3 @@ export const evaluationCases: EvaluationCase[] = [
     evidence: "Minimum target size and readable type remain explicit boundaries."
   }
 ];
-
