@@ -2,11 +2,9 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
-import { designDensityTheoryMetadata } from "./data/sample";
-import { deriveLivingTheory } from "./domain/livingTheory";
-import { deriveMemoryProjections } from "./domain/memoryProjections";
-import { deriveSources, type SourceOrigin, type SourceRecord } from "./domain/sourceProjection";
+import type { SourceOrigin, SourceRecord } from "./domain/sourceProjection";
 import type { EvidenceEvent, EvidenceKind } from "./domain/types";
+import { reduceWorkspace } from "./domain/workspaceProjection";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 import { AboutView } from "./views/AboutView";
 import { FoundryView } from "./views/FoundryView";
@@ -41,17 +39,8 @@ function App() {
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
   const [sourceInput, setSourceInput] = useState("");
-  const sources = useMemo(() => deriveSources(events), [events]);
-
-  const livingTheory = useMemo(
-    () =>
-      deriveLivingTheory(events, {
-        ...designDensityTheoryMetadata,
-        sourceIds: sources.map((source) => source.id)
-      }),
-    [events, sources]
-  );
-  const memoryProjections = useMemo(() => deriveMemoryProjections(livingTheory, events), [events, livingTheory]);
+  const workspace = useMemo(() => reduceWorkspace(events), [events]);
+  const { sources } = workspace;
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];
   const pageTitles: Record<ViewId, [string, string]> = {
@@ -168,9 +157,9 @@ function App() {
             onProcess={() => void processSelectedSource().catch(() => undefined)}
           />
         )}
-        {view === "learn" && <LearnView />}
-        {view === "memory" && <MemoryView events={events} theory={livingTheory} projections={memoryProjections} />}
-        {view === "foundry" && <FoundryView />}
+        {view === "learn" && <LearnView artifacts={workspace.learningArtifacts} />}
+        {view === "memory" && <MemoryView events={events} theory={workspace.theory} projections={workspace.memories} />}
+        {view === "foundry" && <FoundryView capabilities={workspace.capabilities} />}
         {view === "about" && <AboutView />}
       </main>
 

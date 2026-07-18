@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { learningArtifacts } from "../data/workspace";
+import type { LearningArtifact } from "../domain/workspaceEntities";
 
 const artifactTypeLabels = {
   lesson: "Lesson",
@@ -9,9 +9,21 @@ const artifactTypeLabels = {
   reflection: "Reflection"
 } as const;
 
-export function LearnView() {
-  const [selectedArtifact, setSelectedArtifact] = useState(learningArtifacts[0].id);
-  const artifact = learningArtifacts.find((item) => item.id === selectedArtifact) ?? learningArtifacts[0];
+interface LearnViewProps {
+  artifacts: LearningArtifact[];
+}
+
+export function LearnView({ artifacts }: LearnViewProps) {
+  const [selectedArtifact, setSelectedArtifact] = useState(artifacts[0]?.id);
+  const artifact = artifacts.find((item) => item.id === selectedArtifact) ?? artifacts[0];
+
+  if (!artifact) {
+    return (
+      <div className="page-scroll learn-view">
+        <p className="eyebrow">No learning artifacts have been recorded.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-scroll learn-view">
@@ -47,11 +59,11 @@ export function LearnView() {
               <h2>Learning path</h2>
             </div>
           </div>
-          {learningArtifacts.map((item, index) => (
+          {artifacts.map((item, index) => (
             <button
               type="button"
               key={item.id}
-              className={selectedArtifact === item.id ? "selected" : ""}
+              className={artifact.id === item.id ? "selected" : ""}
               onClick={() => setSelectedArtifact(item.id)}
             >
               <span className="artifact-index">0{index + 1}</span>
