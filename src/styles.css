@@ -377,6 +377,14 @@ input[type="range"] { width: 100%; accent-color: var(--signal); }
 .topbar > div:first-child { min-width: 0; }
 .topbar h1 { font-size: 24px; }
 .topbar > div:first-child > p:last-child { margin: 7px 0 0; color: var(--muted); font-size: 10px; }
+.ledger-alert {
+  margin: 0;
+  padding: 9px 32px;
+  color: #6b321f;
+  border-bottom: 1px solid #d9b7a7;
+  background: #fff1e9;
+  font: 10px/1.4 "SFMono-Regular", Consolas, monospace;
+}
 .top-actions { display: flex; align-items: center; gap: 10px; -webkit-app-region: no-drag; }
 .workspace-switcher {
   display: inline-flex;

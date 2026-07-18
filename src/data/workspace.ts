@@ -1,20 +1,5 @@
-import type { EvidenceKind } from "../domain/types";
-
-export type SourceStatus = "ready" | "processing" | "queued";
-export type SourceOrigin = "web" | "local" | "paper";
-
-export interface SourceRecord {
-  id: string;
-  title: string;
-  author: string;
-  origin: SourceOrigin;
-  format: string;
-  status: SourceStatus;
-  progress: number;
-  addedAt: string;
-  provenance: string;
-  outputs: { atoms: number; lessons: number; capabilities: number };
-}
+import type { SourceRecord } from "../domain/sourceProjection";
+import type { CapabilityStatus, EvidenceKind } from "../domain/types";
 
 export interface KnowledgeAtom {
   id: string;
@@ -80,9 +65,19 @@ export const learningArtifacts = [
   { id: "reflection-taste", type: "Reflection", title: "Separate taste from observed value", status: "Ready", evidence: "Personal preference", progress: 0 }
 ];
 
-export const capabilities = [
+interface CapabilityRecord {
+  id: string;
+  name: string;
+  type: string;
+  version: string;
+  status: CapabilityStatus;
+  sources: number;
+  evaluations: string;
+  executions: number;
+}
+
+export const capabilities: CapabilityRecord[] = [
   { id: "value-density-reviewer", name: "value-density-reviewer", type: "Skill", version: "0.1.0", status: "evaluated", sources: 3, evaluations: "8 / 8", executions: 1 },
   { id: "design-knowledge", name: "design-density-knowledge", type: "Knowledge module", version: "0.1.0", status: "synthesized", sources: 3, evaluations: "—", executions: 0 },
   { id: "density-linter", name: "density-constraint-linter", type: "Tool", version: "proposal", status: "captured", sources: 1, evaluations: "—", executions: 0 }
 ];
-

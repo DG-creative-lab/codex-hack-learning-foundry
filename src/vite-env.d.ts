@@ -5,7 +5,7 @@ import type { EvidenceEvent } from "./domain/types";
 declare global {
   interface Window {
     foundryMemory?: {
-      load: () => Promise<EvidenceEvent[]>;
+      load: () => Promise<{ events: EvidenceEvent[]; rejectedCount: number }>;
       append: (entry: EvidenceEvent) => Promise<boolean>;
       reset: () => Promise<boolean>;
     };
@@ -13,4 +13,3 @@ declare global {
 }
 
 export {};
-

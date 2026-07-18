@@ -1,19 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
-const { appendFile, mkdir, readFile, writeFile } = require("node:fs/promises");
-const { dirname, join } = require("node:path");
+const { join } = require("node:path");
 
 const memoryPath = () => join(app.getPath("userData"), "learning-foundry", "events.jsonl");
-
-async function ensureMemoryFile() {
-  const path = memoryPath();
-  await mkdir(dirname(path), { recursive: true });
-  try {
-    await readFile(path, "utf8");
-  } catch {
-    await writeFile(path, "", "utf8");
-  }
-  return path;
-}
 
 async function createWindow() {
   const window = new BrowserWindow({
@@ -43,21 +31,19 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  const { appendMemoryEntry, loadMemoryFile, resetMemoryFile } = await import("./memory.mjs");
+
   ipcMain.handle("memory:load", async () => {
-    const path = await ensureMemoryFile();
-    const contents = await readFile(path, "utf8");
-    return contents.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    return loadMemoryFile(memoryPath());
   });
 
   ipcMain.handle("memory:append", async (_event, entry) => {
-    const path = await ensureMemoryFile();
-    await appendFile(path, `${JSON.stringify(entry)}\n`, "utf8");
+    await appendMemoryEntry(memoryPath(), entry);
     return true;
   });
 
   ipcMain.handle("memory:reset", async () => {
-    const path = await ensureMemoryFile();
-    await writeFile(path, "", "utf8");
+    await resetMemoryFile(memoryPath());
     return true;
   });
 
@@ -70,4 +56,3 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
-
