@@ -127,6 +127,18 @@ export const sourceExtractionErrorSchema = z
   .object({ code: z.string().min(1), message: z.string().min(1), retryable: z.boolean() })
   .strict();
 
+export const synthesisReviewPayloadSchema = z.discriminatedUnion("decision", [
+  z
+    .object({
+      proposalId: z.string().min(1),
+      decision: z.literal("approved"),
+      elements: z.array(theoryElementPayloadSchema),
+      relationships: z.array(theoryRelationshipSchema)
+    })
+    .strict(),
+  z.object({ proposalId: z.string().min(1), decision: z.literal("rejected") }).strict()
+]);
+
 export type ExtractedSourceDocument = z.infer<typeof extractedSourceDocumentSchema>;
 export type NormalizedSourceFragment = z.infer<typeof normalizedSourceFragmentSchema>;
 export type SourceVersion = z.infer<typeof sourceVersionSchema>;
@@ -268,38 +280,22 @@ export function createSynthesisProposal(
   });
 }
 
-export function approvalEvents(proposal: SourceSynthesisProposal, createdAt: string): EvidenceEvent[] {
-  const parsed = sourceSynthesisProposalSchema.parse(proposal);
-  const review = proposalReviewEvent(parsed, "approved", createdAt);
-  const elementEvents: EvidenceEvent[] = parsed.elements.map((candidate) => ({
-    id: `evt-${candidate.element.id}`,
-    type: candidate.element.revisesElementId ? "theory.element_revised" : "theory.element_recorded",
-    kind: candidate.element.epistemicKind,
-    actor: "human",
-    createdAt,
-    summary: `${candidate.element.revisesElementId ? "Revised" : "Recorded"} ${candidate.element.title} from approved synthesis.`,
-    sourceIds: candidate.element.sourceIds,
-    payload: { element: candidate.element, proposalId: parsed.id }
-  }));
-  const relationshipEvents: EvidenceEvent[] = parsed.relationships.map((candidate) => ({
-    id: `evt-${candidate.relationship.id}`,
-    type: "theory.relationship_recorded",
-    kind: "agent_synthesis",
-    actor: "human",
-    createdAt,
-    summary: `Recorded approved ${candidate.relationship.kind} relationship.`,
-    sourceIds: candidate.relationship.sourceIds,
-    payload: { relationship: candidate.relationship, proposalId: parsed.id }
-  }));
-  return [review, ...elementEvents, ...relationshipEvents];
-}
-
 export function proposalReviewEvent(
   proposal: SourceSynthesisProposal,
   decision: "approved" | "rejected",
   createdAt: string
 ): EvidenceEvent {
   const parsed = sourceSynthesisProposalSchema.parse(proposal);
+  if (parsed.status !== "pending") throw new Error(`Synthesis proposal ${parsed.id} has already been reviewed.`);
+  const payload =
+    decision === "approved"
+      ? {
+          proposalId: parsed.id,
+          decision,
+          elements: parsed.elements.map((candidate) => candidate.element),
+          relationships: parsed.relationships.map((candidate) => candidate.relationship)
+        }
+      : { proposalId: parsed.id, decision };
   return {
     id: `evt-${parsed.id}-${decision}`,
     type: "theory.synthesis_reviewed",
@@ -308,6 +304,6 @@ export function proposalReviewEvent(
     createdAt,
     summary: `${decision === "approved" ? "Approved" : "Rejected"} synthesis proposal ${parsed.id}.`,
     sourceIds: [parsed.sourceId],
-    payload: { proposalId: parsed.id, decision }
+    payload: synthesisReviewPayloadSchema.parse(payload)
   };
 }

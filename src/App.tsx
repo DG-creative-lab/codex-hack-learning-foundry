@@ -2,12 +2,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
-import {
-  approvalEvents,
-  createSynthesisProposal,
-  normalizeExtractedDocument,
-  proposalReviewEvent
-} from "./domain/sourcePipeline";
+import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "./domain/sourcePipeline";
 import type { SourceOrigin, SourceRecord } from "./domain/sourceProjection";
 import type { EvidenceEvent, EvidenceKind } from "./domain/types";
 import { reduceWorkspace } from "./domain/workspaceProjection";
@@ -165,10 +160,10 @@ function App() {
     );
     await append(
       makeEvent(
-        "source.processing_completed",
-        "practical_observation",
-        "system",
-        `Extracted ${normalized.fragments.length} traceable fragments.`,
+        "source.synthesis_completed",
+        "agent_synthesis",
+        "agent",
+        `Extracted ${normalized.fragments.length} fragments and proposed ${proposal.elements.length} theory elements for review.`,
         [selectedSource.id],
         {
           sourceId: selectedSource.id,
@@ -177,18 +172,7 @@ function App() {
           format: result.document.format,
           outputs: { ...selectedSource.outputs, atoms: proposal.elements.length },
           version: normalized.version,
-          fragments: normalized.fragments
-        }
-      )
-    );
-    await append(
-      makeEvent(
-        "theory.synthesis_proposed",
-        "agent_synthesis",
-        "agent",
-        `Proposed ${proposal.elements.length} theory elements for review.`,
-        [selectedSource.id],
-        {
+          fragments: normalized.fragments,
           proposal
         }
       )
@@ -198,7 +182,7 @@ function App() {
   async function approveProposal(proposalId: string) {
     const proposal = workspace.synthesisProposals.find((candidate) => candidate.id === proposalId);
     if (proposal?.status !== "pending") return;
-    for (const event of approvalEvents(proposal, new Date().toISOString())) await append(event);
+    await append(proposalReviewEvent(proposal, "approved", new Date().toISOString()));
   }
 
   async function rejectProposal(proposalId: string) {

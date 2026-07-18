@@ -1,5 +1,5 @@
 import type { LivingTheoryMetadata } from "../domain/livingTheory";
-import { approvalEvents, createSynthesisProposal, normalizeExtractedDocument } from "../domain/sourcePipeline";
+import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "../domain/sourcePipeline";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
 import { capabilities, learningArtifacts, workspaceSources } from "./workspace";
 
@@ -98,9 +98,9 @@ const preparedTranscriptProposal = {
 
 const preparedTranscriptEvents: EvidenceEvent[] = [
   {
-    id: "evt-source-dense-by-design-extracted",
-    type: "source.processing_completed",
-    kind: "practical_observation",
+    id: "evt-source-dense-by-design-synthesized",
+    type: "source.synthesis_completed",
+    kind: "agent_synthesis",
     createdAt: "2026-07-14T10:00:10.000Z",
     actor: "system",
     summary: "Prepared transcript fragment normalized with timestamp provenance.",
@@ -110,20 +110,11 @@ const preparedTranscriptEvents: EvidenceEvent[] = [
       author: "Matthew Ström-Awn / Config 2026",
       outputs: { atoms: 9, lessons: 1, capabilities: 1 },
       version: preparedTranscriptExtraction.version,
-      fragments: preparedTranscriptExtraction.fragments
+      fragments: preparedTranscriptExtraction.fragments,
+      proposal: preparedTranscriptProposal
     }
   },
-  {
-    id: "evt-synthesis-dense-by-design-proposed",
-    type: "theory.synthesis_proposed",
-    kind: "agent_synthesis",
-    createdAt: "2026-07-14T10:00:15.000Z",
-    actor: "agent",
-    summary: "Prepared a traceable transcript claim for review.",
-    sourceIds: ["source-dense-by-design"],
-    payload: { proposal: preparedTranscriptProposal }
-  },
-  ...approvalEvents(preparedTranscriptProposal, "2026-07-14T10:00:20.000Z")
+  proposalReviewEvent(preparedTranscriptProposal, "approved", "2026-07-14T10:00:20.000Z")
 ];
 
 function learningSeedEvents(): EvidenceEvent[] {

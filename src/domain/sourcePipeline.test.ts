@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { deriveLivingTheory } from "./livingTheory";
 import {
-  approvalEvents,
   createSynthesisProposal,
   type ExtractedSourceDocument,
   normalizedSourceFragmentSchema,
@@ -87,12 +87,22 @@ describe("universal source pipeline", () => {
       "proposal-1",
       extractedAt
     );
-    const events = approvalEvents(proposal, extractedAt);
-    const element = events.find((event) => event.type === "theory.element_recorded")?.payload.element;
+    const event = proposalReviewEvent(proposal, "approved", extractedAt);
+    const element = Array.isArray(event.payload.elements) ? event.payload.elements[0] : undefined;
 
+    expect(event.type).toBe("theory.synthesis_reviewed");
     expect(proposal.elements[0]?.element.fragmentIds).toEqual([normalized.fragments[0]?.id]);
     expect(element).toMatchObject({ sourceIds: ["source-runtime"], fragmentIds: [normalized.fragments[0]?.id] });
     expect(normalized.fragments[0]?.location).toMatchObject({ label: "Lines 1-2", lineStart: 1, lineEnd: 2 });
+    const theory = deriveLivingTheory([event], {
+      id: "theory-atomic-approval",
+      title: "Atomic approval",
+      sourceIds: ["source-runtime"]
+    });
+    expect(theory.elements[0]).toMatchObject({
+      id: proposal.elements[0]?.element.id,
+      evidenceEventIds: [event.id]
+    });
   });
 
   it("marks unsupported and conflicting synthesis for review", () => {
@@ -153,9 +163,11 @@ describe("universal source pipeline", () => {
       id: "proposal-v2-element-1",
       revisesElementId: "proposal-v1-element-1"
     });
-    expect(approvalEvents(secondProposal, extractedAt).some((event) => event.type === "theory.element_revised")).toBe(
-      true
-    );
+    const approval = proposalReviewEvent(secondProposal, "approved", extractedAt);
+    expect(approval.payload).toMatchObject({
+      decision: "approved",
+      elements: [{ revisesElementId: "proposal-v1-element-1" }]
+    });
   });
 
   it("projects recoverable extraction failures explicitly", () => {
@@ -199,5 +211,145 @@ describe("universal source pipeline", () => {
       payload: { proposalId: proposal.id, decision: "rejected" }
     });
     expect(event.type).not.toMatch(/^theory\.(element|relationship)_/);
+  });
+
+  it("projects extraction and its proposal from one durable event", () => {
+    const normalized = normalizeExtractedDocument(
+      "source-runtime",
+      document("text", "8".repeat(64), "Density is contextual."),
+      extractedAt
+    );
+    const proposal = createSynthesisProposal(
+      "source-runtime",
+      normalized.version,
+      normalized.fragments,
+      "proposal-atomic",
+      extractedAt
+    );
+    const synthesis: EvidenceEvent = {
+      id: "evt-source-synthesis-atomic",
+      type: "source.synthesis_completed",
+      kind: "agent_synthesis",
+      actor: "agent",
+      createdAt: extractedAt,
+      summary: "Extracted and synthesized source.",
+      sourceIds: ["source-runtime"],
+      payload: {
+        sourceId: "source-runtime",
+        author: "Test author",
+        outputs: { atoms: 1, lessons: 0, capabilities: 0 },
+        version: normalized.version,
+        fragments: normalized.fragments,
+        proposal
+      }
+    };
+
+    const projection = deriveSourcePipeline([sourceEvent(), synthesis]);
+    expect(projection.sources[0]).toMatchObject({ status: "review", currentVersionId: normalized.version.id });
+    expect(projection.proposals).toEqual([proposal]);
+  });
+
+  it("rejects a versioned extraction without its synthesis proposal", () => {
+    const normalized = normalizeExtractedDocument(
+      "source-runtime",
+      document("text", "5".repeat(64), "Density is contextual."),
+      extractedAt
+    );
+    const incomplete: EvidenceEvent = {
+      id: "evt-source-extraction-incomplete",
+      type: "source.processing_completed",
+      kind: "practical_observation",
+      actor: "system",
+      createdAt: extractedAt,
+      summary: "Extracted without synthesis.",
+      sourceIds: ["source-runtime"],
+      payload: {
+        sourceId: "source-runtime",
+        author: "Test author",
+        outputs: { atoms: 1, lessons: 0, capabilities: 0 },
+        version: normalized.version,
+        fragments: normalized.fragments
+      }
+    };
+
+    expect(() => deriveSourcePipeline([sourceEvent(), incomplete])).toThrow();
+  });
+
+  it("only permits pending proposals to be reviewed", () => {
+    const normalized = normalizeExtractedDocument(
+      "source-runtime",
+      document("text", "7".repeat(64), "Density is contextual."),
+      extractedAt
+    );
+    const proposal = createSynthesisProposal(
+      "source-runtime",
+      normalized.version,
+      normalized.fragments,
+      "proposal-once",
+      extractedAt
+    );
+    const synthesis: EvidenceEvent = {
+      id: "evt-source-synthesis-once",
+      type: "source.synthesis_completed",
+      kind: "agent_synthesis",
+      actor: "agent",
+      createdAt: extractedAt,
+      summary: "Extracted and synthesized source.",
+      sourceIds: ["source-runtime"],
+      payload: {
+        sourceId: "source-runtime",
+        author: "Test author",
+        outputs: { atoms: 1, lessons: 0, capabilities: 0 },
+        version: normalized.version,
+        fragments: normalized.fragments,
+        proposal
+      }
+    };
+    const approved = proposalReviewEvent(proposal, "approved", extractedAt);
+    const rejected = { ...proposalReviewEvent(proposal, "rejected", extractedAt), id: "evt-proposal-rejected-later" };
+
+    expect(() => deriveSourcePipeline([sourceEvent(), synthesis, approved, rejected])).toThrow(
+      "cannot transition from approved to rejected"
+    );
+  });
+
+  it("rejects an approval payload that differs from its pending proposal", () => {
+    const normalized = normalizeExtractedDocument(
+      "source-runtime",
+      document("text", "6".repeat(64), "Density is contextual."),
+      extractedAt
+    );
+    const proposal = createSynthesisProposal(
+      "source-runtime",
+      normalized.version,
+      normalized.fragments,
+      "proposal-tampered",
+      extractedAt
+    );
+    const synthesis: EvidenceEvent = {
+      id: "evt-source-synthesis-tampered",
+      type: "source.synthesis_completed",
+      kind: "agent_synthesis",
+      actor: "agent",
+      createdAt: extractedAt,
+      summary: "Extracted and synthesized source.",
+      sourceIds: ["source-runtime"],
+      payload: {
+        sourceId: "source-runtime",
+        author: "Test author",
+        outputs: { atoms: 1, lessons: 0, capabilities: 0 },
+        version: normalized.version,
+        fragments: normalized.fragments,
+        proposal
+      }
+    };
+    const approval = proposalReviewEvent(proposal, "approved", extractedAt);
+    const elements = structuredClone(approval.payload.elements) as Array<Record<string, unknown>>;
+    if (elements[0]) elements[0].statement = "A different statement.";
+    approval.payload = { ...approval.payload, elements };
+
+    expect(() => deriveSourcePipeline([sourceEvent(), synthesis, approval])).toThrow(
+      "does not match proposal proposal-tampered"
+    );
   });
 });

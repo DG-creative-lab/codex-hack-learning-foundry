@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "cheerio": "^1.2.0",
+    "ipaddr.js": "^2.4.0",
     "lucide-react": "^0.454.0",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.1.2",

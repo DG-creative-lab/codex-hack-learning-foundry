@@ -32,11 +32,11 @@ Practical outcomes and user feedback append new evidence to the canonical layer.
 
 The desktop boundary supports approved HTTPS pages and local `.txt`, `.md`, `.markdown`, and `.pdf` files. Cheerio extracts meaningful HTML blocks and PDF.js extracts page text. The online adapter rejects credentials, custom ports, loopback hosts, and private-network addresses, follows at most three validated redirects, and limits source size.
 
-Every adapter returns the same extracted-document contract. The domain layer then emits:
+Every adapter returns the same extracted-document contract. The domain layer then emits two atomic transitions:
 
-1. `source.processing_completed` with an immutable content-addressed source version and normalized fragments.
-2. `theory.synthesis_proposed` with candidate elements, relationships, confidence, support state, and fragment IDs.
-3. `theory.synthesis_reviewed` with an explicit human approval or rejection.
-4. Theory element and relationship events only after approval.
+1. `source.synthesis_completed` with an immutable content-addressed source version, normalized fragments, and its reviewable proposal.
+2. `theory.synthesis_reviewed` with an explicit human rejection or an approval carrying the accepted elements and relationships from which Living Theory is projected.
+
+The desktop online adapter validates every DNS answer as public and pins the HTTPS connection to the selected validated address while preserving the source hostname for TLS and HTTP. Response bodies are streamed under a hard byte cap, and both DNS and HTTP operations have deadlines.
 
 Source changes produce a new version linked by `previousVersionId`. Candidates at a stable source position revise the previously approved element with a new theory ID; the earlier element remains superseded in the Living Theory projection.

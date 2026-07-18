@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
 import { lookup as dnsLookup } from "node:dns/promises";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
+import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { basename, extname } from "node:path";
 import { load } from "cheerio";
+import ipaddr from "ipaddr.js";
 
 const maxSourceBytes = 12 * 1024 * 1024;
+const requestDeadlineMs = 15_000;
 const allowedTextExtensions = new Set([".txt", ".md", ".markdown"]);
 
 function extractionError(code, message, retryable = true) {
@@ -66,6 +69,9 @@ export async function extractLocalSource(path) {
   if (extension !== ".pdf" && !allowedTextExtensions.has(extension)) {
     throw extractionError("unsupported_file", "Use a PDF, plain-text, or Markdown file.", false);
   }
+  const file = await stat(path);
+  if (!file.isFile()) throw extractionError("invalid_source", "The selected source is not a file.", false);
+  if (file.size > maxSourceBytes) throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
   const buffer = await readFile(path);
   if (buffer.byteLength > maxSourceBytes)
     throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
@@ -80,34 +86,115 @@ export async function extractLocalSource(path) {
   };
 }
 
-function isPrivateAddress(address) {
-  if (address === "::1" || address.startsWith("fc") || address.startsWith("fd") || address.startsWith("fe80:"))
-    return true;
-  if (address.startsWith("::ffff:")) return isPrivateAddress(address.slice(7));
-  const parts = address.split(".").map(Number);
-  if (parts.length !== 4 || parts.some(Number.isNaN)) return false;
-  return (
-    parts[0] === 10 ||
-    parts[0] === 127 ||
-    (parts[0] === 169 && parts[1] === 254) ||
-    (parts[0] === 172 && (parts[1] ?? 0) >= 16 && (parts[1] ?? 0) <= 31) ||
-    (parts[0] === 192 && parts[1] === 168) ||
-    parts[0] === 0
-  );
+export function isPublicAddress(address) {
+  try {
+    return ipaddr.parse(address.split("%", 1)[0]).range() === "unicast";
+  } catch {
+    return false;
+  }
 }
 
-async function assertPublicUrl(rawUrl, lookup = dnsLookup) {
+function withDeadline(operation, deadlineMs) {
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(
+      () => reject(extractionError("request_timeout", "The source request exceeded its deadline.")),
+      deadlineMs
+    );
+    operation.then(
+      (value) => {
+        clearTimeout(deadline);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(deadline);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function resolvePublicTarget(rawUrl, lookup = dnsLookup, deadlineMs = requestDeadlineMs) {
   const url = new URL(rawUrl);
   if (url.protocol !== "https:") throw extractionError("unsafe_url", "Online sources must use HTTPS.", false);
   if (url.username || url.password || url.port)
     throw extractionError("unsafe_url", "Credentials and custom ports are not allowed.", false);
   if (url.hostname === "localhost")
     throw extractionError("unsafe_url", "Local network sources are not allowed.", false);
-  const addresses = isIP(url.hostname) ? [{ address: url.hostname }] : await lookup(url.hostname, { all: true });
-  if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
-    throw extractionError("unsafe_url", "Private network sources are not allowed.", false);
+  const addresses = isIP(url.hostname)
+    ? [{ address: url.hostname, family: isIP(url.hostname) }]
+    : await withDeadline(lookup(url.hostname, { all: true, verbatim: true }), deadlineMs);
+  if (addresses.length === 0 || addresses.some(({ address }) => !isPublicAddress(address))) {
+    throw extractionError("unsafe_url", "Only public network sources are allowed.", false);
   }
-  return url;
+  return { url, target: addresses[0] };
+}
+
+function pinnedLookup(target) {
+  return (_hostname, options, callback) => {
+    if (options?.all) callback(null, [target]);
+    else callback(null, target.address, target.family);
+  };
+}
+
+function requestPinnedHtml(url, target, requestImpl, deadlineMs) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let deadline;
+    const finish = (error, result) => {
+      if (settled) return;
+      settled = true;
+      if (deadline) clearTimeout(deadline);
+      if (error) reject(error);
+      else resolve(result);
+    };
+    const request = requestImpl(
+      url,
+      {
+        method: "GET",
+        agent: false,
+        servername: url.hostname,
+        lookup: pinnedLookup(target),
+        headers: { accept: "text/html,application/xhtml+xml", "user-agent": "LearningFoundry/0.1 source extractor" }
+      },
+      (response) => {
+        const contentLength = Number(response.headers["content-length"] ?? 0);
+        if (Number.isFinite(contentLength) && contentLength > maxSourceBytes) {
+          response.destroy();
+          finish(extractionError("source_too_large", "Source exceeds the 12 MB limit.", false));
+          return;
+        }
+        const chunks = [];
+        let bytes = 0;
+        response.on("data", (chunk) => {
+          bytes += chunk.length;
+          if (bytes > maxSourceBytes) {
+            const error = extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
+            response.destroy();
+            request.destroy();
+            finish(error);
+            return;
+          }
+          chunks.push(chunk);
+        });
+        response.on("end", () =>
+          finish(undefined, {
+            status: response.statusCode ?? 0,
+            headers: response.headers,
+            html: Buffer.concat(chunks).toString("utf8")
+          })
+        );
+        response.on("aborted", () => finish(extractionError("fetch_failed", "The source response was interrupted.")));
+        response.on("error", (error) => finish(error));
+      }
+    );
+    deadline = setTimeout(() => {
+      const error = extractionError("request_timeout", "The source request exceeded its deadline.");
+      request.destroy();
+      finish(error);
+    }, deadlineMs);
+    request.on("error", (error) => finish(error));
+    request.end();
+  });
 }
 
 function htmlUnits(html, url) {
@@ -129,36 +216,29 @@ function htmlUnits(html, url) {
 }
 
 export async function extractOnlineSource(rawUrl, dependencies = {}) {
-  const fetchImpl = dependencies.fetchImpl ?? fetch;
   const lookup = dependencies.lookup ?? dnsLookup;
-  let url = await assertPublicUrl(rawUrl, lookup);
+  const requestImpl = dependencies.requestImpl ?? httpsRequest;
+  const deadlineMs = dependencies.deadlineMs ?? requestDeadlineMs;
+  let current = await resolvePublicTarget(rawUrl, lookup, deadlineMs);
   for (let redirects = 0; redirects <= 3; redirects += 1) {
-    const response = await fetchImpl(url, {
-      redirect: "manual",
-      headers: { "user-agent": "LearningFoundry/0.1 source extractor" }
-    });
+    const response = await requestPinnedHtml(current.url, current.target, requestImpl, deadlineMs);
     if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location || redirects === 3)
+      const location = response.headers.location;
+      if (typeof location !== "string" || redirects === 3)
         throw extractionError("redirect_failed", "The source redirected too many times.");
-      url = await assertPublicUrl(new URL(location, url).toString(), lookup);
+      current = await resolvePublicTarget(new URL(location, current.url).toString(), lookup, deadlineMs);
       continue;
     }
-    if (!response.ok) throw extractionError("fetch_failed", `The source returned HTTP ${response.status}.`);
-    const contentLength = Number(response.headers.get("content-length") ?? 0);
-    if (contentLength > maxSourceBytes)
-      throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
-    const html = await response.text();
-    if (Buffer.byteLength(html) > maxSourceBytes)
-      throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
-    const units = htmlUnits(html, url);
+    if (response.status < 200 || response.status >= 300)
+      throw extractionError("fetch_failed", `The source returned HTTP ${response.status}.`);
+    const units = htmlUnits(response.html, current.url);
     if (units.length === 0) throw extractionError("empty_source", "No readable article text was found at this URL.");
-    const $ = load(html);
+    const $ = load(response.html);
     return {
-      title: $("title").first().text().trim() || url.hostname,
-      author: $("meta[name='author']").attr("content")?.trim() || url.hostname,
+      title: $("title").first().text().trim() || current.url.hostname,
+      author: $("meta[name='author']").attr("content")?.trim() || current.url.hostname,
       format: "Web page",
-      fingerprint: fingerprint(Buffer.from(html)),
+      fingerprint: fingerprint(Buffer.from(response.html)),
       units
     };
   }
@@ -166,9 +246,14 @@ export async function extractOnlineSource(rawUrl, dependencies = {}) {
 }
 
 export function serializeExtractionError(error) {
+  const invalidRequest = error?.name === "ZodError";
   return {
-    code: typeof error?.code === "string" ? error.code : "extraction_failed",
-    message: error instanceof Error ? error.message : String(error),
-    retryable: typeof error?.retryable === "boolean" ? error.retryable : true
+    code: invalidRequest ? "invalid_request" : typeof error?.code === "string" ? error.code : "extraction_failed",
+    message: invalidRequest
+      ? "The source extraction request is invalid."
+      : error instanceof Error
+        ? error.message
+        : String(error),
+    retryable: invalidRequest ? false : typeof error?.retryable === "boolean" ? error.retryable : true
   };
 }
