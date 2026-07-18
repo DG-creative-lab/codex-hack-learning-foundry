@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { capabilityStatusSchema } from "../../shared/capability-status.js";
 import { evidenceEventSchema, evidenceKindSchema } from "../../shared/evidence-event.js";
 
-export { evidenceEventSchema, evidenceKindSchema };
+export { capabilityStatusSchema, evidenceEventSchema, evidenceKindSchema };
 
 export type EvidenceKind = z.infer<typeof evidenceKindSchema>;
 export type EvidenceEvent = z.infer<typeof evidenceEventSchema>;
@@ -97,17 +98,6 @@ export type TheoryRelationship = z.infer<typeof theoryRelationshipSchema>;
 export type LivingTheory = z.infer<typeof livingTheorySchema>;
 
 export type StageId = "source" | "learn" | "forge" | "evaluate" | "evolve";
-export const capabilityStatusSchema = z.enum([
-  "captured",
-  "synthesized",
-  "drafted",
-  "sandboxed",
-  "evaluated",
-  "approved",
-  "active",
-  "revised",
-  "deprecated"
-]);
 export type CapabilityStatus = z.infer<typeof capabilityStatusSchema>;
 
 export interface DensityPrinciple {

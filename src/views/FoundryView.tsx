@@ -1,13 +1,12 @@
 import { Check, ExternalLink, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { capabilityStatusValues } from "../../shared/capability-status.js";
 import { capabilities } from "../data/workspace";
-
-const lifecycle = ["captured", "synthesized", "drafted", "sandboxed", "evaluated", "approved", "active"];
 
 export function FoundryView() {
   const [selectedId, setSelectedId] = useState(capabilities[0].id);
   const capability = capabilities.find((item) => item.id === selectedId) ?? capabilities[0];
-  const currentStep = lifecycle.indexOf(capability.status);
+  const currentStep = capabilityStatusValues.indexOf(capability.status);
 
   return (
     <div className="page-scroll foundry-view">
@@ -29,7 +28,7 @@ export function FoundryView() {
           <div className="capability-stats"><p><strong>{capability.sources}</strong><span>sources</span></p><p><strong>{capability.evaluations}</strong><span>evaluations</span></p><p><strong>{capability.executions}</strong><span>executions</span></p></div>
           <div className="lifecycle">
             <p className="eyebrow">Controlled evolution</p>
-            {lifecycle.map((step, index) => {
+            {capabilityStatusValues.map((step, index) => {
               const reached = index <= currentStep;
               return <div key={step} className={reached ? "reached" : ""}><i>{reached ? <Check size={11} /> : index + 1}</i><span>{step}</span></div>;
             })}
