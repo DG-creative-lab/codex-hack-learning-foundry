@@ -1,4 +1,4 @@
-import { evidenceEventSchema, livingTheorySchema, type EvidenceEvent, type LivingTheory } from "./types";
+import { type EvidenceEvent, evidenceEventSchema, type LivingTheory, livingTheorySchema } from "./types";
 
 export interface TheoryReferenceProjection {
   theoryId: string;

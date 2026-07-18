@@ -41,7 +41,9 @@ function parseMemoryLine(raw, line, events, rejected) {
 export function parseMemoryContents(contents) {
   const events = [];
   const rejected = [];
-  contents.split("\n").forEach((raw, index) => parseMemoryLine(raw, index + 1, events, rejected));
+  for (const [index, raw] of contents.split("\n").entries()) {
+    parseMemoryLine(raw, index + 1, events, rejected);
+  }
   return { events, rejected };
 }
 
@@ -71,12 +73,16 @@ export async function loadMemoryFile(path) {
 
   if (result.rejected.length > 0) {
     const rejectedPath = `${path}.rejected.jsonl`;
-    const rejectedLines = result.rejected.map((entry) => JSON.stringify({
-      rejectedAt: new Date().toISOString(),
-      sourceLine: entry.line,
-      reason: entry.reason,
-      raw: entry.raw
-    })).join("\n");
+    const rejectedLines = result.rejected
+      .map((entry) =>
+        JSON.stringify({
+          rejectedAt: new Date().toISOString(),
+          sourceLine: entry.line,
+          reason: entry.reason,
+          raw: entry.raw
+        })
+      )
+      .join("\n");
     await appendFile(rejectedPath, `${rejectedLines}\n`, "utf8");
 
     const recoveryPath = `${path}.recovery.tmp`;

@@ -1,4 +1,4 @@
-import { evidenceEventSchema, type EvidenceEvent } from "../domain/types";
+import { type EvidenceEvent, evidenceEventSchema } from "../domain/types";
 
 export interface StoredEvents {
   events: EvidenceEvent[];
@@ -17,7 +17,10 @@ export class EvidenceLedger {
   private readonly seedEvents: EvidenceEvent[];
   private readonly seedIds: Set<string>;
 
-  constructor(private readonly memory: EvidenceMemory, seedEvents: EvidenceEvent[]) {
+  constructor(
+    private readonly memory: EvidenceMemory,
+    seedEvents: EvidenceEvent[]
+  ) {
     this.seedEvents = evidenceEventSchema.array().parse(seedEvents);
     this.currentEvents = [...this.seedEvents];
     this.seedIds = new Set(this.seedEvents.map((event) => event.id));
@@ -49,10 +52,7 @@ export class EvidenceLedger {
         throw new Error(`Evidence event ID ${parsed.id} already exists`);
       }
 
-      const runtimeEvents = [
-        ...this.currentEvents.filter((current) => !this.seedIds.has(current.id)),
-        parsed
-      ];
+      const runtimeEvents = [...this.currentEvents.filter((current) => !this.seedIds.has(current.id)), parsed];
       await this.memory.append(parsed);
       this.currentEvents = [...this.seedEvents, ...runtimeEvents];
       return this.events;
@@ -69,7 +69,10 @@ export class EvidenceLedger {
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.operationQueue.then(operation);
-    this.operationQueue = result.then(() => undefined, () => undefined);
+    this.operationQueue = result.then(
+      () => undefined,
+      () => undefined
+    );
     return result;
   }
 

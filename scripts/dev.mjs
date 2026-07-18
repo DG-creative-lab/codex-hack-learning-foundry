@@ -34,4 +34,3 @@ process.on("SIGINT", () => {
   desktop.kill("SIGTERM");
   vite.kill("SIGTERM");
 });
-

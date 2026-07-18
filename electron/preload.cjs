@@ -5,4 +5,3 @@ contextBridge.exposeInMainWorld("foundryMemory", {
   append: (entry) => ipcRenderer.invoke("memory:append", entry),
   reset: () => ipcRenderer.invoke("memory:reset")
 });
-

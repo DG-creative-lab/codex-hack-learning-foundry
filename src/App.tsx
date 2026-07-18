@@ -14,7 +14,14 @@ import { LearnView } from "./views/LearnView";
 import { MemoryView } from "./views/MemoryView";
 import { SourcesView } from "./views/SourcesView";
 
-function makeEvent(type: string, kind: EvidenceKind, actor: EvidenceEvent["actor"], summary: string, sourceIds: string[] = [], payload: Record<string, unknown> = {}): EvidenceEvent {
+function makeEvent(
+  type: string,
+  kind: EvidenceKind,
+  actor: EvidenceEvent["actor"],
+  summary: string,
+  sourceIds: string[] = [],
+  payload: Record<string, unknown> = {}
+): EvidenceEvent {
   return {
     id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type,
@@ -36,14 +43,15 @@ function App() {
   const [sourceInput, setSourceInput] = useState("");
   const sources = useMemo(() => deriveSources(events), [events]);
 
-  const livingTheory = useMemo(() => deriveLivingTheory(events, {
-    ...designDensityTheoryMetadata,
-    sourceIds: sources.map((source) => source.id)
-  }), [events, sources]);
-  const memoryProjections = useMemo(
-    () => deriveMemoryProjections(livingTheory, events),
-    [events, livingTheory]
+  const livingTheory = useMemo(
+    () =>
+      deriveLivingTheory(events, {
+        ...designDensityTheoryMetadata,
+        sourceIds: sources.map((source) => source.id)
+      }),
+    [events, sources]
   );
+  const memoryProjections = useMemo(() => deriveMemoryProjections(livingTheory, events), [events, livingTheory]);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];
   const pageTitles: Record<ViewId, [string, string]> = {
@@ -78,7 +86,11 @@ function App() {
       provenance: sourceInput,
       outputs: { atoms: 0, lessons: 0, capabilities: 0 }
     };
-    await append(makeEvent("source.registered", "source_fact", "system", `Captured ${title}; extraction is queued.`, [id], { source: record }));
+    await append(
+      makeEvent("source.registered", "source_fact", "system", `Captured ${title}; extraction is queued.`, [id], {
+        source: record
+      })
+    );
     setSelectedSourceId(id);
     setSourceInput("");
     setShowAddSource(false);
@@ -86,13 +98,31 @@ function App() {
 
   async function processSelectedSource() {
     if (!selectedSource || selectedSource.status === "ready") return;
-    await append(makeEvent("source.processing_started", "practical_observation", "system", `Extraction and provenance capture started for ${selectedSource.title}.`, [selectedSource.id], { sourceId: selectedSource.id, progress: 42 }));
+    await append(
+      makeEvent(
+        "source.processing_started",
+        "practical_observation",
+        "system",
+        `Extraction and provenance capture started for ${selectedSource.title}.`,
+        [selectedSource.id],
+        { sourceId: selectedSource.id, progress: 42 }
+      )
+    );
     window.setTimeout(() => {
-      void append(makeEvent("source.processing_completed", "agent_synthesis", "agent", `Structured knowledge and a learning-module proposal were produced from ${selectedSource.title}.`, [selectedSource.id], {
-        sourceId: selectedSource.id,
-        author: "Extracted source",
-        outputs: { atoms: 7, lessons: 1, capabilities: 0 }
-      })).catch(() => undefined);
+      void append(
+        makeEvent(
+          "source.processing_completed",
+          "agent_synthesis",
+          "agent",
+          `Structured knowledge and a learning-module proposal were produced from ${selectedSource.title}.`,
+          [selectedSource.id],
+          {
+            sourceId: selectedSource.id,
+            author: "Extracted source",
+            outputs: { atoms: 7, lessons: 1, capabilities: 0 }
+          }
+        )
+      ).catch(() => undefined);
     }, 900);
   }
 
@@ -113,14 +143,20 @@ function App() {
             <p>{pageTitles[view][1]}</p>
           </div>
           <div className="top-actions">
-            <button className="workspace-switcher"><span>Design intelligence</span><ChevronDown size={14} /></button>
-            <button className="primary-button" onClick={() => setShowAddSource(true)}><Plus size={15} /> Add source</button>
+            <button type="button" className="workspace-switcher">
+              <span>Design intelligence</span>
+              <ChevronDown size={14} />
+            </button>
+            <button type="button" className="primary-button" onClick={() => setShowAddSource(true)}>
+              <Plus size={15} /> Add source
+            </button>
           </div>
         </header>
 
         {(ledgerError || rejectedCount > 0) && (
           <p className="ledger-alert" role="status">
-            {ledgerError ?? `${rejectedCount} malformed memory ${rejectedCount === 1 ? "record was" : "records were"} quarantined.`}
+            {ledgerError ??
+              `${rejectedCount} malformed memory ${rejectedCount === 1 ? "record was" : "records were"} quarantined.`}
           </p>
         )}
 
