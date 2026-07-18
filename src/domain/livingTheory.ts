@@ -1,0 +1,101 @@
+import {
+  evidenceEventSchema,
+  livingTheorySchema,
+  theoryElementSchema,
+  theoryRelationshipSchema,
+  type EvidenceEvent,
+  type LivingTheory,
+  type TheoryElement,
+  type TheoryRelationship
+} from "./types";
+
+const elementEventTypes = new Set(["theory.element_recorded", "theory.element_revised"]);
+
+export interface LivingTheoryMetadata {
+  id: string;
+  title: string;
+  summary?: string;
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function elementFromEvent(event: EvidenceEvent): TheoryElement {
+  const rawElement = theoryElementSchema.parse(event.payload.element);
+  if (rawElement.epistemicKind !== event.kind) {
+    throw new Error(`Theory element ${rawElement.id} must use the epistemic kind of its evidence event.`);
+  }
+  return {
+    ...rawElement,
+    sourceIds: unique([...rawElement.sourceIds, ...event.sourceIds]),
+    evidenceEventIds: unique([...rawElement.evidenceEventIds, event.id])
+  };
+}
+
+function relationshipFromEvent(event: EvidenceEvent): TheoryRelationship {
+  const rawRelationship = theoryRelationshipSchema.parse(event.payload.relationship);
+  return {
+    ...rawRelationship,
+    sourceIds: unique([...rawRelationship.sourceIds, ...event.sourceIds]),
+    evidenceEventIds: unique([...rawRelationship.evidenceEventIds, event.id])
+  };
+}
+
+export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingTheoryMetadata): LivingTheory {
+  const events = evidenceEventSchema.array().parse(rawEvents);
+  const elements = new Map<string, TheoryElement>();
+  const relationships = new Map<string, TheoryRelationship>();
+  const theoryEventIds: string[] = [];
+
+  for (const event of events) {
+    if (elementEventTypes.has(event.type)) {
+      const element = elementFromEvent(event);
+
+      if (event.type === "theory.element_revised") {
+        if (!element.revisesElementId) {
+          throw new Error(`Theory revision ${event.id} must identify the element it revises.`);
+        }
+        const previous = elements.get(element.revisesElementId);
+        if (!previous) {
+          throw new Error(`Theory revision ${event.id} references missing element ${element.revisesElementId}.`);
+        }
+        elements.set(previous.id, { ...previous, status: "superseded" });
+      }
+
+      elements.set(element.id, element);
+      theoryEventIds.push(event.id);
+    }
+
+    if (event.type === "theory.relationship_recorded") {
+      const relationship = relationshipFromEvent(event);
+      relationships.set(relationship.id, relationship);
+      theoryEventIds.push(event.id);
+    }
+  }
+
+  for (const relationship of relationships.values()) {
+    if (!elements.has(relationship.fromElementId) || !elements.has(relationship.toElementId)) {
+      throw new Error(`Theory relationship ${relationship.id} references an unknown element.`);
+    }
+  }
+
+  const projectedElements = [...elements.values()];
+  const projectedRelationships = [...relationships.values()];
+
+  return livingTheorySchema.parse({
+    id: metadata.id,
+    title: metadata.title,
+    summary: metadata.summary ?? "",
+    revision: projectedElements.filter((element) => element.revisesElementId).length,
+    elementIds: projectedElements.map((element) => element.id),
+    elements: projectedElements,
+    relationshipIds: projectedRelationships.map((relationship) => relationship.id),
+    relationships: projectedRelationships,
+    sourceIds: unique([
+      ...projectedElements.flatMap((element) => element.sourceIds),
+      ...projectedRelationships.flatMap((relationship) => relationship.sourceIds)
+    ]),
+    evidenceEventIds: unique(theoryEventIds)
+  });
+}
