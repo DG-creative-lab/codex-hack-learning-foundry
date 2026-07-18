@@ -1,6 +1,7 @@
 import {
   evidenceEventSchema,
   livingTheorySchema,
+  theoryElementPayloadSchema,
   theoryElementSchema,
   theoryRelationshipSchema,
   type EvidenceEvent,
@@ -15,6 +16,7 @@ export interface LivingTheoryMetadata {
   id: string;
   title: string;
   summary?: string;
+  sourceIds: readonly string[];
 }
 
 function unique(values: string[]): string[] {
@@ -22,15 +24,15 @@ function unique(values: string[]): string[] {
 }
 
 function elementFromEvent(event: EvidenceEvent): TheoryElement {
-  const rawElement = theoryElementSchema.parse(event.payload.element);
+  const rawElement = theoryElementPayloadSchema.parse(event.payload.element);
   if (rawElement.epistemicKind !== event.kind) {
     throw new Error(`Theory element ${rawElement.id} must use the epistemic kind of its evidence event.`);
   }
-  return {
+  return theoryElementSchema.parse({
     ...rawElement,
     sourceIds: unique([...rawElement.sourceIds, ...event.sourceIds]),
     evidenceEventIds: unique([...rawElement.evidenceEventIds, event.id])
-  };
+  });
 }
 
 function relationshipFromEvent(event: EvidenceEvent): TheoryRelationship {
@@ -44,13 +46,26 @@ function relationshipFromEvent(event: EvidenceEvent): TheoryRelationship {
 
 export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingTheoryMetadata): LivingTheory {
   const events = evidenceEventSchema.array().parse(rawEvents);
+  const eventIds = new Set<string>();
   const elements = new Map<string, TheoryElement>();
   const relationships = new Map<string, TheoryRelationship>();
   const theoryEventIds: string[] = [];
 
   for (const event of events) {
+    if (eventIds.has(event.id)) {
+      throw new Error(`Evidence event ID ${event.id} is duplicated.`);
+    }
+    eventIds.add(event.id);
+
     if (elementEventTypes.has(event.type)) {
       const element = elementFromEvent(event);
+
+      if (event.type === "theory.element_revised" && element.id === element.revisesElementId) {
+        throw new Error(`Theory revision ${event.id} must use a new element ID.`);
+      }
+      if (elements.has(element.id)) {
+        throw new Error(`Theory element ID ${element.id} is duplicated.`);
+      }
 
       if (event.type === "theory.element_revised") {
         if (!element.revisesElementId) {
@@ -69,6 +84,9 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
 
     if (event.type === "theory.relationship_recorded") {
       const relationship = relationshipFromEvent(event);
+      if (relationships.has(relationship.id)) {
+        throw new Error(`Theory relationship ID ${relationship.id} is duplicated.`);
+      }
       relationships.set(relationship.id, relationship);
       theoryEventIds.push(event.id);
     }
@@ -80,6 +98,16 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
     }
   }
 
+  const knownSourceIds = new Set(metadata.sourceIds);
+  const referencedSourceIds = unique([
+    ...[...elements.values()].flatMap((element) => element.sourceIds),
+    ...[...relationships.values()].flatMap((relationship) => relationship.sourceIds)
+  ]);
+  const unknownSourceId = referencedSourceIds.find((sourceId) => !knownSourceIds.has(sourceId));
+  if (unknownSourceId) {
+    throw new Error(`Living Theory references unknown source ${unknownSourceId}.`);
+  }
+
   const projectedElements = [...elements.values()];
   const projectedRelationships = [...relationships.values()];
 
@@ -88,9 +116,7 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
     title: metadata.title,
     summary: metadata.summary ?? "",
     revision: projectedElements.filter((element) => element.revisesElementId).length,
-    elementIds: projectedElements.map((element) => element.id),
     elements: projectedElements,
-    relationshipIds: projectedRelationships.map((relationship) => relationship.id),
     relationships: projectedRelationships,
     sourceIds: unique([
       ...projectedElements.flatMap((element) => element.sourceIds),

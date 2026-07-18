@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { livingTheory, principles, seedEvents } from "../data/sample";
+import { designDensityTheoryMetadata, principles, seedEvents } from "../data/sample";
 import { deriveLivingTheory } from "./livingTheory";
-import { evidenceEventSchema, type EvidenceEvent } from "./types";
+import { deriveMemoryProjections } from "./memoryProjections";
+import { evidenceEventSchema, livingTheorySchema, type EvidenceEvent } from "./types";
+
+const livingTheory = deriveLivingTheory(seedEvents, designDensityTheoryMetadata);
 
 describe("evidence ledger contract", () => {
   it("accepts the prepared seed events", () => {
@@ -41,6 +44,126 @@ describe("living theory projection", () => {
     expect(sourceFacts.every((element) => element.sourceIds.length > 0 && element.evidenceEventIds.length > 0)).toBe(true);
   });
 
+  it("rejects duplicate evidence event IDs", () => {
+    expect(() => deriveLivingTheory([seedEvents[0], seedEvents[0]], designDensityTheoryMetadata))
+      .toThrow(`Evidence event ID ${seedEvents[0]?.id} is duplicated`);
+  });
+
+  it("rejects duplicate theory element IDs", () => {
+    const original = seedEvents.find((event) => event.type === "theory.element_recorded");
+    expect(original).toBeDefined();
+    const duplicate = { ...original!, id: "evt-duplicate-theory-element" };
+
+    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata))
+      .toThrow("Theory element ID theory-purpose-review-value is duplicated");
+  });
+
+  it("rejects duplicate theory relationship IDs", () => {
+    const original = seedEvents.find((event) => event.type === "theory.relationship_recorded");
+    expect(original).toBeDefined();
+    const duplicate = { ...original!, id: "evt-duplicate-theory-relationship" };
+
+    expect(() => deriveLivingTheory([...seedEvents, duplicate], designDensityTheoryMetadata))
+      .toThrow("Theory relationship ID theory-relation-purpose-accessibility is duplicated");
+  });
+
+  it("requires a revision to use a different element ID", () => {
+    const invalidRevision: EvidenceEvent = {
+      id: "evt-theory-purpose-invalid-revision",
+      type: "theory.element_revised",
+      kind: "user_interpretation",
+      createdAt: "2026-07-14T10:30:00.000Z",
+      actor: "human",
+      summary: "Invalid in-place theory revision.",
+      sourceIds: [],
+      payload: {
+        element: {
+          id: "theory-purpose-review-value",
+          kind: "purpose",
+          title: "Invalid in-place revision",
+          statement: "A revision cannot erase its predecessor.",
+          epistemicKind: "user_interpretation",
+          status: "active",
+          sourceIds: [],
+          evidenceEventIds: [],
+          revisesElementId: "theory-purpose-review-value"
+        }
+      }
+    };
+
+    expect(() => deriveLivingTheory([...seedEvents, invalidRevision], designDensityTheoryMetadata))
+      .toThrow("must use a new element ID");
+  });
+
+  it("rejects source facts without merged provenance", () => {
+    const ungroundedFact: EvidenceEvent = {
+      id: "evt-theory-ungrounded-fact",
+      type: "theory.element_recorded",
+      kind: "source_fact",
+      createdAt: "2026-07-14T10:31:00.000Z",
+      actor: "system",
+      summary: "Ungrounded source fact.",
+      sourceIds: [],
+      payload: {
+        element: {
+          id: "theory-ungrounded-fact",
+          kind: "concept",
+          title: "Ungrounded fact",
+          statement: "This statement has no source provenance.",
+          epistemicKind: "source_fact",
+          status: "active",
+          sourceIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+
+    expect(() => deriveLivingTheory([ungroundedFact], {
+      id: "theory-ungrounded-test",
+      title: "Ungrounded test",
+      sourceIds: []
+    })).toThrow("Source facts must reference at least one source");
+  });
+
+  it("accepts source-fact provenance supplied by the evidence envelope", () => {
+    const envelopedFact: EvidenceEvent = {
+      id: "evt-theory-enveloped-fact",
+      type: "theory.element_recorded",
+      kind: "source_fact",
+      createdAt: "2026-07-14T10:32:00.000Z",
+      actor: "system",
+      summary: "Source provenance is carried by the event envelope.",
+      sourceIds: ["source-a"],
+      payload: {
+        element: {
+          id: "theory-enveloped-fact",
+          kind: "concept",
+          title: "Envelope-grounded fact",
+          statement: "The projector merges event and element provenance before validation.",
+          epistemicKind: "source_fact",
+          status: "active",
+          sourceIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+
+    const theory = deriveLivingTheory([envelopedFact], {
+      id: "theory-envelope-provenance-test",
+      title: "Envelope provenance test",
+      sourceIds: ["source-a"]
+    });
+
+    expect(theory.elements[0]?.sourceIds).toEqual(["source-a"]);
+  });
+
+  it("rejects provenance outside the approved source registry", () => {
+    expect(() => deriveLivingTheory(seedEvents, {
+      ...designDensityTheoryMetadata,
+      sourceIds: ["source-ui-density-2024"]
+    })).toThrow("references unknown source source-wcag-target-size");
+  });
+
   it("preserves the prior element when a revision supersedes it", () => {
     const original = livingTheory.elements.find((element) => element.id === "theory-purpose-review-value");
     expect(original).toBeDefined();
@@ -70,7 +193,8 @@ describe("living theory projection", () => {
 
     const revised = deriveLivingTheory([...seedEvents, revision], {
       id: livingTheory.id,
-      title: livingTheory.title
+      title: livingTheory.title,
+      sourceIds: designDensityTheoryMetadata.sourceIds
     });
 
     expect(revised.revision).toBe(1);
@@ -145,7 +269,8 @@ describe("living theory projection", () => {
 
     const theory = deriveLivingTheory(contradictionEvents, {
       id: "theory-contradiction-test",
-      title: "Contradiction test"
+      title: "Contradiction test",
+      sourceIds: ["source-a", "source-b"]
     });
 
     expect(theory.elements).toHaveLength(2);
@@ -178,7 +303,8 @@ describe("living theory projection", () => {
 
     expect(() => deriveLivingTheory([mismatchedEvent], {
       id: "theory-mismatched-kind-test",
-      title: "Mismatched kind test"
+      title: "Mismatched kind test",
+      sourceIds: ["source-a"]
     })).toThrow("must use the epistemic kind of its evidence event");
   });
 
@@ -205,8 +331,75 @@ describe("living theory projection", () => {
 
     expect(() => deriveLivingTheory([...seedEvents, invalidRelationship], {
       id: livingTheory.id,
-      title: livingTheory.title
+      title: livingTheory.title,
+      sourceIds: designDensityTheoryMetadata.sourceIds
     })).toThrow("references an unknown element");
+  });
+
+  it("does not expose independently mutable element or relationship ID arrays", () => {
+    expect(livingTheorySchema.safeParse({
+      ...livingTheory,
+      elementIds: ["missing"],
+      relationshipIds: ["missing"]
+    }).success).toBe(false);
+  });
+
+  it("rejects duplicate identities at the public aggregate boundary", () => {
+    expect(livingTheorySchema.safeParse({
+      ...livingTheory,
+      elements: [...livingTheory.elements, livingTheory.elements[0]]
+    }).success).toBe(false);
+    expect(livingTheorySchema.safeParse({
+      ...livingTheory,
+      relationships: [...livingTheory.relationships, livingTheory.relationships[0]]
+    }).success).toBe(false);
+  });
+});
+
+describe("memory projections", () => {
+  it("references the live theory from both human and agent states", () => {
+    const projections = deriveMemoryProjections(livingTheory, seedEvents);
+    const activeElementIds = livingTheory.elements
+      .filter((element) => element.status !== "superseded")
+      .map((element) => element.id);
+
+    expect(projections.human.theoryId).toBe(livingTheory.id);
+    expect(projections.agent.theoryId).toBe(livingTheory.id);
+    expect(projections.human.theoryElementIds).toEqual(activeElementIds);
+    expect(projections.agent.theoryElementIds).toEqual(activeElementIds);
+  });
+
+  it("updates both projections when a runtime ledger event revises the theory", () => {
+    const revision: EvidenceEvent = {
+      id: "evt-theory-runtime-revision",
+      type: "theory.element_revised",
+      kind: "user_interpretation",
+      createdAt: "2026-07-14T12:00:00.000Z",
+      actor: "human",
+      summary: "Refined the theory during a live learning session.",
+      sourceIds: [],
+      payload: {
+        element: {
+          id: "theory-purpose-review-value-runtime",
+          kind: "purpose",
+          title: "Review for situated value",
+          statement: "Evaluate density for a named user in a specific workflow.",
+          epistemicKind: "user_interpretation",
+          status: "active",
+          sourceIds: [],
+          evidenceEventIds: [],
+          revisesElementId: "theory-purpose-review-value"
+        }
+      }
+    };
+    const runtimeEvents = [...seedEvents, revision];
+    const runtimeTheory = deriveLivingTheory(runtimeEvents, designDensityTheoryMetadata);
+    const projections = deriveMemoryProjections(runtimeTheory, runtimeEvents);
+
+    expect(projections.human.theoryElementIds).toContain("theory-purpose-review-value-runtime");
+    expect(projections.agent.theoryElementIds).toContain("theory-purpose-review-value-runtime");
+    expect(projections.human.theoryElementIds).not.toContain("theory-purpose-review-value");
+    expect(projections.human.contributedTheoryElementIds).toContain("theory-purpose-review-value-runtime");
   });
 });
 

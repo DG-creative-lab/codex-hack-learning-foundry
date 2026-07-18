@@ -1,4 +1,4 @@
-import { deriveLivingTheory } from "../domain/livingTheory";
+import type { LivingTheoryMetadata } from "../domain/livingTheory";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
 
 export const source = {
@@ -180,11 +180,12 @@ export const seedEvents: EvidenceEvent[] = [
   }
 ];
 
-export const livingTheory = deriveLivingTheory(seedEvents, {
+export const designDensityTheoryMetadata: LivingTheoryMetadata = {
   id: "theory-design-density",
   title: "Design density",
-  summary: "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints."
-});
+  summary: "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
+  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
+};
 
 export const evaluationCases: EvaluationCase[] = [
   {

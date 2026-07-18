@@ -22,9 +22,20 @@ A Living Theory contains:
 
 The ledger remains canonical. Living Theory is a rebuildable projection and cannot silently resolve contradictions, activate capabilities, or overwrite source evidence.
 
+The application derives this projection from the complete runtime ledger, not from prepared sample output. Human and agent memory projections both reference the same Living Theory ID and active element IDs while retaining their own contribution and evidence sets.
+
+Projection boundaries enforce the following invariants:
+
+- Evidence event, theory element, and relationship IDs are unique.
+- A revision has a new ID and preserves its superseded predecessor.
+- Source facts retain provenance after event-envelope and element provenance are merged.
+- Every referenced source exists in the approved source registry supplied to the projection.
+- Aggregate identity is derived from element and relationship objects rather than duplicated ID arrays.
+
 ## Consequences
 
 - Sources, human learning, agent memory, and capabilities can reference stable theory identifiers.
+- Runtime evidence immediately updates the shared theory and both memory projections.
 - Unsupported questions and interpretations remain useful when they are explicitly classified.
 - Relationship endpoints are validated during projection so broken theory graphs fail visibly.
 - Later learning and memory work can add evidence without changing the canonical storage contract.
