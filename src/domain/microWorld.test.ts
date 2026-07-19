@@ -74,6 +74,19 @@ describe("micro-world artifacts", () => {
         )
       })
     ).toThrow("initial value must align");
+    expect(() =>
+      microWorldArtifactSchema.parse({
+        ...preparedDensityMicroWorld,
+        prediction: {
+          ...preparedDensityMicroWorld.prediction,
+          options: preparedDensityMicroWorld.prediction.options.map((option, index) =>
+            index === 0
+              ? { ...option, expectedChanges: [{ outcomeId: "unknown-outcome", direction: "increase" }] }
+              : option
+          )
+        }
+      })
+    ).toThrow("unknown outcome");
   });
 
   it("replays prediction, interaction, and reflection as separate immutable evidence", () => {

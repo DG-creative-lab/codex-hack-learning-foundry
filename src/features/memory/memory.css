@@ -565,6 +565,375 @@
   color: var(--yellow) !important;
 }
 
+.understanding-gap-section {
+  margin-top: 32px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.gap-section-heading {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+  min-height: 112px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--ink);
+}
+
+.gap-section-heading > div {
+  grid-column: 1 / span 8;
+  padding-left: 14px;
+}
+
+.gap-section-heading > p {
+  grid-column: 10 / -1;
+  margin: 0;
+  padding: 0 14px;
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gap-section-heading h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 500;
+}
+
+.gap-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--ink);
+}
+
+.gap-summary > div {
+  min-height: 78px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--line);
+}
+
+.gap-summary > div:last-child {
+  border-right: 0;
+}
+
+.gap-summary strong,
+.gap-summary span {
+  display: block;
+}
+
+.gap-summary strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.gap-summary span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.gap-inspection-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(360px, 5fr);
+  min-height: 540px;
+}
+
+.gap-register {
+  min-width: 0;
+}
+
+.gap-register > header,
+.gap-register > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 84px;
+  gap: 14px;
+  align-items: center;
+}
+
+.gap-register > header {
+  min-height: 38px;
+  padding: 0 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.gap-register > button {
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  color: var(--ink);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gap-register > button:hover,
+.gap-register > button.selected {
+  background: #fff;
+}
+
+.gap-register > button.selected {
+  border-left-color: var(--signal);
+}
+
+.gap-register > button:focus-visible,
+.gap-intervention button:focus-visible,
+.gap-review-actions button:focus-visible,
+.gap-annotation button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+.gap-register > button small,
+.gap-register > button strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.gap-register > button small {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.gap-register > button strong {
+  font-size: 13px;
+}
+
+.gap-register > button > span:not(:first-child),
+[data-gap-level],
+[data-gap-status] {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+[data-gap-level="notice"] {
+  color: var(--blue) !important;
+}
+
+[data-gap-level="attention"] {
+  color: var(--yellow) !important;
+}
+
+[data-gap-level="priority"] {
+  color: var(--signal) !important;
+}
+
+[data-gap-status="dismissed"] {
+  color: var(--muted) !important;
+}
+
+[data-gap-status="confirmed"] {
+  color: var(--blue) !important;
+}
+
+.gap-inspector {
+  min-width: 0;
+  border-left: 1px solid var(--ink);
+  background: #fff;
+}
+
+.gap-inspector-heading {
+  padding: 18px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.gap-inspector-heading h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.gap-inspector-heading > p:not(.eyebrow) {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gap-inspector-heading dl {
+  margin: 16px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.gap-inspector-heading dl > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.gap-inspector-heading dt,
+.gap-inspector-heading dd {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.gap-inspector-heading dt {
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.gap-inspector-heading dd {
+  overflow-wrap: anywhere;
+}
+
+.gap-inspector-heading .gap-caveat {
+  color: var(--signal);
+}
+
+.gap-intervention,
+.gap-review-state,
+.gap-annotation,
+.gap-annotation-history {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.gap-intervention button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 0;
+  color: var(--ink);
+  border: 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gap-review-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.gap-review-actions button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+}
+
+.gap-review-actions button:last-child {
+  border-right: 0;
+}
+
+.gap-review-actions button:hover,
+.gap-annotation button:hover {
+  background: var(--panel);
+}
+
+.gap-review-actions button:disabled,
+.gap-annotation button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.gap-review-state > span {
+  display: block;
+}
+
+.gap-review-state p,
+.gap-review-state code,
+.gap-annotation-history p,
+.gap-annotation-history code {
+  display: block;
+  margin: 7px 0 0;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.gap-review-state code,
+.gap-annotation-history code {
+  color: var(--muted);
+}
+
+.gap-annotation label,
+.gap-annotation-history h4 {
+  display: block;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gap-annotation textarea {
+  width: 100%;
+  margin-top: 9px;
+  padding: 9px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gap-annotation > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.gap-annotation > div > span {
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
+.gap-annotation button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.gap-annotation-history article {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.gap-command-error {
+  margin: 0;
+  padding: 10px 16px;
+  color: var(--signal);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
 .memory-ledger {
   margin-top: 32px;
 }
@@ -613,11 +982,13 @@
   }
 
   .memory-inspection-grid,
-  .agent-memory-grid {
+  .agent-memory-grid,
+  .gap-inspection-grid {
     grid-template-columns: 1fr;
   }
 
-  .memory-evidence-inspector {
+  .memory-evidence-inspector,
+  .gap-inspector {
     border-top: 1px solid var(--ink);
     border-left: 0;
   }
@@ -643,6 +1014,17 @@
 
   .memory-introduction h2 {
     font-size: 28px;
+  }
+
+  .gap-section-heading > div,
+  .gap-section-heading > p {
+    grid-column: 1 / -1;
+  }
+
+  .gap-section-heading > p {
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 
   .memory-projection-tabs {
@@ -720,6 +1102,16 @@
   .coverage-marks abbr {
     width: 28px;
     height: 22px;
+  }
+
+  .gap-register > header,
+  .gap-register > button {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
+  .gap-register > header span:nth-child(3),
+  .gap-register > button > span:nth-child(3) {
+    display: none;
   }
 
   .memory-ledger .ledger-head,

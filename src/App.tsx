@@ -1,6 +1,7 @@
 import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createLearningWorkflow } from "./application/learningWorkflow";
+import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
@@ -32,6 +33,10 @@ function App() {
     () => new Map(workspace.microWorlds.map((microWorld) => [microWorld.id, microWorld])),
     [workspace.microWorlds]
   );
+  const understandingGapsById = useMemo(
+    () => new Map(workspace.understandingGaps.gaps.map((gap) => [gap.id, gap])),
+    [workspace.understandingGaps.gaps]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
     () =>
@@ -42,6 +47,14 @@ function App() {
         resolveUnderstandingCheck: (checkId) => understandingChecksById.get(checkId)
       }),
     [append, explainersById, microWorldsById, understandingChecksById]
+  );
+  const memoryWorkflow = useMemo(
+    () =>
+      createMemoryWorkflow({
+        append,
+        resolveGap: (gapId) => understandingGapsById.get(gapId)
+      }),
+    [append, understandingGapsById]
   );
   const { sources } = workspace;
 
@@ -131,7 +144,17 @@ function App() {
             onMicroWorldReflection={learningWorkflow.recordMicroWorldReflection}
           />
         )}
-        {view === "memory" && <MemoryView events={events} theory={workspace.theory} projections={workspace.memories} />}
+        {view === "memory" && (
+          <MemoryView
+            events={events}
+            theory={workspace.theory}
+            projections={workspace.memories}
+            understandingGaps={workspace.understandingGaps}
+            onReviewGap={memoryWorkflow.reviewUnderstandingGap}
+            onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
+            onIntervene={setView}
+          />
+        )}
         {view === "foundry" && <FoundryView capabilities={workspace.capabilities} />}
         {view === "about" && <AboutView />}
       </main>

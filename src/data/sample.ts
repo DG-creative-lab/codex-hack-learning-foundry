@@ -313,9 +313,30 @@ export const preparedDensityMicroWorld = microWorldArtifactSchema.parse({
   prediction: {
     prompt: "If you show more fields and reduce spacing, what do you expect to happen before hierarchy is adjusted?",
     options: [
-      { id: "prediction-faster", label: "Capacity and scanning both improve" },
-      { id: "prediction-tradeoff", label: "Capacity improves, but scanning becomes harder" },
-      { id: "prediction-no-change", label: "The workflow remains effectively unchanged" }
+      {
+        id: "prediction-faster",
+        label: "Capacity and scanning both improve",
+        expectedChanges: [
+          { outcomeId: "outcome-visible-capacity", direction: "increase" },
+          { outcomeId: "outcome-scan-effort", direction: "decrease" }
+        ]
+      },
+      {
+        id: "prediction-tradeoff",
+        label: "Capacity improves, but scanning becomes harder",
+        expectedChanges: [
+          { outcomeId: "outcome-visible-capacity", direction: "increase" },
+          { outcomeId: "outcome-scan-effort", direction: "increase" }
+        ]
+      },
+      {
+        id: "prediction-no-change",
+        label: "The workflow remains effectively unchanged",
+        expectedChanges: [
+          { outcomeId: "outcome-visible-capacity", direction: "unchanged" },
+          { outcomeId: "outcome-scan-effort", direction: "unchanged" }
+        ]
+      }
     ]
   },
   assumptions: [

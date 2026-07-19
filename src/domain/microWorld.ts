@@ -18,6 +18,7 @@ export const MICRO_WORLD_LIMITS = {
   controls: 8,
   outcomes: 8,
   predictionOptions: 5,
+  predictionExpectedChanges: 8,
   assumptions: 8,
   limitations: 8,
   reflectionPrompts: 4,
@@ -99,10 +100,20 @@ export const microWorldOutcomeSchema = z
   })
   .strict();
 
+export const predictionChangeDirectionSchema = z.enum(["increase", "decrease", "unchanged"]);
+
+const predictionExpectedChangeSchema = z
+  .object({
+    outcomeId: boundedIdSchema,
+    direction: predictionChangeDirectionSchema
+  })
+  .strict();
+
 const predictionOptionSchema = z
   .object({
     id: boundedIdSchema,
-    label: z.string().min(1).max(MICRO_WORLD_LIMITS.titleCharacters)
+    label: z.string().min(1).max(MICRO_WORLD_LIMITS.titleCharacters),
+    expectedChanges: z.array(predictionExpectedChangeSchema).min(1).max(MICRO_WORLD_LIMITS.predictionExpectedChanges)
   })
   .strict();
 
@@ -226,6 +237,25 @@ export const microWorldArtifactSchema = z
         });
       }
     }
+
+    for (const [optionIndex, option] of artifact.prediction.options.entries()) {
+      const expectedOutcomeIds = option.expectedChanges.map((change) => change.outcomeId);
+      if (hasDuplicates(expectedOutcomeIds)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Prediction expected-outcome IDs must be unique within an option.",
+          path: ["prediction", "options", optionIndex, "expectedChanges"]
+        });
+      }
+      const unknownOutcomeId = expectedOutcomeIds.find((outcomeId) => !outcomeIds.includes(outcomeId));
+      if (unknownOutcomeId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Prediction option references unknown outcome ${unknownOutcomeId}.`,
+          path: ["prediction", "options", optionIndex, "expectedChanges"]
+        });
+      }
+    }
   });
 
 const variableValuesSchema = z.record(boundedIdSchema, z.number().finite());
@@ -256,6 +286,7 @@ export type MicroWorldArtifact = z.infer<typeof microWorldArtifactSchema>;
 export type MicroWorldPrediction = z.infer<typeof microWorldPredictionPayloadSchema>;
 export type MicroWorldInteraction = z.infer<typeof microWorldInteractionPayloadSchema>;
 export type MicroWorldReflection = z.infer<typeof microWorldReflectionPayloadSchema>;
+export type PredictionChangeDirection = z.infer<typeof predictionChangeDirectionSchema>;
 export type MicroWorldVariableValues = z.infer<typeof variableValuesSchema>;
 export type MicroWorldOutcomeValues = z.infer<typeof outcomeValuesSchema>;
 

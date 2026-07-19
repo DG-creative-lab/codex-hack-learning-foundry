@@ -2,10 +2,12 @@ import { Bot, History, Network, UserRound } from "lucide-react";
 import { type KeyboardEvent, useMemo, useState } from "react";
 import type { MemoryProjections } from "../domain/memoryProjections";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "../domain/types";
+import type { UnderstandingGapProjection, UnderstandingGapTarget } from "../domain/understandingGaps";
 import { AgentMemoryProjectionView } from "../features/memory/AgentMemoryProjectionView";
 import { HumanMemoryProjectionView } from "../features/memory/HumanMemoryProjectionView";
 import "../features/memory/memory.css";
 import { SharedTheoryProjectionView } from "../features/memory/SharedTheoryProjectionView";
+import { UnderstandingGapsPanel } from "../features/memory/UnderstandingGapsPanel";
 
 const kindLabels: Record<EvidenceKind, string> = {
   source_fact: "Source fact",
@@ -22,9 +24,21 @@ interface MemoryViewProps {
   events: EvidenceEvent[];
   theory: LivingTheory;
   projections: MemoryProjections;
+  understandingGaps: UnderstandingGapProjection;
+  onReviewGap: (gapId: string, decision: "confirmed" | "dismissed") => Promise<void>;
+  onAnnotateGap: (gapId: string, note: string) => Promise<void>;
+  onIntervene: (target: UnderstandingGapTarget) => void;
 }
 
-export function MemoryView({ events, theory, projections }: MemoryViewProps) {
+export function MemoryView({
+  events,
+  theory,
+  projections,
+  understandingGaps,
+  onReviewGap,
+  onAnnotateGap,
+  onIntervene
+}: MemoryViewProps) {
   const [selectedProjection, setSelectedProjection] = useState<ProjectionId>("human");
   const eventRows = useMemo(() => [...events].reverse(), [events]);
   const tabs = [
@@ -104,6 +118,13 @@ export function MemoryView({ events, theory, projections }: MemoryViewProps) {
       {selectedProjection === "human" && <HumanMemoryProjectionView projection={projections.human} />}
       {selectedProjection === "agent" && <AgentMemoryProjectionView projection={projections.agent} />}
       {selectedProjection === "shared" && <SharedTheoryProjectionView projection={projections.shared} />}
+
+      <UnderstandingGapsPanel
+        projection={understandingGaps}
+        onReview={onReviewGap}
+        onAnnotate={onAnnotateGap}
+        onIntervene={onIntervene}
+      />
 
       <section className="ledger-section memory-ledger">
         <div className="section-heading compact">

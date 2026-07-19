@@ -10,7 +10,7 @@ A precise universal learning workbench: cool paper, black typographic structure,
 - Focused Sources, Learn, Memory, and Foundry views for deeper operational work.
 - A source-processing surface where one knowledge stream branches into human and agent learning.
 - A human learning studio that sequences source-grounded explanation, varied checks, interactive exploration, targeted review, and transfer.
-- A memory surface with visibly distinct human, agent, and shared-theory projections.
+- A memory surface with visibly distinct human, agent, and shared-theory projections plus a qualitative evidence-gap register.
 - A controlled capability foundry for knowledge modules, skills, tools, and plugins.
 
 ## Interaction thesis
