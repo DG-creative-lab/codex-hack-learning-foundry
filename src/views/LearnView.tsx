@@ -1,6 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ExplainerProjection } from "../domain/explainer";
+import { countMicroWorldEvidence, type MicroWorldProjection } from "../domain/microWorld";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
 import { countUnderstandingFeedbackEvents } from "../domain/understandingCheckProjection";
 import type {
@@ -11,10 +12,14 @@ import type {
 import type { LearningArtifact, SourceRecord } from "../domain/workspaceEntities";
 import { ExplainerPreview } from "../features/learning/ExplainerPreview";
 import { artifactTypeLabels, LearningArtifactPreview } from "../features/learning/LearningArtifactPreview";
+import { MicroWorldPreview } from "../features/learning/MicroWorldPreview";
 import type {
   DisputeUnderstandingEvaluation,
   RecordCheckPreference,
   RecordExplainerFeedback,
+  RecordMicroWorldInteraction,
+  RecordMicroWorldPrediction,
+  RecordMicroWorldReflection,
   RecordUnderstandingResponse
 } from "../features/learning/types";
 import { UnderstandingCheckPreview } from "../features/learning/UnderstandingCheckPreview";
@@ -31,6 +36,7 @@ const checkTypeLabels = {
 interface LearnViewProps {
   artifacts: LearningArtifact[];
   explainers: ExplainerProjection[];
+  microWorlds: MicroWorldProjection[];
   checks: UnderstandingCheckProjection[];
   evidenceVectors: UnderstandingEvidenceVector[];
   reviewItems: ProjectedReviewItem[];
@@ -40,11 +46,15 @@ interface LearnViewProps {
   onResponse: RecordUnderstandingResponse;
   onDispute: DisputeUnderstandingEvaluation;
   onPreference: RecordCheckPreference;
+  onMicroWorldPrediction: RecordMicroWorldPrediction;
+  onMicroWorldInteraction: RecordMicroWorldInteraction;
+  onMicroWorldReflection: RecordMicroWorldReflection;
 }
 
 export function LearnView({
   artifacts,
   explainers,
+  microWorlds,
   checks,
   evidenceVectors,
   reviewItems,
@@ -53,15 +63,20 @@ export function LearnView({
   onFeedback,
   onResponse,
   onDispute,
-  onPreference
+  onPreference,
+  onMicroWorldPrediction,
+  onMicroWorldInteraction,
+  onMicroWorldReflection
 }: LearnViewProps) {
   const firstItemId = explainers[0]
     ? `explainer:${explainers[0].id}`
     : checks[0]
       ? `check:${checks[0].id}`
-      : artifacts[0]
-        ? `artifact:${artifacts[0].id}`
-        : "";
+      : microWorlds[0]
+        ? `micro-world:${microWorlds[0].id}`
+        : artifacts[0]
+          ? `artifact:${artifacts[0].id}`
+          : "";
   const [selectedItemId, setSelectedItemId] = useState(firstItemId);
   const fragmentsById = useMemo(() => new Map(fragments.map((fragment) => [fragment.id, fragment])), [fragments]);
   const sourcesById = useMemo(() => new Map(sources.map((source) => [source.id, source])), [sources]);
@@ -71,8 +86,16 @@ export function LearnView({
   );
   const selectedExplainer = explainers.find((item) => `explainer:${item.id}` === selectedItemId);
   const selectedCheck = checks.find((item) => `check:${item.id}` === selectedItemId);
+  const selectedMicroWorld = microWorlds.find((item) => `micro-world:${item.id}` === selectedItemId);
   const selectedArtifact = artifacts.find((item) => `artifact:${item.id}` === selectedItemId);
   const nextCheck = checks.find((check) => check.status === "ready" && check.attempts.length === 0);
+  const checkJourneyItems = checks.map((item) => ({
+    id: `check:${item.id}`,
+    type: checkTypeLabels[item.kind],
+    title: item.prompt,
+    status: item.status === "rejected" ? "Rejected" : item.attempts.length > 0 ? "Observed" : "Ready",
+    kind: item.kind
+  }));
   const journeyItems = [
     ...explainers.map((item) => ({
       id: `explainer:${item.id}`,
@@ -80,12 +103,14 @@ export function LearnView({
       title: item.title,
       status: "Ready"
     })),
-    ...checks.map((item) => ({
-      id: `check:${item.id}`,
-      type: checkTypeLabels[item.kind],
-      title: item.prompt,
-      status: item.status === "rejected" ? "Rejected" : item.attempts.length > 0 ? "Observed" : "Ready"
+    ...checkJourneyItems.filter((item) => ["recall", "explanation", "prediction"].includes(item.kind)),
+    ...microWorlds.map((item) => ({
+      id: `micro-world:${item.id}`,
+      type: "Micro-world",
+      title: item.title,
+      status: item.predictions.length === 0 ? "Predict" : item.interactions.length === 0 ? "Explore" : "Observed"
     })),
+    ...checkJourneyItems.filter((item) => ["teach_back", "transfer"].includes(item.kind)),
     ...artifacts.map((item) => ({
       id: `artifact:${item.id}`,
       type: artifactTypeLabels[item.type],
@@ -119,7 +144,8 @@ export function LearnView({
             <span>Feedback events</span>
             <strong>
               {explainers.reduce((total, item) => total + item.feedback.length, 0) +
-                countUnderstandingFeedbackEvents(checks)}
+                countUnderstandingFeedbackEvents(checks) +
+                countMicroWorldEvidence(microWorlds)}
             </strong>
           </p>
           <p>
@@ -129,7 +155,7 @@ export function LearnView({
         </div>
       </section>
       <section
-        className={`artifact-workspace ${selectedExplainer ? "explainer-active" : ""} ${selectedCheck ? "check-active" : ""}`}
+        className={`artifact-workspace ${selectedExplainer ? "explainer-active" : ""} ${selectedCheck ? "check-active" : ""} ${selectedMicroWorld ? "micro-world-active" : ""}`}
       >
         <div className="artifact-list">
           <div className="section-heading compact">
@@ -172,6 +198,15 @@ export function LearnView({
             onResponse={onResponse}
             onDispute={onDispute}
             onPreference={onPreference}
+          />
+        ) : selectedMicroWorld ? (
+          <MicroWorldPreview
+            key={selectedMicroWorld.id}
+            artifact={selectedMicroWorld}
+            sourcesById={sourcesById}
+            onPrediction={onMicroWorldPrediction}
+            onInteraction={onMicroWorldInteraction}
+            onReflection={onMicroWorldReflection}
           />
         ) : selectedArtifact ? (
           <LearningArtifactPreview artifact={selectedArtifact} />

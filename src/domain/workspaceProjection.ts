@@ -2,6 +2,7 @@ import { z } from "zod";
 import { deriveExplainers } from "./explainer";
 import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
+import { deriveMicroWorlds } from "./microWorld";
 import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import { deriveUnderstandingChecks } from "./understandingCheckProjection";
@@ -109,6 +110,11 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
     theoryElementIds: new Set(theory.elements.map((element) => element.id))
   });
+  const microWorlds = deriveMicroWorlds(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(theory.elements.map((element) => element.id))
+  });
 
   return {
     sources,
@@ -119,6 +125,7 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     memories: deriveMemoryProjections(theory, events),
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
     explainers,
+    microWorlds,
     understandingChecks: understanding.checks,
     understandingEvidenceVectors: understanding.evidenceVectors,
     targetedReviewItems: understanding.reviewItems,

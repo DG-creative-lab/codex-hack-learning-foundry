@@ -20,6 +20,7 @@ describe("learning workflow", () => {
         events.push(event);
       },
       resolveExplainer,
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: () => undefined,
       now: () => "2026-07-19T12:30:00.000Z",
       createId: (prefix) => `${prefix}-${++sequence}`
@@ -48,6 +49,7 @@ describe("learning workflow", () => {
     const workflow = createLearningWorkflow({
       append: async (event) => events.push(event),
       resolveExplainer: (artifactId) => (artifactId === preparedExplainer.id ? preparedExplainer : undefined),
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: () => undefined
     });
 
@@ -66,6 +68,7 @@ describe("learning workflow", () => {
     const workflow = createLearningWorkflow({
       append: async (event) => events.push(event),
       resolveExplainer: (artifactId) => (artifactId === preparedExplainer.id ? preparedExplainer : undefined),
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: () => undefined
     });
 
@@ -111,6 +114,7 @@ describe("learning workflow", () => {
     const workflow = createLearningWorkflow({
       append: async (event) => events.push(event),
       resolveExplainer: () => undefined,
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: (checkId) => (checkId === check.id ? check : undefined),
       evaluateUnderstandingResponse,
       now: () => "2026-07-19T14:00:00.000Z",
@@ -177,6 +181,7 @@ describe("learning workflow", () => {
     const workflow = createLearningWorkflow({
       append: async (event) => events.push(event),
       resolveExplainer: () => undefined,
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: (checkId) => (checkId === check.id ? check : undefined)
     });
 
@@ -214,6 +219,7 @@ describe("learning workflow", () => {
     const workflow = createLearningWorkflow({
       append: async (event) => events.push(event),
       resolveExplainer: () => undefined,
+      resolveMicroWorld: () => undefined,
       resolveUnderstandingCheck: (checkId) => (checkId === check.id ? check : undefined),
       evaluateUnderstandingResponse: (resolvedCheck, response) => {
         const evaluation = createProvisionalEvaluation(resolvedCheck, response);
