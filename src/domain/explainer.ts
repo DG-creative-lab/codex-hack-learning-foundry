@@ -2,6 +2,30 @@ import { z } from "zod";
 import type { EvidenceEvent } from "./types";
 import { evidenceKindSchema } from "./types";
 
+export const EXPLAINER_LIMITS = {
+  idCharacters: 200,
+  titleCharacters: 200,
+  objectiveCharacters: 1600,
+  projectContextCharacters: 2400,
+  sourceIds: 64,
+  theoryElementIds: 256,
+  sectionTitleCharacters: 200,
+  sectionContentCharacters: 6000,
+  sectionSourceIds: 64,
+  sectionFragmentIds: 128,
+  sectionTheoryElementIds: 128,
+  understandingChecks: 32,
+  understandingCheckPromptCharacters: 1600,
+  understandingCheckSectionIds: 6,
+  microWorldTitleCharacters: 200,
+  microWorldScenarioCharacters: 2400,
+  microWorldVariables: 32,
+  variableLabelCharacters: 160,
+  correctionCharacters: 1200
+} as const;
+
+const boundedIdSchema = z.string().min(1).max(EXPLAINER_LIMITS.idCharacters);
+
 export const explainerSectionKindSchema = z.enum([
   "background",
   "purpose",
@@ -15,14 +39,14 @@ const sectionOrder = explainerSectionKindSchema.options;
 
 export const explainerSectionSchema = z
   .object({
-    id: z.string().min(1),
+    id: boundedIdSchema,
     kind: explainerSectionKindSchema,
-    title: z.string().min(1),
-    content: z.string().min(1),
+    title: z.string().min(1).max(EXPLAINER_LIMITS.sectionTitleCharacters),
+    content: z.string().min(1).max(EXPLAINER_LIMITS.sectionContentCharacters),
     epistemicKind: evidenceKindSchema,
-    sourceIds: z.array(z.string().min(1)),
-    fragmentIds: z.array(z.string().min(1)),
-    theoryElementIds: z.array(z.string().min(1))
+    sourceIds: z.array(boundedIdSchema).max(EXPLAINER_LIMITS.sectionSourceIds),
+    fragmentIds: z.array(boundedIdSchema).max(EXPLAINER_LIMITS.sectionFragmentIds),
+    theoryElementIds: z.array(boundedIdSchema).max(EXPLAINER_LIMITS.sectionTheoryElementIds)
   })
   .strict()
   .superRefine((section, context) => {
@@ -44,29 +68,30 @@ export const explainerSectionSchema = z
 
 export const understandingCheckSeedSchema = z
   .object({
-    id: z.string().min(1),
-    prompt: z.string().min(1),
-    sectionIds: z.array(z.string().min(1)).min(1)
+    id: boundedIdSchema,
+    prompt: z.string().min(1).max(EXPLAINER_LIMITS.understandingCheckPromptCharacters),
+    sectionIds: z.array(boundedIdSchema).min(1).max(EXPLAINER_LIMITS.understandingCheckSectionIds)
   })
   .strict();
 
 export const microWorldSeedSchema = z
   .object({
-    title: z.string().min(1),
-    scenario: z.string().min(1),
+    title: z.string().min(1).max(EXPLAINER_LIMITS.microWorldTitleCharacters),
+    scenario: z.string().min(1).max(EXPLAINER_LIMITS.microWorldScenarioCharacters),
     variables: z
       .array(
         z
           .object({
-            id: z.string().min(1),
-            label: z.string().min(1),
-            lowLabel: z.string().min(1),
-            highLabel: z.string().min(1),
+            id: boundedIdSchema,
+            label: z.string().min(1).max(EXPLAINER_LIMITS.variableLabelCharacters),
+            lowLabel: z.string().min(1).max(EXPLAINER_LIMITS.variableLabelCharacters),
+            highLabel: z.string().min(1).max(EXPLAINER_LIMITS.variableLabelCharacters),
             initialValue: z.number().min(0).max(100)
           })
           .strict()
       )
       .min(1)
+      .max(EXPLAINER_LIMITS.microWorldVariables)
   })
   .strict();
 
@@ -76,14 +101,14 @@ function hasDuplicates(values: string[]): boolean {
 
 export const explainerArtifactSchema = z
   .object({
-    id: z.string().min(1),
-    title: z.string().min(1),
-    objective: z.string().min(1),
-    projectContext: z.string().min(1),
-    sourceIds: z.array(z.string().min(1)).min(1),
-    theoryElementIds: z.array(z.string().min(1)),
-    sections: z.array(explainerSectionSchema),
-    understandingCheckSeeds: z.array(understandingCheckSeedSchema).min(1),
+    id: boundedIdSchema,
+    title: z.string().min(1).max(EXPLAINER_LIMITS.titleCharacters),
+    objective: z.string().min(1).max(EXPLAINER_LIMITS.objectiveCharacters),
+    projectContext: z.string().min(1).max(EXPLAINER_LIMITS.projectContextCharacters),
+    sourceIds: z.array(boundedIdSchema).min(1).max(EXPLAINER_LIMITS.sourceIds),
+    theoryElementIds: z.array(boundedIdSchema).max(EXPLAINER_LIMITS.theoryElementIds),
+    sections: z.array(explainerSectionSchema).length(sectionOrder.length),
+    understandingCheckSeeds: z.array(understandingCheckSeedSchema).min(1).max(EXPLAINER_LIMITS.understandingChecks),
     microWorldSeed: microWorldSeedSchema
   })
   .strict()
@@ -122,6 +147,7 @@ export const explainerArtifactSchema = z
       }
     }
     const artifactSourceIds = new Set(artifact.sourceIds);
+    const artifactTheoryElementIds = new Set(artifact.theoryElementIds);
     for (const [index, section] of artifact.sections.entries()) {
       const unknownSourceId = section.sourceIds.find((sourceId) => !artifactSourceIds.has(sourceId));
       if (unknownSourceId) {
@@ -131,16 +157,26 @@ export const explainerArtifactSchema = z
           path: ["sections", index, "sourceIds"]
         });
       }
+      const undeclaredTheoryElementId = section.theoryElementIds.find(
+        (theoryElementId) => !artifactTheoryElementIds.has(theoryElementId)
+      );
+      if (undeclaredTheoryElementId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Explainer section references undeclared theory element ${undeclaredTheoryElementId}.`,
+          path: ["sections", index, "theoryElementIds"]
+        });
+      }
     }
   });
 
 export const explainerFeedbackSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("confusion"), sectionId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("confusion"), sectionId: boundedIdSchema }).strict(),
   z
     .object({
       kind: z.literal("correction"),
-      sectionId: z.string().min(1),
-      correction: z.string().trim().min(3).max(1200)
+      sectionId: boundedIdSchema,
+      correction: z.string().trim().min(3).max(EXPLAINER_LIMITS.correctionCharacters)
     })
     .strict(),
   z.object({ kind: z.literal("depth"), depth: z.enum(["less", "more"]) }).strict()
@@ -148,7 +184,7 @@ export const explainerFeedbackSchema = z.discriminatedUnion("kind", [
 
 const registeredPayloadSchema = z.object({ artifact: explainerArtifactSchema }).strict();
 export const explainerFeedbackPayloadSchema = z
-  .object({ artifactId: z.string().min(1), feedback: explainerFeedbackSchema })
+  .object({ artifactId: boundedIdSchema, feedback: explainerFeedbackSchema })
   .strict();
 
 export type ExplainerArtifact = z.infer<typeof explainerArtifactSchema>;

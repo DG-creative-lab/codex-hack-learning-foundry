@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { preparedExplainer, seedEvents } from "../data/sample";
-import { explainerArtifactSchema } from "./explainer";
+import { EXPLAINER_LIMITS, explainerArtifactSchema, explainerFeedbackSchema } from "./explainer";
 import type { EvidenceEvent } from "./types";
 import { reduceWorkspace } from "./workspaceProjection";
 
@@ -44,6 +44,99 @@ describe("explainer artifacts", () => {
     const sections = [...preparedExplainer.sections];
     sections.reverse();
     expect(explainerArtifactSchema.safeParse({ ...preparedExplainer, sections }).success).toBe(false);
+  });
+
+  it("requires section theory dependencies in the artifact manifest", () => {
+    const omittedTheoryElementId = preparedExplainer.sections[0]?.theoryElementIds[0];
+    if (!omittedTheoryElementId) throw new Error("Prepared section theory dependency is missing");
+
+    const result = explainerArtifactSchema.safeParse({
+      ...preparedExplainer,
+      theoryElementIds: preparedExplainer.theoryElementIds.filter((id) => id !== omittedTheoryElementId)
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.message.includes("undeclared theory element"))).toBe(true);
+    }
+  });
+
+  it("accepts content at ledger limits and rejects content beyond them", () => {
+    const atLimit = {
+      ...preparedExplainer,
+      title: "t".repeat(EXPLAINER_LIMITS.titleCharacters),
+      objective: "o".repeat(EXPLAINER_LIMITS.objectiveCharacters),
+      projectContext: "p".repeat(EXPLAINER_LIMITS.projectContextCharacters),
+      sections: preparedExplainer.sections.map((section) => ({
+        ...section,
+        title: "s".repeat(EXPLAINER_LIMITS.sectionTitleCharacters),
+        content: "c".repeat(EXPLAINER_LIMITS.sectionContentCharacters)
+      }))
+    };
+
+    expect(explainerArtifactSchema.safeParse(atLimit).success).toBe(true);
+    expect(
+      explainerArtifactSchema.safeParse({
+        ...atLimit,
+        objective: `${atLimit.objective}x`
+      }).success
+    ).toBe(false);
+    expect(
+      explainerArtifactSchema.safeParse({
+        ...atLimit,
+        sections: atLimit.sections.map((section, index) =>
+          index === 0 ? { ...section, content: `${section.content}x` } : section
+        )
+      }).success
+    ).toBe(false);
+  });
+
+  it("bounds generated collections and learner corrections", () => {
+    const checksAtLimit = Array.from({ length: EXPLAINER_LIMITS.understandingChecks }, (_, index) => ({
+      id: `check-${index}`,
+      prompt: "p".repeat(EXPLAINER_LIMITS.understandingCheckPromptCharacters),
+      sectionIds: [preparedExplainer.sections[0].id]
+    }));
+    const variablesAtLimit = Array.from({ length: EXPLAINER_LIMITS.microWorldVariables }, (_, index) => ({
+      id: `variable-${index}`,
+      label: "l".repeat(EXPLAINER_LIMITS.variableLabelCharacters),
+      lowLabel: "low",
+      highLabel: "high",
+      initialValue: 50
+    }));
+
+    expect(
+      explainerArtifactSchema.safeParse({
+        ...preparedExplainer,
+        understandingCheckSeeds: checksAtLimit,
+        microWorldSeed: { ...preparedExplainer.microWorldSeed, variables: variablesAtLimit }
+      }).success
+    ).toBe(true);
+    expect(
+      explainerArtifactSchema.safeParse({
+        ...preparedExplainer,
+        understandingCheckSeeds: [...checksAtLimit, checksAtLimit[0]]
+      }).success
+    ).toBe(false);
+    expect(
+      explainerArtifactSchema.safeParse({
+        ...preparedExplainer,
+        microWorldSeed: {
+          ...preparedExplainer.microWorldSeed,
+          variables: [...variablesAtLimit, variablesAtLimit[0]]
+        }
+      }).success
+    ).toBe(false);
+
+    const correction = {
+      kind: "correction" as const,
+      sectionId: preparedExplainer.sections[0].id,
+      correction: "c".repeat(EXPLAINER_LIMITS.correctionCharacters)
+    };
+    expect(explainerFeedbackSchema.safeParse(correction).success).toBe(true);
+    expect(explainerFeedbackSchema.safeParse({ ...correction, correction: `${correction.correction}x` }).success).toBe(
+      false
+    );
   });
 
   it("appends corrections as evidence without mutating the original explainer", () => {

@@ -1,6 +1,11 @@
 import { AlertCircle, ArrowRight, BookOpen, Check, Flag, Minus, Plus, Quote, Send, X } from "lucide-react";
 import { useState } from "react";
-import type { ExplainerArtifact, ExplainerFeedback, ExplainerProjection } from "../domain/explainer";
+import {
+  EXPLAINER_LIMITS,
+  type ExplainerArtifact,
+  type ExplainerFeedback,
+  type ExplainerProjection
+} from "../domain/explainer";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
 import type { LearningArtifact, SourceRecord } from "../domain/workspaceEntities";
 
@@ -77,27 +82,48 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
   const [correctionSectionId, setCorrectionSectionId] = useState<string>();
   const [correction, setCorrection] = useState("");
   const [saved, setSaved] = useState<string>();
+  const [feedbackPending, setFeedbackPending] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string>();
   const selectedFragment = fragments.find((fragment) => fragment.id === selectedFragmentId);
   const selectedSource = sources.find((source) => source.id === selectedFragment?.sourceId);
   const latestDepth = [...artifact.feedback].reverse().find((feedback) => feedback.kind === "depth");
   const confusionCount = artifact.feedback.filter((feedback) => feedback.kind === "confusion").length;
   const correctionCount = artifact.feedback.filter((feedback) => feedback.kind === "correction").length;
 
-  async function record(feedback: ExplainerFeedback) {
-    await onFeedback(artifact, feedback);
-    setSaved(feedback.kind);
-    window.setTimeout(() => setSaved(undefined), 1800);
+  async function record(feedback: ExplainerFeedback): Promise<boolean> {
+    if (feedbackPending) return false;
+    setFeedbackPending(true);
+    setFeedbackError(undefined);
+    setSaved(undefined);
+    try {
+      await onFeedback(artifact, feedback);
+      setSaved(feedback.kind);
+      window.setTimeout(() => setSaved(undefined), 1800);
+      return true;
+    } catch {
+      setFeedbackError("Feedback could not be recorded. Nothing was saved; please try again.");
+      return false;
+    } finally {
+      setFeedbackPending(false);
+    }
   }
 
   async function submitCorrection() {
-    if (!correctionSectionId || correction.trim().length < 3) return;
-    await record({ kind: "correction", sectionId: correctionSectionId, correction });
-    setCorrection("");
-    setCorrectionSectionId(undefined);
+    if (
+      !correctionSectionId ||
+      correction.trim().length < 3 ||
+      correction.length > EXPLAINER_LIMITS.correctionCharacters
+    )
+      return;
+    const recorded = await record({ kind: "correction", sectionId: correctionSectionId, correction });
+    if (recorded) {
+      setCorrection("");
+      setCorrectionSectionId(undefined);
+    }
   }
 
   return (
-    <div className="explainer-preview">
+    <div className="explainer-preview" aria-busy={feedbackPending}>
       <header className="explainer-titlebar">
         <div>
           <p className="eyebrow">Source-grounded explainer</p>
@@ -109,6 +135,8 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
           <button
             type="button"
             className={latestDepth?.kind === "depth" && latestDepth.depth === "less" ? "active" : ""}
+            aria-pressed={latestDepth?.kind === "depth" && latestDepth.depth === "less"}
+            disabled={feedbackPending}
             title="Request less depth"
             onClick={() => void record({ kind: "depth", depth: "less" })}
           >
@@ -117,6 +145,8 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
           <button
             type="button"
             className={latestDepth?.kind === "depth" && latestDepth.depth === "more" ? "active" : ""}
+            aria-pressed={latestDepth?.kind === "depth" && latestDepth.depth === "more"}
+            disabled={feedbackPending}
             title="Request more depth"
             onClick={() => void record({ kind: "depth", depth: "more" })}
           >
@@ -129,6 +159,21 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
         <span>Active project</span>
         <p>{artifact.projectContext}</p>
       </div>
+
+      {feedbackError && (
+        <div className="feedback-error" role="alert">
+          <AlertCircle size={15} />
+          <span>{feedbackError}</span>
+          <button
+            type="button"
+            className="icon-button"
+            title="Dismiss error"
+            onClick={() => setFeedbackError(undefined)}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="explainer-reading-grid">
         <div className="explainer-sections">
@@ -157,10 +202,14 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
                   </fieldset>
                 )}
                 <div className="section-feedback-actions">
-                  <button type="button" onClick={() => void record({ kind: "confusion", sectionId: section.id })}>
+                  <button
+                    type="button"
+                    disabled={feedbackPending}
+                    onClick={() => void record({ kind: "confusion", sectionId: section.id })}
+                  >
                     <Flag size={12} /> Flag confusion
                   </button>
-                  <button type="button" onClick={() => setCorrectionSectionId(section.id)}>
+                  <button type="button" disabled={feedbackPending} onClick={() => setCorrectionSectionId(section.id)}>
                     <BookOpen size={12} /> Correct interpretation
                   </button>
                 </div>
@@ -171,9 +220,14 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
                       id={`correction-${section.id}`}
                       value={correction}
                       onChange={(event) => setCorrection(event.target.value)}
+                      maxLength={EXPLAINER_LIMITS.correctionCharacters}
+                      aria-describedby={`correction-limit-${section.id}`}
                       placeholder="State what should change and why. The source remains unchanged."
                       rows={3}
                     />
+                    <span className="correction-limit" id={`correction-limit-${section.id}`}>
+                      {correction.length.toLocaleString()} / {EXPLAINER_LIMITS.correctionCharacters.toLocaleString()}
+                    </span>
                     <div>
                       <button
                         type="button"
@@ -186,10 +240,14 @@ function ExplainerPreview({ artifact, fragments, sources, onFeedback }: Explaine
                       <button
                         type="button"
                         className="primary-button"
-                        disabled={correction.trim().length < 3}
+                        disabled={
+                          feedbackPending ||
+                          correction.trim().length < 3 ||
+                          correction.length > EXPLAINER_LIMITS.correctionCharacters
+                        }
                         onClick={() => void submitCorrection()}
                       >
-                        <Send size={13} /> Record correction
+                        <Send size={13} /> {feedbackPending ? "Recording..." : "Record correction"}
                       </button>
                     </div>
                   </div>
@@ -335,6 +393,7 @@ export function LearnView({ artifacts, explainers, fragments, sources, onFeedbac
         </div>
         {selectedExplainer ? (
           <ExplainerPreview
+            key={selectedExplainer.id}
             artifact={selectedExplainer}
             fragments={fragments}
             sources={sources}

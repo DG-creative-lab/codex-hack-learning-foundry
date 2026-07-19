@@ -1278,6 +1278,11 @@ button {
   background: var(--ink);
   color: #fff;
 }
+.depth-control button:disabled,
+.section-feedback-actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
 .explainer-context {
   display: grid;
   grid-template-columns: 105px 1fr;
@@ -1298,6 +1303,26 @@ button {
   margin: 0;
   font-size: var(--text-secondary);
   line-height: 1.5;
+}
+.feedback-error {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 30px;
+  gap: 9px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 16px;
+  color: #782d20;
+  border-bottom: 1px solid #d7a89e;
+  background: #fff1ed;
+  font-size: var(--text-secondary);
+}
+.feedback-error .icon-button {
+  width: 30px;
+  height: 30px;
+  border-color: #d7a89e;
 }
 .explainer-reading-grid {
   display: grid;
@@ -1447,6 +1472,16 @@ button {
 }
 .correction-editor textarea:focus {
   border-color: var(--ink);
+}
+.correction-limit {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font:
+    var(--text-micro) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-align: right;
 }
 .correction-editor > div {
   display: flex;
