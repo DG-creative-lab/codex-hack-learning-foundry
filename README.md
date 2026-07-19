@@ -16,6 +16,7 @@ The current vertical slice includes:
 - Recall, explanation, prediction, teach-back, and transfer checks that produce evidence vectors rather than a mastery score.
 - A constrained design-density micro-world with prediction, recorded interaction, and reflection evidence.
 - An append-only evidence ledger with deterministic human, agent, theory, and capability projections.
+- Evidence-backed understanding-gap signals with qualitative rationale, review actions, and recommended interventions rather than a cognitive-debt score.
 - A generated and evaluated `value-density-reviewer` Codex skill with explicit approval and revision states.
 
 ## Run locally
@@ -46,4 +47,5 @@ Prepared sample evidence is committed. Personal learning memory, imported privat
 - [ADR 0003](docs/architecture/0003-living-theory.md): the shared, revisable theory model.
 - [ADR 0004](docs/architecture/0004-learning-artifacts.md): bounded explainers, checks, and micro-worlds.
 - [ADR 0005](docs/architecture/0005-distinct-memory-projections.md): separate human, agent, and shared-theory memory projections.
+- [ADR 0006](docs/architecture/0006-evidence-backed-understanding-gaps.md): bounded cognitive-debt warning signals and append-only review state.
 - [Hackathon baseline](docs/hackathon/baseline.md): the repository state at the start of Build Week.

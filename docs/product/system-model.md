@@ -61,6 +61,12 @@ The human-learning path currently has three complementary forms:
 
 These artifacts support participation in a real task. They do not claim to measure cognition directly.
 
+## Understanding-gap signals
+
+Memory derives qualitative warning signs from observable ledger conditions such as stale theory, weak prediction or transfer evidence, unexplained decisions, unresolved contradictions, agent-only dependencies, and unevaluated capability revisions. Micro-world mismatches keep prediction, modeled observation, and linked reflection as separate evidence.
+
+Every signal explains why it appeared, names affected theory elements, links canonical events, and recommends an intervention. Confirmation, dismissal, and annotation append evidence without changing the source condition. Later learning or revision can remove a gap when replay no longer detects it. The system makes these signs visible to help mitigate cognitive debt; it does not calculate a cognitive-debt score or claim to measure the learner's mind.
+
 ## Agent learning and the Foundry
 
 The agent side turns the same Living Theory into inspectable, versioned capability proposals. A capability records provenance, assumptions, operating boundaries, evaluation cases, failures, and revision history.
@@ -71,4 +77,4 @@ Synthesis, evaluation, approval, and activation are separate states. No capabili
 
 The design-density workspace is prepared sample data for a domain-independent product. The current micro-world uses one trusted renderer and transparent heuristic outcomes. Arbitrary generated JavaScript, autonomous web crawling, universal file parsing, cloud sync, and autonomous capability activation are outside the hackathon scope.
 
-The current Memory surface derives distinct human, agent, and shared-theory projections with traceable evidence and deterministic freshness. The pending roadmap adds evidence-backed understanding gaps, a central Understanding workspace, capability activation gates, practical-evidence consolidation, and the complete offline demo journey.
+The current Memory surface derives distinct human, agent, and shared-theory projections with traceable evidence, deterministic freshness, and evidence-backed understanding-gap signals. The pending roadmap adds a central Understanding workspace, capability activation gates, practical-evidence consolidation, and the complete offline demo journey.

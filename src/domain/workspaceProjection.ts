@@ -6,6 +6,7 @@ import { deriveMicroWorlds } from "./microWorld";
 import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import { deriveUnderstandingChecks } from "./understandingCheckProjection";
+import { deriveUnderstandingGaps } from "./understandingGaps";
 import {
   capabilityEvaluationPayloadSchema,
   capabilityExecutionPayloadSchema,
@@ -119,6 +120,14 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     microWorlds,
     capabilities
   });
+  const understandingGaps = deriveUnderstandingGaps({
+    theory,
+    events,
+    memories,
+    understandingChecks: understanding.checks,
+    microWorlds,
+    capabilities
+  });
 
   return {
     sources,
@@ -127,6 +136,7 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     synthesisProposals: sourcePipeline.proposals,
     theory,
     memories,
+    understandingGaps,
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
     explainers,
     microWorlds,

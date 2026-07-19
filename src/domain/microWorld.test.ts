@@ -74,6 +74,19 @@ describe("micro-world artifacts", () => {
         )
       })
     ).toThrow("initial value must align");
+    expect(() =>
+      microWorldArtifactSchema.parse({
+        ...preparedDensityMicroWorld,
+        prediction: {
+          ...preparedDensityMicroWorld.prediction,
+          options: preparedDensityMicroWorld.prediction.options.map((option, index) =>
+            index === 0
+              ? { ...option, expectedChanges: [{ outcomeId: "unknown-outcome", direction: "increase" }] }
+              : option
+          )
+        }
+      })
+    ).toThrow("unknown outcome");
   });
 
   it("replays prediction, interaction, and reflection as separate immutable evidence", () => {
@@ -90,6 +103,7 @@ describe("micro-world artifacts", () => {
       sourceIds: preparedDensityMicroWorld.sourceIds,
       payload: {
         artifactId: preparedDensityMicroWorld.id,
+        predictionEventId: "evt-test-micro-world-prediction",
         variableValues: changedValues,
         changedVariableIds: ["queue-spacing", "queue-information"],
         outcomeValues: outcomes
@@ -111,7 +125,7 @@ describe("micro-world artifacts", () => {
       }
     };
 
-    const projected = deriveMicroWorlds([registration, prediction(values), interaction, reflection], context)[0];
+    const projected = deriveMicroWorlds([registration, prediction(changedValues), interaction, reflection], context)[0];
 
     expect(projected?.predictions).toHaveLength(1);
     expect(projected?.interactions[0]?.outcomeValues).toEqual(outcomes);
@@ -127,7 +141,7 @@ describe("micro-world artifacts", () => {
       }
     };
     expect(() =>
-      deriveMicroWorlds([registration, prediction(values), interaction, missingLinkReflection], context)
+      deriveMicroWorlds([registration, prediction(changedValues), interaction, missingLinkReflection], context)
     ).toThrow();
 
     const unknownLinkReflection = {
@@ -136,7 +150,7 @@ describe("micro-world artifacts", () => {
       payload: { ...reflection.payload, interactionEventId: "evt-missing-interaction" }
     };
     expect(() =>
-      deriveMicroWorlds([registration, prediction(values), interaction, unknownLinkReflection], context)
+      deriveMicroWorlds([registration, prediction(changedValues), interaction, unknownLinkReflection], context)
     ).toThrow("unknown interaction");
   });
 
@@ -153,13 +167,56 @@ describe("micro-world artifacts", () => {
       sourceIds: preparedDensityMicroWorld.sourceIds,
       payload: {
         artifactId: preparedDensityMicroWorld.id,
+        predictionEventId: "evt-missing-prediction",
         variableValues: changedValues,
         changedVariableIds: ["queue-hierarchy"],
         outcomeValues: evaluateMicroWorld(preparedDensityMicroWorld, changedValues)
       }
     };
 
-    expect(() => deriveMicroWorlds([registration, interaction], context)).toThrow("requires a prediction");
+    expect(() => deriveMicroWorlds([registration, interaction], context)).toThrow("unknown prediction");
+  });
+
+  it("rejects unrelated and opposite manipulations for a linked prediction", () => {
+    const { registration, context, values } = fixture();
+    const predictedValues = { ...values, "queue-spacing": 10, "queue-information": 7 };
+    const unrelatedValues = { ...values, "queue-hierarchy": 80 };
+    const oppositeValues = { ...values, "queue-spacing": 22, "queue-information": 3 };
+
+    function interaction(id: string, variableValues: MicroWorldVariableValues): EvidenceEvent {
+      const changedVariableIds = preparedDensityMicroWorld.variables
+        .filter((variable) => values[variable.id] !== variableValues[variable.id])
+        .map((variable) => variable.id);
+      return {
+        id,
+        type: "learning.micro_world_interaction_recorded",
+        kind: "practical_observation",
+        createdAt: "2026-07-19T15:01:00.000Z",
+        actor: "human",
+        summary: "Recorded a different manipulation from the predicted experiment.",
+        sourceIds: preparedDensityMicroWorld.sourceIds,
+        payload: {
+          artifactId: preparedDensityMicroWorld.id,
+          predictionEventId: "evt-test-micro-world-prediction",
+          variableValues,
+          changedVariableIds,
+          outcomeValues: evaluateMicroWorld(preparedDensityMicroWorld, variableValues)
+        }
+      };
+    }
+
+    expect(() =>
+      deriveMicroWorlds(
+        [registration, prediction(predictedValues), interaction("evt-unrelated-manipulation", unrelatedValues)],
+        context
+      )
+    ).toThrow("does not match prediction");
+    expect(() =>
+      deriveMicroWorlds(
+        [registration, prediction(predictedValues), interaction("evt-opposite-manipulation", oppositeValues)],
+        context
+      )
+    ).toThrow("does not match prediction");
   });
 
   it("rejects incomplete snapshots, inconsistent change manifests, and missing provenance", () => {
@@ -184,14 +241,15 @@ describe("micro-world artifacts", () => {
       sourceIds: preparedDensityMicroWorld.sourceIds,
       payload: {
         artifactId: preparedDensityMicroWorld.id,
+        predictionEventId: "evt-test-micro-world-prediction",
         variableValues: changedValues,
         changedVariableIds: ["queue-spacing"],
         outcomeValues: evaluateMicroWorld(preparedDensityMicroWorld, changedValues)
       }
     };
-    expect(() => deriveMicroWorlds([registration, prediction(values), inconsistentInteraction], context)).toThrow(
-      "changed-variable manifest is inconsistent"
-    );
+    expect(() =>
+      deriveMicroWorlds([registration, prediction(changedValues), inconsistentInteraction], context)
+    ).toThrow("changed-variable manifest is inconsistent");
 
     const forgedOutcomeInteraction = {
       ...inconsistentInteraction,
@@ -205,8 +263,8 @@ describe("micro-world artifacts", () => {
         }
       }
     };
-    expect(() => deriveMicroWorlds([registration, prediction(values), forgedOutcomeInteraction], context)).toThrow(
-      "invalid value for outcome"
-    );
+    expect(() =>
+      deriveMicroWorlds([registration, prediction(changedValues), forgedOutcomeInteraction], context)
+    ).toThrow("invalid value for outcome");
   });
 });

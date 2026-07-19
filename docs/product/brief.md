@@ -8,6 +8,8 @@ The human and agent share an inspectable evidence layer, but retain distinct lea
 
 The evidence layer derives a Living Theory: a source-grounded and revisable representation of purpose, concepts, causal relationships, decisions, assumptions, boundaries, contradictions, and unresolved questions. Sources remain canonical; the theory is an inspectable lens rather than a replacement for them.
 
+Learning Foundry makes evidence-backed warning signs associated with cognitive debt visible so people can mitigate them through explanation, practice, review, and revision. These qualitative workflow signals do not measure cognition and are not presented as a score.
+
 ## Product scope
 
 The application is domain-independent. It accepts approved local or online literature, papers, studies, talks, documentation, and practical evidence. It transforms those sources into:
@@ -47,5 +49,5 @@ The hackathon build produces one Codex skill and one reproducible prepared journ
 - **Understanding:** the Living Theory, current objective, evidence trail, open questions, and next meaningful learning or application action.
 - **Sources:** source capture, provenance, extraction status, source fragments, and synthesis review.
 - **Learn:** explainers, understanding checks, micro-worlds, targeted review, corrections, and transfer.
-- **Memory:** distinct human, agent, and shared-theory projections derived from the same evidence ledger.
+- **Memory:** distinct human, agent, and shared-theory projections plus evidence-backed understanding-gap signals derived from the same evidence ledger.
 - **Foundry:** knowledge modules, skills, tools, plugins, evaluations, approval, execution, and revision.

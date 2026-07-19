@@ -33,12 +33,17 @@ describe("micro-world learning workflow", () => {
       preparedDensityMicroWorld.variables.map((variable) => [variable.id, variable.initialValue])
     );
 
-    await workflow.recordMicroWorldPrediction(preparedDensityMicroWorld.id, "prediction-tradeoff", initialValues);
-    await workflow.recordMicroWorldInteraction(preparedDensityMicroWorld.id, {
+    const targetValues = {
       ...initialValues,
       "queue-spacing": 10,
       "queue-information": 7
-    });
+    };
+    const predictionEventId = await workflow.recordMicroWorldPrediction(
+      preparedDensityMicroWorld.id,
+      "prediction-tradeoff",
+      targetValues
+    );
+    await workflow.recordMicroWorldInteraction(preparedDensityMicroWorld.id, predictionEventId, targetValues);
     await workflow.recordMicroWorldReflection(
       preparedDensityMicroWorld.id,
       preparedDensityMicroWorld.reflectionPrompts[0],
@@ -55,6 +60,7 @@ describe("micro-world learning workflow", () => {
     const projection = resolveMicroWorld(preparedDensityMicroWorld.id);
     expect(projection?.predictions).toHaveLength(1);
     expect(projection?.interactions).toHaveLength(1);
+    expect(projection?.interactions[0]?.predictionEventId).toBe(events[0]?.id);
     expect(projection?.reflections[0]?.interactionEventId).toBe(events[1]?.id);
   });
 
@@ -71,7 +77,9 @@ describe("micro-world learning workflow", () => {
     });
     const values = Object.fromEntries(world.variables.map((variable) => [variable.id, variable.initialValue]));
 
-    await expect(workflow.recordMicroWorldInteraction(world.id, values)).rejects.toThrow("requires a prediction");
+    await expect(workflow.recordMicroWorldInteraction(world.id, "evt-missing-prediction", values)).rejects.toThrow(
+      "unknown prediction"
+    );
     canonicalWorld = {
       ...world,
       predictions: [
@@ -84,7 +92,9 @@ describe("micro-world learning workflow", () => {
         }
       ]
     };
-    await expect(workflow.recordMicroWorldInteraction(world.id, values)).rejects.toThrow("no changed variables");
+    await expect(workflow.recordMicroWorldInteraction(world.id, "evt-existing-prediction", values)).rejects.toThrow(
+      "no changed variables"
+    );
     await expect(
       workflow.recordMicroWorldReflection(world.id, world.reflectionPrompts[0], "A premature reflection.")
     ).rejects.toThrow("requires an interaction");

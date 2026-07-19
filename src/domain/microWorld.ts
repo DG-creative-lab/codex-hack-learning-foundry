@@ -18,6 +18,7 @@ export const MICRO_WORLD_LIMITS = {
   controls: 8,
   outcomes: 8,
   predictionOptions: 5,
+  predictionExpectedChanges: 8,
   assumptions: 8,
   limitations: 8,
   reflectionPrompts: 4,
@@ -99,10 +100,20 @@ export const microWorldOutcomeSchema = z
   })
   .strict();
 
+export const predictionChangeDirectionSchema = z.enum(["increase", "decrease", "unchanged"]);
+
+const predictionExpectedChangeSchema = z
+  .object({
+    outcomeId: boundedIdSchema,
+    direction: predictionChangeDirectionSchema
+  })
+  .strict();
+
 const predictionOptionSchema = z
   .object({
     id: boundedIdSchema,
-    label: z.string().min(1).max(MICRO_WORLD_LIMITS.titleCharacters)
+    label: z.string().min(1).max(MICRO_WORLD_LIMITS.titleCharacters),
+    expectedChanges: z.array(predictionExpectedChangeSchema).min(1).max(MICRO_WORLD_LIMITS.predictionExpectedChanges)
   })
   .strict();
 
@@ -226,6 +237,25 @@ export const microWorldArtifactSchema = z
         });
       }
     }
+
+    for (const [optionIndex, option] of artifact.prediction.options.entries()) {
+      const expectedOutcomeIds = option.expectedChanges.map((change) => change.outcomeId);
+      if (hasDuplicates(expectedOutcomeIds)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Prediction expected-outcome IDs must be unique within an option.",
+          path: ["prediction", "options", optionIndex, "expectedChanges"]
+        });
+      }
+      const unknownOutcomeId = expectedOutcomeIds.find((outcomeId) => !outcomeIds.includes(outcomeId));
+      if (unknownOutcomeId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Prediction option references unknown outcome ${unknownOutcomeId}.`,
+          path: ["prediction", "options", optionIndex, "expectedChanges"]
+        });
+      }
+    }
   });
 
 const variableValuesSchema = z.record(boundedIdSchema, z.number().finite());
@@ -238,6 +268,7 @@ export const microWorldPredictionPayloadSchema = z
 export const microWorldInteractionPayloadSchema = z
   .object({
     artifactId: boundedIdSchema,
+    predictionEventId: boundedIdSchema,
     variableValues: variableValuesSchema,
     changedVariableIds: boundedIds(MICRO_WORLD_LIMITS.variables).min(1),
     outcomeValues: outcomeValuesSchema
@@ -256,6 +287,7 @@ export type MicroWorldArtifact = z.infer<typeof microWorldArtifactSchema>;
 export type MicroWorldPrediction = z.infer<typeof microWorldPredictionPayloadSchema>;
 export type MicroWorldInteraction = z.infer<typeof microWorldInteractionPayloadSchema>;
 export type MicroWorldReflection = z.infer<typeof microWorldReflectionPayloadSchema>;
+export type PredictionChangeDirection = z.infer<typeof predictionChangeDirectionSchema>;
 export type MicroWorldVariableValues = z.infer<typeof variableValuesSchema>;
 export type MicroWorldOutcomeValues = z.infer<typeof outcomeValuesSchema>;
 
@@ -391,10 +423,26 @@ export function deriveMicroWorlds(events: EvidenceEvent[], context: MicroWorldCo
       const interaction = microWorldInteractionPayloadSchema.parse(event.payload);
       const artifact = worlds.get(interaction.artifactId);
       if (!artifact) throw new Error(`Cannot interact with unknown micro-world ${interaction.artifactId}`);
-      if (artifact.predictions.length === 0) {
-        throw new Error(`Micro-world ${artifact.id} requires a prediction before recording an interaction`);
+      const prediction = artifact.predictions.find(
+        (candidate) => candidate.evidenceEventId === interaction.predictionEventId
+      );
+      if (!prediction) {
+        throw new Error(
+          `Micro-world interaction ${event.id} references unknown prediction ${interaction.predictionEventId}`
+        );
+      }
+      if (artifact.interactions.some((candidate) => candidate.predictionEventId === interaction.predictionEventId)) {
+        throw new Error(`Micro-world prediction ${interaction.predictionEventId} already has a recorded interaction`);
       }
       validateVariableValues(artifact, interaction.variableValues, `Micro-world interaction ${event.id}`);
+      const mismatchedPredictionVariableId = artifact.variables
+        .map((variable) => variable.id)
+        .find((id) => prediction.variableValues[id] !== interaction.variableValues[id]);
+      if (mismatchedPredictionVariableId) {
+        throw new Error(
+          `Micro-world interaction ${event.id} does not match prediction ${interaction.predictionEventId} target configuration`
+        );
+      }
       validateOutcomeValues(artifact, interaction.outcomeValues, `Micro-world interaction ${event.id}`);
       const expectedOutcomeValues = evaluateMicroWorld(artifact, interaction.variableValues);
       const mismatchedOutcomeId = artifact.outcomes
