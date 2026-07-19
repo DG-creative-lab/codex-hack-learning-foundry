@@ -40,3 +40,7 @@ Every adapter returns the same extracted-document contract. The domain layer the
 The desktop online adapter validates every DNS answer as public and pins the HTTPS connection to the selected validated address while preserving the source hostname for TLS and HTTP. Response bodies are streamed under a hard byte cap, and both DNS and HTTP operations have deadlines.
 
 Source changes produce a new version linked by `previousVersionId`. Candidates at a stable source position revise the previously approved element with a new theory ID; the earlier element remains superseded in the Living Theory projection.
+
+Source workflow commands belong to the application layer. Views may invoke registration, processing, and review commands, but they do not coordinate extraction, synthesis, or evidence-event sequencing themselves.
+
+Raw documents are transient inputs rather than ledger records. A shared runtime-neutral content contract normalizes whitespace, HTML selectors, metadata fallbacks, and persistence limits before evidence is appended. JSONL stores at most 64 normalized units of 1,600 characters for each source version, while the version fingerprint and provenance identify the original extraction. This keeps the MVP on one recoverable persistence mechanism without allowing a source to turn replay into an unbounded document store. A dedicated content-addressed store can be added behind this boundary if full-text retrieval becomes a product requirement.

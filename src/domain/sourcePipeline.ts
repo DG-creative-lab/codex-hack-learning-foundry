@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeSourceUnits, SOURCE_CONTENT_LIMITS } from "../../shared/source-content.js";
 import type { EvidenceEvent } from "./types";
 import {
   type TheoryElementKind,
@@ -19,7 +20,7 @@ export const sourceLocationSchema = z
   .strict();
 
 export const extractedSourceUnitSchema = z
-  .object({ content: z.string().min(1), location: sourceLocationSchema })
+  .object({ content: z.string().min(1).max(SOURCE_CONTENT_LIMITS.maxUnitCharacters), location: sourceLocationSchema })
   .strict();
 
 export const extractedSourceDocumentSchema = z
@@ -28,7 +29,7 @@ export const extractedSourceDocumentSchema = z
     author: z.string().min(1),
     format: z.string().min(1),
     fingerprint: z.string().min(8),
-    units: z.array(extractedSourceUnitSchema).min(1)
+    units: z.array(extractedSourceUnitSchema).min(1).max(SOURCE_CONTENT_LIMITS.maxUnits)
   })
   .strict();
 
@@ -151,7 +152,10 @@ export function normalizeExtractedDocument(
   extractedAt: string,
   previousVersionId?: string
 ): { version: SourceVersion; fragments: NormalizedSourceFragment[] } {
-  const parsed = extractedSourceDocumentSchema.parse(document);
+  const parsed = extractedSourceDocumentSchema.parse({
+    ...document,
+    units: normalizeSourceUnits(document.units)
+  });
   const versionId = `${sourceId}-v-${parsed.fingerprint.slice(0, 12)}`;
   const fragments = parsed.units.map((unit, ordinal) =>
     normalizedSourceFragmentSchema.parse({
