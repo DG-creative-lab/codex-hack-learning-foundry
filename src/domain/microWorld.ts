@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  getMicroWorldRendererDefinition,
+  MICRO_WORLD_OUTCOME_KINDS,
+  MICRO_WORLD_RENDERER_IDS,
+  MICRO_WORLD_VARIABLE_ROLES
+} from "./microWorldRendererRegistry";
 import type { EvidenceEvent } from "./types";
 
 export const MICRO_WORLD_LIMITS = {
@@ -24,8 +30,8 @@ const boundedIdSchema = z.string().min(1).max(MICRO_WORLD_LIMITS.idCharacters);
 const boundedDescriptionSchema = z.string().trim().min(1).max(MICRO_WORLD_LIMITS.descriptionCharacters);
 const boundedIds = (maximum: number) => z.array(boundedIdSchema).max(maximum);
 
-export const microWorldVariableRoleSchema = z.enum(["spacing", "hierarchy", "information_density"]);
-export const microWorldRendererSchema = z.enum(["design_density_queue"]);
+export const microWorldVariableRoleSchema = z.enum(MICRO_WORLD_VARIABLE_ROLES);
+export const microWorldRendererSchema = z.enum(MICRO_WORLD_RENDERER_IDS);
 
 function isStepAligned(value: number, minimum: number, step: number): boolean {
   const stepOffset = (value - minimum) / step;
@@ -83,7 +89,7 @@ export const microWorldControlSchema = z
 export const microWorldOutcomeSchema = z
   .object({
     id: boundedIdSchema,
-    kind: z.enum(["visible_capacity", "scan_effort", "hierarchy_clarity"]),
+    kind: z.enum(MICRO_WORLD_OUTCOME_KINDS),
     label: z.string().min(1).max(MICRO_WORLD_LIMITS.titleCharacters),
     description: boundedDescriptionSchema,
     unit: z.enum(["items", "seconds", "percent"]),
@@ -143,6 +149,7 @@ export const microWorldArtifactSchema = z
     const optionIds = artifact.prediction.options.map((option) => option.id);
     const artifactSourceIds = new Set(artifact.sourceIds);
     const artifactTheoryIds = new Set(artifact.theoryElementIds);
+    const rendererDefinition = getMicroWorldRendererDefinition(artifact.renderer);
 
     if (hasDuplicates(variableIds))
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Variable IDs must be unique." });
@@ -165,6 +172,25 @@ export const microWorldArtifactSchema = z
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Fragment IDs must be unique." });
     if (hasDuplicates(artifact.theoryElementIds)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Theory element IDs must be unique." });
+    }
+
+    const missingRole = rendererDefinition.variableRoles.find((role) => !variableRoles.includes(role));
+    const unsupportedRole = variableRoles.find((role) => !rendererDefinition.variableRoles.includes(role));
+    if (missingRole || unsupportedRole) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Variables do not satisfy renderer ${artifact.renderer}.`,
+        path: ["variables"]
+      });
+    }
+    const missingOutcomeKind = rendererDefinition.outcomeKinds.find((kind) => !outcomeKinds.includes(kind));
+    const unsupportedOutcomeKind = outcomeKinds.find((kind) => !rendererDefinition.outcomeKinds.includes(kind));
+    if (missingOutcomeKind || unsupportedOutcomeKind) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Outcomes do not satisfy renderer ${artifact.renderer}.`,
+        path: ["outcomes"]
+      });
     }
 
     const variableIdSet = new Set(variableIds);
@@ -252,22 +278,19 @@ export function evaluateMicroWorld(
   values: MicroWorldVariableValues
 ): MicroWorldOutcomeValues {
   validateVariableValues(artifact, values, `Micro-world ${artifact.id}`);
-  if (artifact.renderer !== "design_density_queue") throw new Error(`Unsupported renderer ${artifact.renderer}`);
-  const spacing = normalizedValue(artifact, values, "spacing");
-  const hierarchy = normalizedValue(artifact, values, "hierarchy");
-  const informationDensity = normalizedValue(artifact, values, "information_density");
+  const rendererDefinition = getMicroWorldRendererDefinition(artifact.renderer);
+  const normalizedValues = Object.fromEntries(
+    rendererDefinition.variableRoles.map((role) => [role, normalizedValue(artifact, values, role)])
+  );
+  const outcomesByKind = rendererDefinition.evaluate(normalizedValues);
 
   return Object.fromEntries(
     artifact.outcomes.map((outcome) => {
-      if (outcome.kind === "visible_capacity") {
-        return [outcome.id, Math.round(5 + informationDensity * 4 - spacing * 2)];
+      const value = outcomesByKind[outcome.kind];
+      if (value === undefined) {
+        throw new Error(`Renderer ${artifact.renderer} did not evaluate outcome ${outcome.kind}`);
       }
-      if (outcome.kind === "scan_effort") {
-        const value = 5.2 + informationDensity * 3.4 + (1 - hierarchy) * 3.8 + Math.abs(spacing - 0.55) * 1.8;
-        return [outcome.id, Number(value.toFixed(1))];
-      }
-      const value = 38 + hierarchy * 54 + spacing * 8 - informationDensity * 14;
-      return [outcome.id, Math.round(Math.max(0, Math.min(100, value)))];
+      return [outcome.id, value];
     })
   );
 }

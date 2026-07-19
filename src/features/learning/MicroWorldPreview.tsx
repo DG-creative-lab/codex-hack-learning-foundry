@@ -6,8 +6,8 @@ import {
   type MicroWorldProjection,
   type MicroWorldVariableValues
 } from "../../domain/microWorld";
-import { DensityQueueStage } from "./DensityQueueStage";
 import { MicroWorldControls } from "./MicroWorldControls";
+import { getMicroWorldStage } from "./microWorldStageRegistry";
 import type {
   RecordMicroWorldInteraction,
   RecordMicroWorldPrediction,
@@ -61,6 +61,7 @@ export function MicroWorldPreview({
   const outcomesRevealed = artifact.predictions.length > 0 || predictionSaved;
   const hasRecordedInteraction = artifact.interactions.length > 0;
   const configurationChanged = !valuesEqual(values, committedValues);
+  const Stage = getMicroWorldStage(artifact.renderer);
 
   useEffect(() => {
     setCommittedValues(canonicalValues);
@@ -146,7 +147,7 @@ export function MicroWorldPreview({
           onRecord={() => void recordConfiguration()}
         />
 
-        <DensityQueueStage artifact={artifact} values={values} />
+        <Stage artifact={artifact} values={values} />
 
         <aside className="micro-world-inspector">
           <section className="prediction-panel">

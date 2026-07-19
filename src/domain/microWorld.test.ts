@@ -6,6 +6,7 @@ import {
   type MicroWorldVariableValues,
   microWorldArtifactSchema
 } from "./microWorld";
+import { getMicroWorldRendererDefinition } from "./microWorldRendererRegistry";
 import type { EvidenceEvent } from "./types";
 import { reduceWorkspace } from "./workspaceProjection";
 
@@ -52,6 +53,10 @@ describe("micro-world artifacts", () => {
     expect(preparedDensityMicroWorld.controls).toHaveLength(3);
     expect(preparedDensityMicroWorld.outcomes).toHaveLength(3);
     expect(preparedDensityMicroWorld.outcomes.every((outcome) => outcome.theoryElementIds.length > 0)).toBe(true);
+    expect(getMicroWorldRendererDefinition(preparedDensityMicroWorld.renderer)).toMatchObject({
+      variableRoles: ["spacing", "hierarchy", "information_density"],
+      outcomeKinds: ["visible_capacity", "scan_effort", "hierarchy_clarity"]
+    });
     expect(() =>
       microWorldArtifactSchema.parse({ ...preparedDensityMicroWorld, renderer: "generated_javascript" })
     ).toThrow();
