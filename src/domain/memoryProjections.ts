@@ -1,41 +1,31 @@
+import { deriveAgentMemory } from "./agentMemoryProjection";
+import { deriveHumanMemory } from "./humanMemoryProjection";
+import { latestTimestamp } from "./memoryProjectionSupport";
+import type { MemoryProjections } from "./memoryProjectionTypes";
+import type { MicroWorldProjection } from "./microWorld";
+import { deriveSharedTheoryMemory } from "./sharedTheoryProjection";
 import { type EvidenceEvent, evidenceEventSchema, type LivingTheory, livingTheorySchema } from "./types";
+import type { UnderstandingCheckProjection } from "./understandingChecks";
+import type { FoundryCapability } from "./workspaceEntities";
 
-export interface TheoryReferenceProjection {
-  theoryId: string;
-  theoryElementIds: string[];
-  contributedTheoryElementIds: string[];
-  evidenceEventIds: string[];
+export * from "./memoryProjectionTypes";
+
+interface MemoryProjectionInput {
+  theory: LivingTheory;
+  events: EvidenceEvent[];
+  understandingChecks: UnderstandingCheckProjection[];
+  microWorlds: MicroWorldProjection[];
+  capabilities: FoundryCapability[];
 }
 
-export interface MemoryProjections {
-  human: TheoryReferenceProjection;
-  agent: TheoryReferenceProjection;
-}
+export function deriveMemoryProjections(input: MemoryProjectionInput): MemoryProjections {
+  const theory = livingTheorySchema.parse(input.theory);
+  const events = evidenceEventSchema.array().parse(input.events);
+  const asOf = latestTimestamp(events.map((event) => event.createdAt)) ?? new Date(0).toISOString();
+  const eventsById = new Map(events.map((event) => [event.id, event]));
+  const human = deriveHumanMemory(theory, eventsById, input.understandingChecks, input.microWorlds, asOf);
+  const agent = deriveAgentMemory(theory, events, eventsById, input.capabilities, asOf);
+  const shared = deriveSharedTheoryMemory(theory, eventsById, human, agent, asOf);
 
-function projectionFor(
-  theory: LivingTheory,
-  events: EvidenceEvent[],
-  actor: "human" | "agent"
-): TheoryReferenceProjection {
-  const activeElements = theory.elements.filter((element) => element.status !== "superseded");
-  const actorEventIds = new Set(events.filter((event) => event.actor === actor).map((event) => event.id));
-
-  return {
-    theoryId: theory.id,
-    theoryElementIds: activeElements.map((element) => element.id),
-    contributedTheoryElementIds: activeElements
-      .filter((element) => element.evidenceEventIds.some((eventId) => actorEventIds.has(eventId)))
-      .map((element) => element.id),
-    evidenceEventIds: [...actorEventIds]
-  };
-}
-
-export function deriveMemoryProjections(theoryInput: LivingTheory, rawEvents: EvidenceEvent[]): MemoryProjections {
-  const theory = livingTheorySchema.parse(theoryInput);
-  const events = evidenceEventSchema.array().parse(rawEvents);
-
-  return {
-    human: projectionFor(theory, events, "human"),
-    agent: projectionFor(theory, events, "agent")
-  };
+  return { asOf, human, agent, shared };
 }

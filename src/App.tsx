@@ -49,7 +49,7 @@ function App() {
   const pageTitles: Record<ViewId, [string, string]> = {
     sources: ["Source library", "Capture, process, and trace knowledge"],
     learn: ["Learning studio", "Study, practice, recall, and reflect"],
-    memory: ["Shared memory", "One evidence layer, two learning states"],
+    memory: ["Shared memory", "One ledger, three distinct projections"],
     foundry: ["Capability foundry", "Build, evaluate, approve, and revise"],
     about: ["System model", "Local-first shared human-agent learning"]
   };

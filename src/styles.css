@@ -1023,108 +1023,6 @@ button {
   }
 }
 
-.memory-view {
-  height: calc(100vh - 112px);
-  padding: 30px 34px 56px;
-}
-.memory-model {
-  display: grid;
-  grid-template-columns: 0.75fr 1.5fr 0.75fr;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
-}
-.memory-column,
-.shared-memory {
-  min-height: 315px;
-  padding: 24px;
-}
-.memory-column {
-  background: #e7e9e5;
-}
-.human-memory {
-  border-right: 1px solid var(--ink);
-}
-.agent-memory {
-  border-left: 1px solid var(--ink);
-}
-.memory-column > svg {
-  margin-bottom: 30px;
-  color: var(--signal);
-}
-.agent-memory > svg {
-  color: var(--blue);
-}
-.memory-model h2 {
-  margin: 0 0 28px;
-  font-size: 20px;
-  font-weight: 500;
-}
-.memory-column ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.memory-column li {
-  padding: 9px 0;
-  color: #555a53;
-  border-top: 1px solid var(--line);
-  font-size: var(--text-secondary);
-}
-.shared-memory {
-  text-align: center;
-  background: #fff;
-}
-.shared-memory > svg {
-  color: var(--signal);
-}
-.shared-memory .eyebrow {
-  margin-top: 18px;
-}
-.shared-memory h2 {
-  margin-bottom: 10px;
-  font-size: 25px;
-}
-.shared-memory > p:last-of-type {
-  max-width: 490px;
-  margin: 0 auto;
-  color: var(--muted);
-  font-size: var(--text-secondary);
-  line-height: 1.5;
-}
-.atom-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 25px;
-}
-.atom-cloud span {
-  max-width: 210px;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  background: #f4f5f2;
-  font-size: var(--text-micro);
-}
-.kind-border-source_fact {
-  border-left-color: var(--blue) !important;
-}
-.kind-border-user_interpretation {
-  border-left-color: var(--signal) !important;
-}
-.kind-border-agent_synthesis {
-  border-left-color: var(--yellow) !important;
-}
-.kind-border-validated_behavior {
-  border-left-color: var(--green) !important;
-}
-.memory-view .ledger-section {
-  margin-top: 30px;
-}
-.memory-view .ledger-section .section-heading {
-  min-height: 62px;
-}
-
 .foundry-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
@@ -1491,14 +1389,6 @@ button {
   }
   .source-inspector {
     min-height: 210px;
-  }
-  .memory-model {
-    grid-template-columns: 1fr;
-  }
-  .human-memory,
-  .agent-memory {
-    border: 0;
-    border-bottom: 1px solid var(--ink);
   }
   .foundry-header {
     grid-template-columns: 1fr;
