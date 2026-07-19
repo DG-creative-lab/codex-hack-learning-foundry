@@ -25,26 +25,6 @@ function requiredElement<T extends Element>(parent: ParentNode, selector: string
   return element;
 }
 
-function learningProps(workspace: WorkspaceProjection) {
-  return {
-    artifacts: workspace.learningArtifacts,
-    explainers: workspace.explainers,
-    microWorlds: workspace.microWorlds,
-    checks: workspace.understandingChecks,
-    evidenceVectors: workspace.understandingEvidenceVectors,
-    reviewItems: workspace.targetedReviewItems,
-    fragments: workspace.sourceFragments,
-    sources: workspace.sources,
-    onFeedback: async () => undefined,
-    onResponse: async () => undefined,
-    onDispute: async () => undefined,
-    onPreference: async () => undefined,
-    onMicroWorldPrediction: async () => "evt-test-prediction",
-    onMicroWorldInteraction: async () => undefined,
-    onMicroWorldReflection: async () => undefined
-  };
-}
-
 async function renderView(
   workspace: WorkspaceProjection,
   overrides: Partial<Parameters<typeof UnderstandingView>[0]> = {}
@@ -58,9 +38,9 @@ async function renderView(
       <UnderstandingView
         workspace={workspace}
         loading={false}
-        learningProps={learningProps(workspace)}
         onAddSource={() => undefined}
         onOpenSource={() => undefined}
+        onOpenLearning={() => undefined}
         onOpenMemory={() => undefined}
         onOpenFoundry={() => undefined}
         {...overrides}
@@ -92,15 +72,12 @@ describe("UnderstandingView", () => {
     expect(onOpenMemory).toHaveBeenCalledWith("theory-concept-visual-density");
   });
 
-  it("opens the prepared next action and returns to the Living Theory", async () => {
-    const view = await renderView(reduceWorkspace(seedEvents));
+  it("routes the prepared next action to the exact learning item", async () => {
+    const onOpenLearning = vi.fn();
+    const view = await renderView(reduceWorkspace(seedEvents), { onOpenLearning });
 
     await act(async () => requiredElement<HTMLButtonElement>(view, ".next-action > button").click());
-    expect(view.textContent).toContain("Predict what would happen");
-    expect(view.textContent).toContain("Living Theory");
-    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
-    expect(view.textContent).toContain("Next meaningful action");
-    expect(view.textContent).toContain("Review for user value");
+    expect(onOpenLearning).toHaveBeenCalledWith(expect.stringMatching(/^check:/));
   });
 
   it("renders loading and empty states with a recoverable source action", async () => {
@@ -116,9 +93,9 @@ describe("UnderstandingView", () => {
         <UnderstandingView
           workspace={empty}
           loading={false}
-          learningProps={learningProps(empty)}
           onAddSource={onAddSource}
           onOpenSource={() => undefined}
+          onOpenLearning={() => undefined}
           onOpenMemory={() => undefined}
           onOpenFoundry={() => undefined}
         />

@@ -1,22 +1,18 @@
 import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, LoaderCircle } from "lucide-react";
-import { type ComponentProps, useEffect, useState } from "react";
+import { useState } from "react";
 import type { WorkspaceProjection } from "../../domain/workspaceProjection";
-import { LearnView } from "../../views/LearnView";
 import { TheoryInspector } from "./TheoryInspector";
 import { TheoryRegister } from "./TheoryRegister";
 import { UnderstandingActionRail } from "./UnderstandingActionRail";
 import { deriveUnderstandingNextAction, deriveUnderstandingWorkspaceState } from "./understandingModel";
 import "./understanding.css";
 
-type LearningProps = Omit<ComponentProps<typeof LearnView>, "requestedItemId" | "onReturnToTheory" | "contextTitle">;
-
 interface UnderstandingViewProps {
   workspace: WorkspaceProjection;
   loading: boolean;
-  requestedItemId?: string;
-  learningProps: LearningProps;
   onAddSource: () => void;
   onOpenSource: (sourceId: string) => void;
+  onOpenLearning: (itemId: string) => void;
   onOpenMemory: (theoryElementId: string) => void;
   onOpenFoundry: (capabilityId: string) => void;
 }
@@ -34,17 +30,15 @@ const stateCopy = {
 export function UnderstandingView({
   workspace,
   loading,
-  requestedItemId,
-  learningProps,
   onAddSource,
   onOpenSource,
+  onOpenLearning,
   onOpenMemory,
   onOpenFoundry
 }: UnderstandingViewProps) {
   const activeElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
   const initialElement = activeElements.find((element) => element.kind === "purpose") ?? activeElements[0];
   const [selectedElementId, setSelectedElementId] = useState(initialElement?.id);
-  const [activeLearningItemId, setActiveLearningItemId] = useState(requestedItemId);
   const selectedElement = activeElements.find((element) => element.id === selectedElementId) ?? initialElement;
   const state = deriveUnderstandingWorkspaceState(workspace, loading);
   const nextAction = deriveUnderstandingNextAction(workspace);
@@ -58,27 +52,12 @@ export function UnderstandingView({
   const questions = activeElements.filter((element) => element.kind === "question" || element.status === "unresolved");
   const stateLabel = stateCopy[state];
 
-  useEffect(() => {
-    if (requestedItemId) setActiveLearningItemId(requestedItemId);
-  }, [requestedItemId]);
-
   function openNextAction() {
     if (nextAction.kind === "source") onOpenSource(nextAction.id);
-    if (nextAction.kind === "learning") setActiveLearningItemId(nextAction.id);
+    if (nextAction.kind === "learning") onOpenLearning(nextAction.id);
     if (nextAction.kind === "memory") onOpenMemory(nextAction.id);
     if (nextAction.kind === "foundry") onOpenFoundry(nextAction.id);
     if (nextAction.kind === "complete" && selectedElement) onOpenMemory(selectedElement.id);
-  }
-
-  if (activeLearningItemId) {
-    return (
-      <LearnView
-        {...learningProps}
-        requestedItemId={activeLearningItemId}
-        contextTitle={workspace.theory.title}
-        onReturnToTheory={() => setActiveLearningItemId(undefined)}
-      />
-    );
   }
 
   if (state === "loading") {

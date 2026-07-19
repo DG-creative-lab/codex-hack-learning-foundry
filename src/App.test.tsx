@@ -52,9 +52,13 @@ describe("App understanding-gap intervention routing", () => {
     await act(async () => predictionSignal.click());
     await act(async () => requiredElement<HTMLButtonElement>(view, ".gap-intervention button").click());
 
-    expect(view.textContent).toContain("Understanding");
+    expect(view.textContent).toContain("Learning studio");
     const selectedJourneyItem = requiredElement<HTMLButtonElement>(view, ".artifact-list button.selected");
     expect(selectedJourneyItem.textContent).toContain("Prediction");
     expect(requiredElement(view, ".understanding-check-preview").textContent).toContain("Predict what would happen");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
+    expect(view.textContent).toContain("Understanding");
+    expect(view.textContent).toContain("Next meaningful action");
   });
 });
