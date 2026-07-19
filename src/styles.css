@@ -14,6 +14,11 @@
   --green: #1f7953;
   --blue: #2865a8;
   --yellow: #a66a00;
+  --text-micro: 10px;
+  --text-meta: 11px;
+  --text-secondary: 12px;
+  --text-compact: 13px;
+  --text-body: 14px;
 }
 
 * {
@@ -31,6 +36,8 @@ body,
 body {
   overflow: hidden;
   background: var(--paper);
+  font-size: var(--text-body);
+  line-height: 1.4;
 }
 
 button,
@@ -104,7 +111,7 @@ button {
   margin: 13px 0 0;
   color: #92978f;
   font:
-    10px / 1.2 "SFMono-Regular",
+    var(--text-compact) / 1.2 "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -133,7 +140,7 @@ button {
 .primary-nav button .nav-count {
   color: #62675f;
   font:
-    10px "SFMono-Regular",
+    var(--text-compact) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -159,7 +166,7 @@ button {
   margin: 0 0 9px;
   color: var(--muted);
   font:
-    10px / 1.4 "SFMono-Regular",
+    var(--text-compact) / 1.4 "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -250,7 +257,7 @@ button {
   border: 1px solid var(--signal);
   border-radius: 3px;
   background: var(--signal);
-  font-size: 11px;
+  font-size: var(--text-body);
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -286,7 +293,7 @@ button {
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -304,7 +311,7 @@ button {
 .ledger-section article > span {
   color: var(--muted);
   font:
-    8px / 1.5 "SFMono-Regular",
+    var(--text-meta) / 1.5 "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -315,14 +322,14 @@ button {
 }
 .ledger-section article strong {
   font:
-    9px "SFMono-Regular",
+    var(--text-secondary) "SFMono-Regular",
     Consolas,
     monospace;
 }
 .ledger-section article p {
   margin: 5px 0 0;
   color: #51564f;
-  font-size: 9px;
+  font-size: var(--text-secondary);
   line-height: 1.45;
 }
 
@@ -356,7 +363,7 @@ button {
 .about-columns span {
   color: var(--signal-dark);
   font:
-    9px "SFMono-Regular",
+    var(--text-secondary) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -367,7 +374,7 @@ button {
 .about-columns p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-body);
   line-height: 1.6;
 }
 
@@ -450,7 +457,7 @@ button {
 .topbar > div:first-child > p:last-child {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .ledger-alert {
   margin: 0;
@@ -459,7 +466,7 @@ button {
   border-bottom: 1px solid #d9b7a7;
   background: #fff1e9;
   font:
-    10px / 1.4 "SFMono-Regular",
+    var(--text-compact) / 1.4 "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -478,7 +485,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 3px;
   background: transparent;
-  font-size: 10px;
+  font-size: var(--text-compact);
   cursor: pointer;
 }
 .workspace-switcher:hover {
@@ -493,7 +500,7 @@ button {
 }
 .sidebar-project strong {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-compact);
   font-weight: 500;
 }
 .sidebar-project span {
@@ -501,7 +508,7 @@ button {
   margin-top: 7px;
   color: #777d75;
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -515,7 +522,7 @@ button {
   color: #8e938c;
   border: 0;
   background: transparent;
-  font-size: 10px;
+  font-size: var(--text-compact);
   cursor: pointer;
 }
 .about-nav:hover,
@@ -529,7 +536,7 @@ button {
   gap: 7px;
   margin-top: 8px;
   color: #b9bdb7;
-  font-size: 9px;
+  font-size: var(--text-secondary);
 }
 
 .page-scroll {
@@ -554,7 +561,7 @@ button {
   max-width: 430px;
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-compact);
   line-height: 1.55;
 }
 .section-heading.compact h2 {
@@ -570,7 +577,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 3px;
   background: transparent;
-  font-size: 9px;
+  font-size: var(--text-secondary);
   cursor: pointer;
 }
 .secondary-button:hover {
@@ -605,7 +612,7 @@ button {
 }
 .pipeline-node span,
 .branch-destinations span {
-  font-size: 11px;
+  font-size: var(--text-body);
   font-weight: 600;
 }
 .pipeline-node small {
@@ -613,7 +620,7 @@ button {
   margin-top: 5px;
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -678,7 +685,7 @@ button {
 .branch-destinations small {
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -690,7 +697,7 @@ button {
   gap: 8px;
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -712,7 +719,7 @@ button {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 9px;
+  font-size: var(--text-secondary);
 }
 .source-workspace {
   display: grid;
@@ -738,7 +745,7 @@ button {
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -765,7 +772,7 @@ button {
 }
 .source-list > button > span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
 }
 .source-title {
   display: grid;
@@ -782,7 +789,7 @@ button {
 }
 .source-title strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: var(--text-compact);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -790,7 +797,7 @@ button {
 .source-title small {
   overflow: hidden;
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -799,7 +806,7 @@ button {
   align-items: center;
   gap: 6px;
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace !important;
   text-transform: uppercase;
@@ -834,7 +841,7 @@ button {
 .source-author {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--text-secondary);
 }
 .source-inspector dl {
   margin: 22px 0 12px;
@@ -847,7 +854,7 @@ button {
   margin-bottom: 5px;
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -855,7 +862,7 @@ button {
 .source-inspector dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.45;
 }
 .progress-track {
@@ -889,7 +896,7 @@ button {
 }
 .output-summary span {
   color: var(--muted);
-  font-size: 7px;
+  font-size: var(--text-micro);
   line-height: 1.3;
 }
 .source-error {
@@ -910,7 +917,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.45;
 }
 .source-error strong,
@@ -927,7 +934,7 @@ button {
   justify-content: space-between;
   padding: 11px 0 7px;
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -936,7 +943,7 @@ button {
 }
 .synthesis-review > p {
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
 }
 .candidate-list {
   margin: 12px 0;
@@ -950,21 +957,21 @@ button {
   justify-content: space-between;
   padding: 9px 0;
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   cursor: pointer;
 }
 .candidate-list details > p {
   margin: 0 0 9px;
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 .candidate-list blockquote {
   margin: 0 0 8px;
   padding: 9px;
   background: #fff;
-  font-size: 7px;
+  font-size: var(--text-micro);
   line-height: 1.5;
 }
 .candidate-list blockquote span {
@@ -979,7 +986,7 @@ button {
   display: block;
   margin-bottom: 9px;
   color: #8a5b13;
-  font-size: 7px;
+  font-size: var(--text-micro);
 }
 .review-actions {
   display: flex;
@@ -991,7 +998,7 @@ button {
   color: var(--muted);
   border: 0;
   background: transparent;
-  font-size: 8px;
+  font-size: var(--text-meta);
   cursor: pointer;
 }
 .reprocess-button {
@@ -1003,7 +1010,7 @@ button {
   color: var(--muted);
   border: 0;
   background: transparent;
-  font-size: 8px;
+  font-size: var(--text-meta);
   cursor: pointer;
 }
 .spin {
@@ -1032,7 +1039,7 @@ button {
   max-width: 680px;
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-body);
   line-height: 1.6;
 }
 .learning-metrics {
@@ -1050,7 +1057,7 @@ button {
 .learning-metrics span {
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1080,7 +1087,7 @@ button {
   gap: 10px;
   align-items: center;
   width: 100%;
-  min-height: 76px;
+  min-height: 88px;
   padding: 10px;
   border: 0;
   border-bottom: 1px solid var(--line);
@@ -1098,7 +1105,7 @@ button {
 .artifact-index {
   color: var(--signal-dark);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -1110,17 +1117,17 @@ button {
 .artifact-list small {
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
 }
 .artifact-list strong {
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .artifact-list > button > span:last-child {
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
   text-align: right;
 }
 .artifact-list i {
@@ -1146,7 +1153,7 @@ button {
   border-bottom: 1px solid #424640;
   color: #91978f;
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1166,7 +1173,7 @@ button {
   max-width: 600px;
   margin: 20px 0 30px;
   color: #aeb3ac;
-  font-size: 10px;
+  font-size: var(--text-compact);
   line-height: 1.6;
 }
 .lesson-sequence {
@@ -1187,24 +1194,24 @@ button {
 .lesson-sequence span {
   color: var(--signal);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
 .lesson-sequence strong {
   display: block;
   margin-top: 28px;
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .lesson-sequence p {
   margin: 8px 0 0;
   color: #92988f;
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.45;
 }
 
 .artifact-workspace.explainer-active {
-  grid-template-columns: 276px minmax(0, 1fr);
+  grid-template-columns: 310px minmax(0, 1fr);
   gap: 24px;
 }
 .explainer-preview {
@@ -1228,12 +1235,12 @@ button {
   max-width: 650px;
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-compact);
   line-height: 1.55;
 }
 .depth-control {
   display: grid;
-  grid-template-columns: repeat(2, 74px);
+  grid-template-columns: repeat(2, 82px);
   align-content: start;
   flex: 0 0 auto;
   border: 1px solid var(--line);
@@ -1247,7 +1254,7 @@ button {
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1260,7 +1267,7 @@ button {
   min-height: 31px;
   border: 0;
   background: transparent;
-  font-size: 8px;
+  font-size: var(--text-meta);
   cursor: pointer;
 }
 .depth-control button + button {
@@ -1282,19 +1289,19 @@ button {
 }
 .explainer-context span {
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
 }
 .explainer-context p {
   margin: 0;
-  font-size: 9px;
+  font-size: var(--text-secondary);
   line-height: 1.5;
 }
 .explainer-reading-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 230px;
+  grid-template-columns: minmax(0, 1fr) 270px;
 }
 .explainer-sections {
   min-width: 0;
@@ -1315,7 +1322,7 @@ button {
   padding-top: 3px;
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -1327,7 +1334,7 @@ button {
 .section-kicker span,
 .section-kicker strong {
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1354,10 +1361,10 @@ button {
   font-weight: 600;
 }
 .explainer-section h3 + p {
-  max-width: 680px;
+  max-width: 760px;
   margin: 0;
   color: #4f544e;
-  font-size: 10px;
+  font-size: var(--text-body);
   line-height: 1.7;
 }
 .fragment-links {
@@ -1373,7 +1380,7 @@ button {
   margin-bottom: 7px;
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1387,7 +1394,7 @@ button {
   border: 1px solid #aec2d9;
   border-radius: 3px;
   background: #f4f7fa;
-  font-size: 7px;
+  font-size: var(--text-micro);
   cursor: pointer;
 }
 .fragment-links button:hover {
@@ -1406,7 +1413,7 @@ button {
   color: var(--muted);
   border: 0;
   background: transparent;
-  font-size: 7px;
+  font-size: var(--text-micro);
   cursor: pointer;
 }
 .section-feedback-actions button:hover {
@@ -1423,7 +1430,7 @@ button {
   margin-bottom: 7px;
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1434,7 +1441,7 @@ button {
   padding: 9px;
   border: 1px solid var(--line);
   background: #fff;
-  font-size: 9px;
+  font-size: var(--text-secondary);
   line-height: 1.5;
   outline: 0;
 }
@@ -1466,13 +1473,13 @@ button {
   display: block;
 }
 .inspector-block > strong {
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .inspector-block > span {
   margin-top: 5px;
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -1480,13 +1487,13 @@ button {
   margin: 16px 0 12px;
   padding: 0 0 0 12px;
   border-left: 2px solid var(--blue);
-  font-size: 9px;
+  font-size: var(--text-compact);
   line-height: 1.65;
 }
 .inspector-block > small {
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 7px;
+  font-size: var(--text-micro);
   line-height: 1.45;
 }
 .feedback-summary {
@@ -1504,7 +1511,7 @@ button {
 .feedback-summary dt,
 .feedback-summary dd {
   margin: 0;
-  font-size: 8px;
+  font-size: var(--text-meta);
 }
 .feedback-summary dd {
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -1516,7 +1523,7 @@ button {
   gap: 5px;
   margin: 12px 0 0;
   color: var(--green);
-  font-size: 8px;
+  font-size: var(--text-meta);
 }
 .explainer-seeds {
   display: grid;
@@ -1538,19 +1545,19 @@ button {
 .explainer-seeds span {
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
 }
 .explainer-seeds strong {
   margin-top: 10px;
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .explainer-seeds p {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.5;
 }
 
@@ -1599,7 +1606,7 @@ button {
   padding: 9px 0;
   color: #555a53;
   border-top: 1px solid var(--line);
-  font-size: 9px;
+  font-size: var(--text-secondary);
 }
 .shared-memory {
   text-align: center;
@@ -1619,7 +1626,7 @@ button {
   max-width: 490px;
   margin: 0 auto;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--text-secondary);
   line-height: 1.5;
 }
 .atom-cloud {
@@ -1635,7 +1642,7 @@ button {
   border: 1px solid var(--line);
   border-left-width: 3px;
   background: #f4f5f2;
-  font-size: 7px;
+  font-size: var(--text-micro);
 }
 .kind-border-source_fact {
   border-left-color: var(--blue) !important;
@@ -1674,7 +1681,7 @@ button {
 .foundry-header > p {
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-compact);
   line-height: 1.6;
 }
 .capability-workspace {
@@ -1700,7 +1707,7 @@ button {
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1733,18 +1740,18 @@ button {
 .capability-list small {
   color: var(--muted);
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
 }
 .capability-list strong {
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .capability-list button > span:not(:first-child) {
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
 }
@@ -1770,7 +1777,7 @@ button {
   color: var(--green);
   border: 1px solid var(--green);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1799,7 +1806,7 @@ button {
 }
 .capability-stats span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
 }
 .lifecycle {
   padding: 22px 24px;
@@ -1819,13 +1826,13 @@ button {
   border: 1px solid #c8ccc6;
   border-radius: 50%;
   font:
-    7px "SFMono-Regular",
+    var(--text-micro) "SFMono-Regular",
     Consolas,
     monospace;
 }
 .lifecycle span {
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1854,7 +1861,7 @@ button {
   max-width: 780px;
   margin: 24px 0 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-body);
   line-height: 1.7;
 }
 
@@ -1912,7 +1919,7 @@ button {
   border: 0;
   border-right: 1px solid var(--line);
   background: transparent;
-  font-size: 9px;
+  font-size: var(--text-secondary);
   cursor: pointer;
 }
 .mode-switch button:last-child {
@@ -1931,7 +1938,7 @@ button {
 .dialog-field span {
   color: var(--muted);
   font:
-    8px "SFMono-Regular",
+    var(--text-meta) "SFMono-Regular",
     Consolas,
     monospace;
   text-transform: uppercase;
@@ -1944,7 +1951,7 @@ button {
   border-radius: 2px;
   outline: 0;
   background: #fff;
-  font-size: 10px;
+  font-size: var(--text-compact);
 }
 .dialog-field input:focus {
   border-color: var(--signal);
@@ -1964,11 +1971,11 @@ button {
   margin: 0;
 }
 .ingestion-note strong {
-  font-size: 9px;
+  font-size: var(--text-secondary);
 }
 .ingestion-note span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--text-meta);
   line-height: 1.4;
 }
 
