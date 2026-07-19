@@ -110,7 +110,22 @@ export function deriveHumanMemory(
 
   for (const check of checks) {
     for (const attempt of check.attempts) {
-      if (attempt.dispute) continue;
+      if (attempt.dispute) {
+        const disputeEvent = eventsById.get(attempt.dispute.evidenceEventId);
+        if (disputeEvent) {
+          addDimensionEvidence(
+            elements,
+            check.theoryElementIds,
+            "uncertainty",
+            evidenceReference(
+              disputeEvent,
+              "mixed",
+              `The learner disputed evaluation ${attempt.eventId}. Correction: ${attempt.dispute.correction}`
+            )
+          );
+        }
+        continue;
+      }
       const event = eventsById.get(attempt.eventId);
       if (!event) continue;
       for (const signal of attempt.evaluation.signals) {

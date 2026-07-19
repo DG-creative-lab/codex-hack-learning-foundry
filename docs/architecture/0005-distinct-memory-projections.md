@@ -12,11 +12,11 @@ The evidence ledger and Living Theory already provide canonical history and stab
 
 Derive three separate memory projections from the complete validated workspace state.
 
-The human projection represents recall, explanation, prediction, transfer, participation, and uncertainty handling independently for every active theory element. Understanding-check evaluations contribute their declared signals. A micro-world prediction contributes an unassessed hypothesis signal, while deliberately recorded interactions and interaction-linked reflections contribute participation evidence. Modeled outcome values never become human-understanding evidence.
+The human projection represents recall, explanation, prediction, transfer, participation, and uncertainty handling independently for every active theory element. Understanding-check evaluations contribute their declared signals. When an evaluation is disputed, its provisional signals are suppressed and the correction event remains as mixed uncertainty evidence linked to the original attempt. A micro-world prediction contributes an unassessed hypothesis signal, while deliberately recorded interactions and interaction-linked reflections contribute participation evidence. Modeled outcome values never become human-understanding evidence.
 
 The agent projection categorizes accessible theory as knowledge, assumptions, boundaries, and decisions. Capability registrations provide version records, and evaluations provide supporting, mixed, or failure evidence. Agent evaluation and execution events never update the human projection.
 
-The shared-theory projection reports source, human, and agent coverage separately from agreement. Explicit contradiction relationships produce contested state. Questions and unresolved elements remain unresolved. Human challenge evidence can prevent a supported agreement state without being misclassified as a contradiction of the theory itself.
+The shared-theory projection reports source, human, and agent coverage separately from agreement. Human and agent coverage is derived from actors on the element's evidence and every linked relationship event, so authorship remains visible even without understanding-check evidence. Explicit contradiction relationships produce contested state. Questions and unresolved elements remain unresolved. Human challenge evidence can prevent a supported agreement state without being misclassified as a contradiction of the theory itself.
 
 Every projected signal carries its evidence event ID, timestamp, epistemic kind, summary, source IDs, and rationale. Projections calculate their deterministic `asOf` time from the latest ledger event. Evidence older than 30 days relative to that point is marked stale for the MVP; history remains intact.
 

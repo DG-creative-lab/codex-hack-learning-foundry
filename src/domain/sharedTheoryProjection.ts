@@ -18,6 +18,12 @@ function relationshipEventIds(theory: LivingTheory, elementId: string, kind: "su
     .flatMap((relationship) => relationship.evidenceEventIds);
 }
 
+function linkedRelationships(theory: LivingTheory, elementId: string) {
+  return theory.relationships.filter(
+    (relationship) => relationship.fromElementId === elementId || relationship.toElementId === elementId
+  );
+}
+
 export function deriveSharedTheoryMemory(
   theory: LivingTheory,
   eventsById: Map<string, EvidenceEvent>,
@@ -26,11 +32,19 @@ export function deriveSharedTheoryMemory(
   asOf: string
 ): SharedTheoryProjection {
   const humanById = new Map(human.elements.map((element) => [element.theoryElementId, element]));
+  const humanContributions = new Set(human.contributedTheoryElementIds);
   const agentContributions = new Set(agent.contributedTheoryElementIds);
   const elements = theory.elements
     .filter((element) => element.status !== "superseded")
     .map<SharedTheoryElementProjection>((element) => {
       const humanElement = humanById.get(element.id);
+      const relationships = linkedRelationships(theory, element.id);
+      const linkedEvents = [
+        ...element.evidenceEventIds,
+        ...relationships.flatMap((relationship) => relationship.evidenceEventIds)
+      ]
+        .map((eventId) => eventsById.get(eventId))
+        .filter((event): event is EvidenceEvent => Boolean(event));
       const supportingEventIds = [
         ...element.evidenceEventIds,
         ...relationshipEventIds(theory, element.id, "supports"),
@@ -55,9 +69,9 @@ export function deriveSharedTheoryMemory(
           )
       );
       const coverage = {
-        source: element.sourceIds.length > 0,
-        human: Boolean(humanElement?.lastObservedAt) || element.epistemicKind === "user_interpretation",
-        agent: agentContributions.has(element.id) || element.epistemicKind === "agent_synthesis"
+        source: element.sourceIds.length > 0 || relationships.some((relationship) => relationship.sourceIds.length > 0),
+        human: humanContributions.has(element.id) || linkedEvents.some((event) => event.actor === "human"),
+        agent: agentContributions.has(element.id) || linkedEvents.some((event) => event.actor === "agent")
       };
       const humanSupport = (humanElement?.supportingEvidence.length ?? 0) > 0;
       const humanChallenge = (humanElement?.contradictoryEvidence.length ?? 0) > 0;

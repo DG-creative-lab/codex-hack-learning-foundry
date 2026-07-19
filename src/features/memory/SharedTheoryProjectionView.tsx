@@ -60,14 +60,26 @@ export function SharedTheoryProjectionView({ projection }: { projection: SharedT
                 <strong>{element.title}</strong>
               </span>
               <span className="coverage-marks">
-                <abbr title="Source coverage" data-covered={element.coverage.source}>
-                  S
+                <abbr
+                  title="Source coverage"
+                  aria-label={`Source coverage: ${element.coverage.source ? "present" : "absent"}`}
+                  data-covered={element.coverage.source}
+                >
+                  <span aria-hidden="true">S {element.coverage.source ? "+" : "-"}</span>
                 </abbr>
-                <abbr title="Human evidence coverage" data-covered={element.coverage.human}>
-                  H
+                <abbr
+                  title="Human evidence coverage"
+                  aria-label={`Human evidence coverage: ${element.coverage.human ? "present" : "absent"}`}
+                  data-covered={element.coverage.human}
+                >
+                  <span aria-hidden="true">H {element.coverage.human ? "+" : "-"}</span>
                 </abbr>
-                <abbr title="Agent contribution coverage" data-covered={element.coverage.agent}>
-                  A
+                <abbr
+                  title="Agent contribution coverage"
+                  aria-label={`Agent contribution coverage: ${element.coverage.agent ? "present" : "absent"}`}
+                  data-covered={element.coverage.agent}
+                >
+                  <span aria-hidden="true">A {element.coverage.agent ? "+" : "-"}</span>
                 </abbr>
               </span>
               <span data-agreement={element.agreement}>{element.agreement}</span>

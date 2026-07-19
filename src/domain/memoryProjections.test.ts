@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { preparedDensityMicroWorld, seedEvents } from "../data/sample";
+import { preparedDensityMicroWorld, preparedUnderstandingChecks, seedEvents } from "../data/sample";
 import { evaluateMicroWorld } from "./microWorld";
 import type { EvidenceEvent } from "./types";
 import { reduceWorkspace } from "./workspaceProjection";
@@ -120,6 +120,97 @@ describe("memory projections", () => {
         (element) => element.dimensions.participation.supportingEvidence.length === 0
       )
     ).toBe(true);
+  });
+
+  it("replaces a disputed evaluation with traceable uncertainty evidence", () => {
+    const prediction = preparedUnderstandingChecks.find((check) => check.kind === "prediction");
+    if (!prediction) throw new Error("Prepared prediction check is missing");
+    const attemptEventId = "evt-understanding-attempt-prediction-prepared";
+    const dispute: EvidenceEvent = {
+      id: "evt-memory-prediction-dispute",
+      type: "learning.understanding_evaluation_disputed",
+      kind: "user_interpretation",
+      createdAt: "2026-07-14T11:13:00.000Z",
+      actor: "human",
+      summary: "Disputed the prepared prediction evaluation.",
+      sourceIds: prediction.sourceIds,
+      payload: {
+        checkId: prediction.id,
+        attemptEventId,
+        reason: "The evaluation overlooked the mechanism in my response.",
+        correction: "Treat the response as uncertain until the mechanism is reviewed."
+      }
+    };
+    const workspace = reduceWorkspace([...seedEvents, dispute]);
+    const elements = workspace.memories.human.elements.filter((element) =>
+      prediction.theoryElementIds.includes(element.theoryElementId)
+    );
+    const allReferences = elements.flatMap((element) =>
+      Object.values(element.dimensions).flatMap((dimension) => [
+        ...dimension.supportingEvidence,
+        ...dimension.mixedEvidence,
+        ...dimension.contradictoryEvidence
+      ])
+    );
+
+    expect(allReferences.map((reference) => reference.eventId)).not.toContain(attemptEventId);
+    expect(
+      elements[0]?.dimensions.uncertainty.mixedEvidence.find((reference) => reference.eventId === dispute.id)?.rationale
+    ).toContain(attemptEventId);
+  });
+
+  it("derives human and agent coverage from linked event actors without check evidence", () => {
+    const eventsWithoutChecks = seedEvents.filter((event) => !event.type.startsWith("learning.understanding_"));
+    const theoryElementId = "theory-memory-human-hypothesis";
+    const humanElement: EvidenceEvent = {
+      id: "evt-memory-human-hypothesis",
+      type: "theory.element_recorded",
+      kind: "hypothesis",
+      createdAt: "2026-07-14T11:31:00.000Z",
+      actor: "human",
+      summary: "Recorded a human-authored density hypothesis.",
+      sourceIds: [],
+      payload: {
+        element: {
+          id: theoryElementId,
+          kind: "assumption",
+          title: "Human-authored hypothesis",
+          statement: "Queue compression may reduce scan quality.",
+          epistemicKind: "hypothesis",
+          status: "active",
+          sourceIds: [],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const agentRelationship: EvidenceEvent = {
+      id: "evt-memory-agent-relationship",
+      type: "theory.relationship_recorded",
+      kind: "agent_synthesis",
+      createdAt: "2026-07-14T11:32:00.000Z",
+      actor: "agent",
+      summary: "Linked the hypothesis to the accessibility boundary.",
+      sourceIds: [],
+      payload: {
+        relationship: {
+          id: "relationship-memory-agent-link",
+          kind: "constrained-by",
+          fromElementId: theoryElementId,
+          toElementId: "theory-boundary-accessibility",
+          sourceIds: [],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const workspace = reduceWorkspace([...eventsWithoutChecks, humanElement, agentRelationship]);
+    const projection = workspace.memories.shared.elements.find(
+      (element) => element.theoryElementId === theoryElementId
+    );
+
+    expect(projection?.coverage.human).toBe(true);
+    expect(projection?.coverage.agent).toBe(true);
   });
 
   it("keeps capability success and failure out of human understanding", () => {

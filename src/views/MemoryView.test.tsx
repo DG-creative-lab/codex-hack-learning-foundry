@@ -50,5 +50,46 @@ describe("MemoryView", () => {
     expect(view.textContent).toContain("Three-way coverage");
     expect(view.textContent).toContain("Unresolved");
     expect(view.textContent?.toLowerCase()).not.toContain("mastery percentage");
+
+    const coverageMarks = [...view.querySelectorAll<HTMLElement>(".coverage-marks abbr")];
+    expect(coverageMarks.length).toBeGreaterThan(0);
+    expect(
+      coverageMarks.every((mark) => /coverage: (present|absent)$/.test(mark.getAttribute("aria-label") ?? ""))
+    ).toBe(true);
+    expect(coverageMarks.every((mark) => /[+-]/.test(mark.textContent ?? ""))).toBe(true);
+  });
+
+  it("supports roving focus and keyboard activation across projection tabs", async () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => {
+      root?.render(<MemoryView events={seedEvents} theory={workspace.theory} projections={workspace.memories} />);
+    });
+    const human = requiredElement<HTMLButtonElement>(view, "#memory-tab-human");
+    const agent = requiredElement<HTMLButtonElement>(view, "#memory-tab-agent");
+    const shared = requiredElement<HTMLButtonElement>(view, "#memory-tab-shared");
+
+    expect(human.tabIndex).toBe(0);
+    expect(agent.tabIndex).toBe(-1);
+    human.focus();
+    await act(async () => human.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(agent);
+    expect(agent.getAttribute("aria-selected")).toBe("true");
+    expect(agent.tabIndex).toBe(0);
+
+    await act(async () => agent.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+    expect(document.activeElement).toBe(shared);
+    expect(shared.getAttribute("aria-selected")).toBe("true");
+
+    await act(async () => shared.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(document.activeElement).toBe(human);
+    expect(human.getAttribute("aria-selected")).toBe("true");
+
+    await act(async () => human.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(document.activeElement).toBe(shared);
+    expect(shared.getAttribute("aria-selected")).toBe("true");
   });
 });

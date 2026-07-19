@@ -540,7 +540,7 @@
 .coverage-marks abbr {
   display: inline-grid;
   place-items: center;
-  width: 24px;
+  width: 30px;
   height: 24px;
   color: var(--muted);
   border: 1px solid var(--line);
@@ -718,7 +718,7 @@
   }
 
   .coverage-marks abbr {
-    width: 22px;
+    width: 28px;
     height: 22px;
   }
 

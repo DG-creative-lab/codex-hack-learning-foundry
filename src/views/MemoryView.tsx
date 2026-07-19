@@ -1,5 +1,5 @@
 import { Bot, History, Network, UserRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, useMemo, useState } from "react";
 import type { MemoryProjections } from "../domain/memoryProjections";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "../domain/types";
 import { AgentMemoryProjectionView } from "../features/memory/AgentMemoryProjectionView";
@@ -48,6 +48,20 @@ export function MemoryView({ events, theory, projections }: MemoryViewProps) {
     }
   ];
 
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | undefined;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = tabs.length - 1;
+    if (nextIndex === undefined) return;
+
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    setSelectedProjection(nextTab.id);
+    event.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`#memory-tab-${nextTab.id}`)?.focus();
+  }
+
   return (
     <div className="page-scroll memory-view">
       <section className="memory-introduction">
@@ -73,8 +87,10 @@ export function MemoryView({ events, theory, projections }: MemoryViewProps) {
               role="tab"
               aria-selected={selected}
               aria-controls={`memory-panel-${tab.id}`}
+              tabIndex={selected ? 0 : -1}
               className={selected ? "selected" : ""}
               onClick={() => setSelectedProjection(tab.id)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}
             >
               <span>{String(index + 1).padStart(2, "0")}</span>
               <Icon size={18} />
