@@ -14,7 +14,7 @@ The application is domain-independent. It accepts approved local or online liter
 
 - Shared source-grounded knowledge with provenance and epistemic classification.
 - A Living Theory that links sources, human understanding, agent memory, decisions, uncertainty, and capability revisions.
-- Human learning artifacts including objectives, lessons, exercises, recall, review, reflection, and progress evidence.
+- Human learning artifacts including source-grounded explainers, varied understanding checks, interactive micro-worlds, targeted review, reflection, and transfer evidence.
 - Agent learning state including durable knowledge, assumptions, associations, evaluations, failures, and capability versions.
 - Practical capabilities expressed first as Codex skills, and later as tools and plugins.
 
@@ -28,12 +28,13 @@ Self-directed professionals, researchers, students, and builders who need to tur
 
 1. Capture or select an approved local or online source.
 2. Process it into source fragments, claims, knowledge atoms, and associations.
-3. Generate a human learning module and complete a transfer exercise.
-4. Capture the learner's confidence, interpretation, correction, and practical evidence.
-5. Generate a draft Codex skill from the same shared knowledge.
-6. Inspect provenance, assumptions, boundaries, and evaluation cases.
-7. Approve the evaluated skill and apply it to a new task.
-8. Record feedback and create both a human review item and a traceable capability revision.
+3. Read a project-grounded explainer whose factual sections link to exact source fragments.
+4. Predict an outcome, explore a constrained micro-world, and record an interaction and reflection.
+5. Complete varied understanding checks and a transfer task that update an evidence vector rather than a mastery score.
+6. Generate a draft Codex skill from the same Living Theory.
+7. Inspect provenance, assumptions, boundaries, evaluation cases, and relevant understanding evidence.
+8. Approve the evaluated skill and apply it to a new task.
+9. Record feedback and create both a human review item and traceable theory and capability revision proposals.
 
 The prepared design-density workspace supplies the deterministic sample data for this flow.
 
@@ -41,9 +42,10 @@ The prepared design-density workspace supplies the deterministic sample data for
 
 The hackathon build produces one Codex skill and one reproducible prepared journey. It implements a narrow but real ingestion contract rather than a design-specific application. Universal parsing, generated tools, generated plugins, cloud sync, multi-user collaboration, and autonomous capability activation remain future work.
 
-## Product surfaces
+## Target product surfaces
 
-- **Sources:** capture, provenance, extraction status, source fragments, and generated outputs.
-- **Learn:** human objectives, lessons, exercises, review, confidence, corrections, and transfer.
-- **Memory:** shared evidence plus distinct human and agent projections.
+- **Understanding:** the Living Theory, current objective, evidence trail, open questions, and next meaningful learning or application action.
+- **Sources:** source capture, provenance, extraction status, source fragments, and synthesis review.
+- **Learn:** explainers, understanding checks, micro-worlds, targeted review, corrections, and transfer.
+- **Memory:** distinct human, agent, and shared-theory projections derived from the same evidence ledger.
 - **Foundry:** knowledge modules, skills, tools, plugins, evaluations, approval, execution, and revision.
