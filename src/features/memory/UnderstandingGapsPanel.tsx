@@ -2,8 +2,8 @@ import { ArrowUpRight, Check, MessageSquareText, X } from "lucide-react";
 import { useState } from "react";
 import {
   UNDERSTANDING_GAP_LIMITS,
-  type UnderstandingGapProjection,
-  type UnderstandingGapTarget
+  type UnderstandingGapDestination,
+  type UnderstandingGapProjection
 } from "../../domain/understandingGaps";
 import { ProjectionEvidenceList } from "./ProjectionEvidenceList";
 
@@ -11,7 +11,7 @@ interface UnderstandingGapsPanelProps {
   projection: UnderstandingGapProjection;
   onReview: (gapId: string, decision: "confirmed" | "dismissed") => Promise<void>;
   onAnnotate: (gapId: string, note: string) => Promise<void>;
-  onIntervene: (target: UnderstandingGapTarget) => void;
+  onIntervene: (destination: UnderstandingGapDestination) => void;
 }
 
 const kindLabels = {
@@ -153,7 +153,7 @@ export function UnderstandingGapsPanel({ projection, onReview, onAnnotate, onInt
 
             <section className="gap-intervention">
               <p className="eyebrow">Recommended intervention</p>
-              <button type="button" onClick={() => onIntervene(selected.recommendedIntervention.target)}>
+              <button type="button" onClick={() => onIntervene(selected.recommendedIntervention.destination)}>
                 <span>{selected.recommendedIntervention.label}</span>
                 <ArrowUpRight size={15} aria-hidden="true" />
               </button>

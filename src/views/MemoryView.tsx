@@ -1,8 +1,8 @@
 import { Bot, History, Network, UserRound } from "lucide-react";
-import { type KeyboardEvent, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import type { MemoryProjections } from "../domain/memoryProjections";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "../domain/types";
-import type { UnderstandingGapProjection, UnderstandingGapTarget } from "../domain/understandingGaps";
+import type { UnderstandingGapDestination, UnderstandingGapProjection } from "../domain/understandingGaps";
 import { AgentMemoryProjectionView } from "../features/memory/AgentMemoryProjectionView";
 import { HumanMemoryProjectionView } from "../features/memory/HumanMemoryProjectionView";
 import "../features/memory/memory.css";
@@ -25,9 +25,10 @@ interface MemoryViewProps {
   theory: LivingTheory;
   projections: MemoryProjections;
   understandingGaps: UnderstandingGapProjection;
+  requestedTheoryElementId?: string;
   onReviewGap: (gapId: string, decision: "confirmed" | "dismissed") => Promise<void>;
   onAnnotateGap: (gapId: string, note: string) => Promise<void>;
-  onIntervene: (target: UnderstandingGapTarget) => void;
+  onIntervene: (destination: UnderstandingGapDestination) => void;
 }
 
 export function MemoryView({
@@ -35,11 +36,17 @@ export function MemoryView({
   theory,
   projections,
   understandingGaps,
+  requestedTheoryElementId,
   onReviewGap,
   onAnnotateGap,
   onIntervene
 }: MemoryViewProps) {
-  const [selectedProjection, setSelectedProjection] = useState<ProjectionId>("human");
+  const [selectedProjection, setSelectedProjection] = useState<ProjectionId>(
+    requestedTheoryElementId ? "shared" : "human"
+  );
+  useEffect(() => {
+    if (requestedTheoryElementId) setSelectedProjection("shared");
+  }, [requestedTheoryElementId]);
   const eventRows = useMemo(() => [...events].reverse(), [events]);
   const tabs = [
     {
@@ -117,7 +124,12 @@ export function MemoryView({
 
       {selectedProjection === "human" && <HumanMemoryProjectionView projection={projections.human} />}
       {selectedProjection === "agent" && <AgentMemoryProjectionView projection={projections.agent} />}
-      {selectedProjection === "shared" && <SharedTheoryProjectionView projection={projections.shared} />}
+      {selectedProjection === "shared" && (
+        <SharedTheoryProjectionView
+          projection={projections.shared}
+          requestedTheoryElementId={requestedTheoryElementId}
+        />
+      )}
 
       <UnderstandingGapsPanel
         projection={understandingGaps}

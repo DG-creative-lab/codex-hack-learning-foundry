@@ -5,6 +5,7 @@ import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
+import type { UnderstandingGapDestination } from "./domain/understandingGaps";
 import { reduceWorkspace } from "./domain/workspaceProjection";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 import { AboutView } from "./views/AboutView";
@@ -20,6 +21,9 @@ function App() {
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
   const [sourceInput, setSourceInput] = useState("");
+  const [requestedLearnItemId, setRequestedLearnItemId] = useState<string>();
+  const [requestedTheoryElementId, setRequestedTheoryElementId] = useState<string>();
+  const [requestedCapabilityId, setRequestedCapabilityId] = useState<string>();
   const workspace = useMemo(() => reduceWorkspace(events), [events]);
   const explainersById = useMemo(
     () => new Map(workspace.explainers.map((explainer) => [explainer.id, explainer])),
@@ -75,6 +79,14 @@ function App() {
     setShowAddSource(false);
   }
 
+  function navigateToIntervention(destination: UnderstandingGapDestination) {
+    if (destination.kind === "check") setRequestedLearnItemId(`check:${destination.id}`);
+    if (destination.kind === "micro-world") setRequestedLearnItemId(`micro-world:${destination.id}`);
+    if (destination.kind === "theory-element") setRequestedTheoryElementId(destination.id);
+    if (destination.kind === "capability") setRequestedCapabilityId(destination.id);
+    setView(destination.view);
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -127,6 +139,7 @@ function App() {
         )}
         {view === "learn" && (
           <LearnView
+            requestedItemId={requestedLearnItemId}
             artifacts={workspace.learningArtifacts}
             explainers={workspace.explainers}
             microWorlds={workspace.microWorlds}
@@ -146,16 +159,19 @@ function App() {
         )}
         {view === "memory" && (
           <MemoryView
+            requestedTheoryElementId={requestedTheoryElementId}
             events={events}
             theory={workspace.theory}
             projections={workspace.memories}
             understandingGaps={workspace.understandingGaps}
             onReviewGap={memoryWorkflow.reviewUnderstandingGap}
             onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
-            onIntervene={setView}
+            onIntervene={navigateToIntervention}
           />
         )}
-        {view === "foundry" && <FoundryView capabilities={workspace.capabilities} />}
+        {view === "foundry" && (
+          <FoundryView capabilities={workspace.capabilities} requestedCapabilityId={requestedCapabilityId} />
+        )}
         {view === "about" && <AboutView />}
       </main>
 

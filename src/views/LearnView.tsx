@@ -34,6 +34,7 @@ const checkTypeLabels = {
 } as const;
 
 interface LearnViewProps {
+  requestedItemId?: string;
   artifacts: LearningArtifact[];
   explainers: ExplainerProjection[];
   microWorlds: MicroWorldProjection[];
@@ -52,6 +53,7 @@ interface LearnViewProps {
 }
 
 export function LearnView({
+  requestedItemId,
   artifacts,
   explainers,
   microWorlds,
@@ -77,7 +79,15 @@ export function LearnView({
         : artifacts[0]
           ? `artifact:${artifacts[0].id}`
           : "";
-  const [selectedItemId, setSelectedItemId] = useState(firstItemId);
+  const availableItemIds = new Set([
+    ...explainers.map((item) => `explainer:${item.id}`),
+    ...checks.map((item) => `check:${item.id}`),
+    ...microWorlds.map((item) => `micro-world:${item.id}`),
+    ...artifacts.map((item) => `artifact:${item.id}`)
+  ]);
+  const [selectedItemId, setSelectedItemId] = useState(
+    requestedItemId && availableItemIds.has(requestedItemId) ? requestedItemId : firstItemId
+  );
   const fragmentsById = useMemo(() => new Map(fragments.map((fragment) => [fragment.id, fragment])), [fragments]);
   const sourcesById = useMemo(() => new Map(sources.map((source) => [source.id, source])), [sources]);
   const vectorsByTheoryId = useMemo(

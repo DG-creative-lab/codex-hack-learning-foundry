@@ -25,7 +25,12 @@ export const understandingGapKindSchema = z.enum([
 ]);
 export const understandingGapLevelSchema = z.enum(["notice", "attention", "priority"]);
 export const understandingGapStatusSchema = z.enum(["open", "confirmed", "dismissed"]);
-export const understandingGapTargetSchema = z.enum(["learn", "memory", "foundry"]);
+export const understandingGapDestinationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("check"), view: z.literal("learn"), id: boundedIdSchema }).strict(),
+  z.object({ kind: z.literal("micro-world"), view: z.literal("learn"), id: boundedIdSchema }).strict(),
+  z.object({ kind: z.literal("theory-element"), view: z.literal("memory"), id: boundedIdSchema }).strict(),
+  z.object({ kind: z.literal("capability"), view: z.literal("foundry"), id: boundedIdSchema }).strict()
+]);
 export const understandingGapReviewPayloadSchema = z
   .object({
     gapId: boundedIdSchema,
@@ -43,7 +48,7 @@ export const understandingGapAnnotationPayloadSchema = z
 export type UnderstandingGapKind = z.infer<typeof understandingGapKindSchema>;
 export type UnderstandingGapLevel = z.infer<typeof understandingGapLevelSchema>;
 export type UnderstandingGapStatus = z.infer<typeof understandingGapStatusSchema>;
-export type UnderstandingGapTarget = z.infer<typeof understandingGapTargetSchema>;
+export type UnderstandingGapDestination = z.infer<typeof understandingGapDestinationSchema>;
 export type UnderstandingGapReview = z.infer<typeof understandingGapReviewPayloadSchema>;
 export type UnderstandingGapAnnotation = z.infer<typeof understandingGapAnnotationPayloadSchema>;
 
@@ -60,7 +65,7 @@ export interface UnderstandingGap {
   evidence: MemoryEvidenceReference[];
   recommendedIntervention: {
     label: string;
-    target: UnderstandingGapTarget;
+    destination: UnderstandingGapDestination;
   };
   review?: UnderstandingGapReview & { evidenceEventId: string; createdAt: string };
   annotations: Array<UnderstandingGapAnnotation & { evidenceEventId: string; createdAt: string }>;

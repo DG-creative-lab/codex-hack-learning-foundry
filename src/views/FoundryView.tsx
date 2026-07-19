@@ -12,10 +12,12 @@ const capabilityTypeLabels = {
 
 interface FoundryViewProps {
   capabilities: FoundryCapability[];
+  requestedCapabilityId?: string;
 }
 
-export function FoundryView({ capabilities }: FoundryViewProps) {
-  const [selectedId, setSelectedId] = useState(capabilities[0]?.manifest.id);
+export function FoundryView({ capabilities, requestedCapabilityId }: FoundryViewProps) {
+  const requestedCapability = capabilities.find((item) => item.manifest.id === requestedCapabilityId);
+  const [selectedId, setSelectedId] = useState(requestedCapability?.manifest.id ?? capabilities[0]?.manifest.id);
   const capability = capabilities.find((item) => item.manifest.id === selectedId) ?? capabilities[0];
 
   if (!capability) {

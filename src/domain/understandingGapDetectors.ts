@@ -112,7 +112,7 @@ function lowDimensionGap(
     evidence: [...challengeEvidence, ...theoryEvidence],
     recommendedIntervention: {
       label: dimension === "prediction" ? "Revisit the prediction task" : "Complete the transfer task",
-      target: "learn"
+      destination: { kind: "check", view: "learn", id: relevantChecks[0].id }
     }
   });
 }
@@ -176,7 +176,10 @@ function microWorldGaps(worlds: MicroWorldProjection[], eventsById: Map<string, 
             evidenceReference(event, "mixed", "This reflection is causally linked to the recorded interaction.")
           )
         ],
-        recommendedIntervention: { label: "Compare the prediction and model limits", target: "learn" }
+        recommendedIntervention: {
+          label: "Compare the prediction and model limits",
+          destination: { kind: "micro-world", view: "learn", id: world.id }
+        }
       });
       return gap ? [gap] : [];
     })
@@ -193,21 +196,55 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
     (element) => element.kind === "decision" && element.status !== "superseded"
   )) {
     const explanation = humanById.get(decision.id)?.dimensions.explanation;
-    if ((explanation?.supportingEvidence.length ?? 0) + (explanation?.mixedEvidence.length ?? 0) > 0) continue;
+    const explanationRelationships = input.theory.relationships.filter(
+      (relationship) =>
+        relationship.kind === "decision-because" &&
+        (relationship.fromElementId === decision.id || relationship.toElementId === decision.id)
+    );
+    const relationshipEvents = explanationRelationships.flatMap((relationship) =>
+      relationship.evidenceEventIds
+        .map((eventId) => eventsById.get(eventId))
+        .filter((event): event is EvidenceEvent => Boolean(event))
+    );
+    const humanRelationshipEvents = relationshipEvents.filter((event) => event.actor === "human");
+    if (
+      (explanation?.supportingEvidence.length ?? 0) + (explanation?.mixedEvidence.length ?? 0) > 0 ||
+      humanRelationshipEvents.length > 0
+    ) {
+      continue;
+    }
+    const agentRelationshipEvidence = relationshipEvents
+      .filter((event) => event.actor !== "human")
+      .map((event) =>
+        evidenceReference(
+          event,
+          "mixed",
+          "This canonical relationship records a rationale, but it is not a human-authored explanation."
+        )
+      );
     gaps.push(
       createGap({
         kind: "unexplained_decision",
         level: "attention",
         title: `Decision lacks an inspectable explanation: ${decision.title}`,
-        why: "The Living Theory records a decision, but no human explanation evidence is linked to it.",
+        why:
+          agentRelationshipEvidence.length > 0
+            ? "The Living Theory records a decision rationale, but the linked explanation is agent-authored and has not been inspected by the human."
+            : "The Living Theory records a decision, but no human explanation evidence is linked to it.",
         severityRationale: "Decisions can guide later work, so an unexplained rationale deserves attention.",
         affectedTheoryElementIds: [decision.id],
-        evidence: referencesForElement(
-          decision,
-          eventsById,
-          "This event introduced the decision whose explanation is absent."
-        ),
-        recommendedIntervention: { label: "Explain the decision and its boundary", target: "learn" }
+        evidence: [
+          ...referencesForElement(
+            decision,
+            eventsById,
+            "This event introduced the decision whose explanation is absent."
+          ),
+          ...agentRelationshipEvidence
+        ],
+        recommendedIntervention: {
+          label: "Inspect the decision and add a rationale",
+          destination: { kind: "theory-element", view: "memory", id: decision.id }
+        }
       })
     );
   }
@@ -222,7 +259,10 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
         severityRationale: "Staleness is a review prompt, not proof that the theory is wrong.",
         affectedTheoryElementIds: [element.theoryElementId],
         evidence: [...element.supportingEvidence, ...element.contradictoryEvidence],
-        recommendedIntervention: { label: "Review current supporting evidence", target: "memory" }
+        recommendedIntervention: {
+          label: "Review current supporting evidence",
+          destination: { kind: "theory-element", view: "memory", id: element.theoryElementId }
+        }
       })
     );
   }
@@ -250,7 +290,10 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
               "Priority is warranted because capability activation must not rely on an opaque revision.",
             affectedTheoryElementIds: [],
             evidence: [evidenceReference(event, "challenges", "This event registered the unevaluated revision.")],
-            recommendedIntervention: { label: "Evaluate the revised capability", target: "foundry" }
+            recommendedIntervention: {
+              label: "Evaluate the revised capability",
+              destination: { kind: "capability", view: "foundry", id: capability.manifest.id }
+            }
           })
         : undefined
     );
@@ -266,7 +309,10 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
         severityRationale: "Priority is warranted when conflicting claims can guide the same decision.",
         affectedTheoryElementIds: [element.theoryElementId],
         evidence: element.contradictoryEvidence,
-        recommendedIntervention: { label: "Inspect and revise the contradiction", target: "memory" }
+        recommendedIntervention: {
+          label: "Inspect and revise the contradiction",
+          destination: { kind: "theory-element", view: "memory", id: element.theoryElementId }
+        }
       })
     );
   }
@@ -296,7 +342,10 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
         severityRationale: "Attention is warranted because the dependency can shape action without shared inspection.",
         affectedTheoryElementIds: affected,
         evidence,
-        recommendedIntervention: { label: "Explain or test the dependency", target: "learn" }
+        recommendedIntervention: {
+          label: "Inspect the dependency evidence",
+          destination: { kind: "theory-element", view: "memory", id: affected[0] }
+        }
       })
     );
   }

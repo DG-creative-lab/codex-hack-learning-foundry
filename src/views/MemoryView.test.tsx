@@ -155,6 +155,31 @@ describe("MemoryView", () => {
     expect(onAnnotateGap).toHaveBeenCalledWith(firstGap.id, "Use the transfer task before activation.");
 
     await act(async () => requiredElement<HTMLButtonElement>(view, ".gap-intervention button").click());
-    expect(onIntervene).toHaveBeenCalledWith(firstGap.recommendedIntervention.target);
+    expect(onIntervene).toHaveBeenCalledWith(firstGap.recommendedIntervention.destination);
+  });
+
+  it("opens an intervention on the exact shared-theory element", async () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const theoryElementId = workspace.memories.shared.elements.at(-1)?.theoryElementId;
+    if (!theoryElementId) throw new Error("Prepared shared theory is missing");
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => {
+      root?.render(
+        <MemoryView
+          events={seedEvents}
+          theory={workspace.theory}
+          projections={workspace.memories}
+          understandingGaps={workspace.understandingGaps}
+          requestedTheoryElementId={theoryElementId}
+          {...noOpMemoryActions}
+        />
+      );
+    });
+
+    expect(view.querySelector('[role="tabpanel"]')?.id).toBe("memory-panel-shared");
+    expect(requiredElement(view, ".memory-evidence-inspector").textContent).toContain(theoryElementId);
   });
 });

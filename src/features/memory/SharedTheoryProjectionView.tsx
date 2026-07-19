@@ -1,9 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SharedTheoryProjection } from "../../domain/memoryProjections";
 import { ProjectionEvidenceList } from "./ProjectionEvidenceList";
 
-export function SharedTheoryProjectionView({ projection }: { projection: SharedTheoryProjection }) {
-  const [selectedId, setSelectedId] = useState(projection.elements[0]?.theoryElementId);
+export function SharedTheoryProjectionView({
+  projection,
+  requestedTheoryElementId
+}: {
+  projection: SharedTheoryProjection;
+  requestedTheoryElementId?: string;
+}) {
+  const requestedElement = projection.elements.find((element) => element.theoryElementId === requestedTheoryElementId);
+  const [selectedId, setSelectedId] = useState(
+    requestedElement?.theoryElementId ?? projection.elements[0]?.theoryElementId
+  );
+  useEffect(() => {
+    if (requestedElement) setSelectedId(requestedElement.theoryElementId);
+  }, [requestedElement]);
   const selected =
     projection.elements.find((element) => element.theoryElementId === selectedId) ?? projection.elements[0];
   const covered = projection.elements.filter(

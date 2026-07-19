@@ -70,6 +70,15 @@ describe("understanding-gap projection", () => {
     expect(projection.gaps.every((gap) => gap.affectedTheoryElementIds.length > 0)).toBe(true);
     expect(projection.gaps.every((gap) => gap.caveat.includes("does not measure cognition"))).toBe(true);
     expect(projection.gaps.some((gap) => gap.kind === "micro_world_mismatch")).toBe(false);
+    const predictionGap = projection.gaps.find((gap) => gap.kind === "low_prediction_evidence");
+    const predictionCheck = reduceWorkspace(seedEvents).understandingChecks.find(
+      (check) => check.kind === "prediction"
+    );
+    expect(predictionGap?.recommendedIntervention.destination).toEqual({
+      kind: "check",
+      view: "learn",
+      id: predictionCheck?.id
+    });
   });
 
   it("removes the prepared transfer gap after an inspectable transfer response", () => {
@@ -221,6 +230,118 @@ describe("understanding-gap projection", () => {
         "agent_only_dependency"
       ])
     );
+  });
+
+  it("recognizes a human-authored decision-because relationship as canonical explanation evidence", () => {
+    const sourceId = "source-ui-density-2024";
+    const decision: EvidenceEvent = {
+      id: "evt-explained-decision",
+      type: "theory.element_recorded",
+      kind: "agent_synthesis",
+      createdAt: "2026-07-14T12:30:00.000Z",
+      actor: "agent",
+      summary: "Recorded a queue context decision.",
+      sourceIds: [sourceId],
+      payload: {
+        element: {
+          id: "theory-explained-decision",
+          kind: "decision",
+          title: "Compress repeated queue context",
+          statement: "Repeated context should be compressed after the first row.",
+          epistemicKind: "agent_synthesis",
+          status: "active",
+          sourceIds: [sourceId],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const explanation: EvidenceEvent = {
+      id: "evt-human-decision-explanation",
+      type: "theory.relationship_recorded",
+      kind: "user_interpretation",
+      createdAt: "2026-07-14T12:31:00.000Z",
+      actor: "human",
+      summary: "Explained the queue context decision.",
+      sourceIds: [sourceId],
+      payload: {
+        relationship: {
+          id: "relationship-human-decision-because",
+          kind: "decision-because",
+          fromElementId: "theory-explained-decision",
+          toElementId: "theory-purpose-review-value",
+          sourceIds: [sourceId],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const gaps = reduceWorkspace([...seedEvents, decision, explanation]).understandingGaps.gaps;
+
+    expect(
+      gaps.some(
+        (gap) =>
+          gap.kind === "unexplained_decision" && gap.affectedTheoryElementIds.includes("theory-explained-decision")
+      )
+    ).toBe(false);
+  });
+
+  it("retains an agent-only decision explanation as inspectable gap evidence", () => {
+    const sourceId = "source-ui-density-2024";
+    const decision: EvidenceEvent = {
+      id: "evt-agent-explained-decision",
+      type: "theory.element_recorded",
+      kind: "agent_synthesis",
+      createdAt: "2026-07-14T12:30:00.000Z",
+      actor: "agent",
+      summary: "Recorded an agent-explained decision.",
+      sourceIds: [sourceId],
+      payload: {
+        element: {
+          id: "theory-agent-explained-decision",
+          kind: "decision",
+          title: "Compress repeated status labels",
+          statement: "Repeated status labels should be compressed.",
+          epistemicKind: "agent_synthesis",
+          status: "active",
+          sourceIds: [sourceId],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const explanation: EvidenceEvent = {
+      id: "evt-agent-decision-explanation",
+      type: "theory.relationship_recorded",
+      kind: "agent_synthesis",
+      createdAt: "2026-07-14T12:31:00.000Z",
+      actor: "agent",
+      summary: "Linked an agent rationale to the decision.",
+      sourceIds: [sourceId],
+      payload: {
+        relationship: {
+          id: "relationship-agent-decision-because",
+          kind: "decision-because",
+          fromElementId: "theory-agent-explained-decision",
+          toElementId: "theory-purpose-review-value",
+          sourceIds: [sourceId],
+          fragmentIds: [],
+          evidenceEventIds: []
+        }
+      }
+    };
+    const gap = reduceWorkspace([...seedEvents, decision, explanation]).understandingGaps.gaps.find(
+      (candidate) =>
+        candidate.kind === "unexplained_decision" &&
+        candidate.affectedTheoryElementIds.includes("theory-agent-explained-decision")
+    );
+
+    expect(gap?.evidence.map((reference) => reference.eventId)).toContain(explanation.id);
+    expect(gap?.recommendedIntervention.destination).toEqual({
+      kind: "theory-element",
+      view: "memory",
+      id: "theory-agent-explained-decision"
+    });
   });
 
   it("projects review and annotation events without changing detector evidence", () => {
