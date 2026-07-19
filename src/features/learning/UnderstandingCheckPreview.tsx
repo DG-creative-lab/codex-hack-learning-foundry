@@ -1,5 +1,5 @@
 import { AlertCircle, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type ProjectedReviewItem,
   type ResponseConfidence,
@@ -15,6 +15,7 @@ import type {
   SourceIndex
 } from "./types";
 import { UnderstandingAttemptEvaluation } from "./UnderstandingAttemptEvaluation";
+import { UnderstandingAttemptHistory } from "./UnderstandingAttemptHistory";
 import { UnderstandingCheckInspector } from "./UnderstandingCheckInspector";
 import { UnderstandingEvidenceVector } from "./UnderstandingEvidenceVector";
 import { UnderstandingResponseComposer } from "./UnderstandingResponseComposer";
@@ -57,8 +58,14 @@ export function UnderstandingCheckPreview({
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
   const latestAttempt = check.attempts.at(-1);
+  const [selectedAttemptEventId, setSelectedAttemptEventId] = useState(latestAttempt?.eventId);
+  const selectedAttempt = check.attempts.find((attempt) => attempt.eventId === selectedAttemptEventId) ?? latestAttempt;
   const answerValid = answer.trim().length >= 3 && answer.length <= UNDERSTANDING_CHECK_LIMITS.answerCharacters;
   const disputeValid = disputeReason.trim().length >= 3 && disputeCorrection.trim().length >= 3;
+
+  useEffect(() => {
+    setSelectedAttemptEventId(latestAttempt?.eventId);
+  }, [latestAttempt?.eventId]);
 
   async function execute(label: string, action: () => Promise<void>): Promise<boolean> {
     if (pendingCommand) return false;
@@ -95,10 +102,10 @@ export function UnderstandingCheckPreview({
   }
 
   async function submitDispute() {
-    if (!latestAttempt || !disputeValid || latestAttempt.dispute) return;
+    if (!selectedAttempt || !disputeValid || selectedAttempt.dispute) return;
     const recorded = await execute("dispute", () =>
       onDispute(check.id, {
-        attemptEventId: latestAttempt.eventId,
+        attemptEventId: selectedAttempt.eventId,
         reason: disputeReason,
         correction: disputeCorrection
       })
@@ -150,10 +157,20 @@ export function UnderstandingCheckPreview({
 
       <div className="check-body-grid">
         <div className="check-main-column">
-          {latestAttempt && (
+          {check.attempts.length > 1 && (
+            <UnderstandingAttemptHistory
+              attempts={check.attempts}
+              selectedAttemptEventId={selectedAttempt?.eventId}
+              onSelect={(attemptEventId) => {
+                setSelectedAttemptEventId(attemptEventId);
+                setDisputeOpen(false);
+              }}
+            />
+          )}
+          {selectedAttempt && (
             <UnderstandingAttemptEvaluation
               checkId={check.id}
-              attempt={latestAttempt}
+              attempt={selectedAttempt}
               pending={pendingCommand === "dispute"}
               disputeOpen={disputeOpen}
               disputeReason={disputeReason}

@@ -8,6 +8,7 @@ import {
   type UnderstandingChecksProjection,
   type UnderstandingDimension,
   type UnderstandingEvidenceVector,
+  type UnderstandingSignal,
   understandingAttemptPayloadSchema,
   understandingCheckRegisteredPayloadSchema,
   understandingDimensionSchema
@@ -45,9 +46,13 @@ function validateFragmentSources(
 }
 
 function emptyDimensions(): Record<UnderstandingDimension, DimensionEvidence> {
-  return Object.fromEntries(
-    understandingDimensionSchema.options.map((dimension) => [dimension, { supports: 0, mixed: 0, challenges: 0 }])
-  ) as Record<UnderstandingDimension, DimensionEvidence>;
+  return understandingDimensionSchema.options.reduce(
+    (dimensions, dimension) => {
+      dimensions[dimension] = { supports: 0, mixed: 0, challenges: 0, observations: [] };
+      return dimensions;
+    },
+    {} as Record<UnderstandingDimension, DimensionEvidence>
+  );
 }
 
 function buildEvidenceProjection(checks: UnderstandingCheckProjection[]) {
@@ -63,6 +68,13 @@ function buildEvidenceProjection(checks: UnderstandingCheckProjection[]) {
           const dimension = vector.dimensions[signal.dimension];
           dimension[signal.signal] += 1;
           dimension.lastObservedAt = attempt.createdAt;
+          if (!dimension.observations.some((observation) => observation.attemptEventId === attempt.eventId)) {
+            dimension.observations.push({
+              attemptEventId: attempt.eventId,
+              signal: signal.signal,
+              createdAt: attempt.createdAt
+            });
+          }
           vectors.set(theoryElementId, vector);
         }
       }
@@ -103,7 +115,7 @@ export function deriveUnderstandingChecks(
       );
       validateFragmentSources(`Understanding check ${check.id}`, check.fragmentIds, check.sourceIds, context);
       requireEventSources(event, `Understanding check ${check.id}`, check.sourceIds);
-      checks.set(check.id, { ...check, status: "ready", attempts: [] });
+      checks.set(check.id, { ...check, status: "ready", attempts: [], preferences: [] });
       prompts.add(normalizedPrompt);
       cues.add(cueKey);
     }
@@ -135,6 +147,8 @@ export function deriveUnderstandingChecks(
       }
       for (const item of payload.evaluation.reviewItems) {
         requireKnownIds(`Review item ${item.id}`, item.sourceIds, context.sourceIds, "source");
+        requireKnownIds(`Review item ${item.id}`, item.sourceIds, new Set(check.sourceIds), "check source");
+        requireEventSources(event, `Review item ${item.id}`, item.sourceIds);
         requireKnownIds(
           `Review item ${item.id}`,
           item.theoryElementIds,
@@ -182,14 +196,54 @@ export function deriveUnderstandingChecks(
       if (!check) throw new Error(`Cannot steer unknown check ${preference.checkId}`);
       if (check.status === "rejected") throw new Error(`Check ${check.id} has already been rejected`);
       requireEventSources(event, `Check preference ${event.id}`, check.sourceIds);
+      const preferenceRecord = { ...preference, evidenceEventId: event.id, createdAt: event.createdAt };
       checks.set(check.id, {
         ...check,
         status: preference.preference === "reject" ? "rejected" : "ready",
-        preference: { ...preference, evidenceEventId: event.id, createdAt: event.createdAt }
+        preferences: [...check.preferences, preferenceRecord],
+        preference: preferenceRecord
       });
     }
   }
 
   const projectedChecks = [...checks.values()];
   return { checks: projectedChecks, ...buildEvidenceProjection(projectedChecks) };
+}
+
+const signalPriority: Record<UnderstandingSignal, number> = { supports: 1, mixed: 2, challenges: 3 };
+
+export function summarizeEvidenceForTheoryElements(
+  vectors: Iterable<UnderstandingEvidenceVector>,
+  theoryElementIds: string[]
+) {
+  const selectedIds = new Set(theoryElementIds);
+  const availableVectors = [...vectors];
+  return Object.fromEntries(
+    understandingDimensionSchema.options.map((dimension) => {
+      const observations = new Map<string, UnderstandingSignal>();
+      for (const vector of availableVectors) {
+        if (!selectedIds.has(vector.theoryElementId)) continue;
+        for (const observation of vector.dimensions[dimension].observations) {
+          const current = observations.get(observation.attemptEventId);
+          if (!current || signalPriority[observation.signal] > signalPriority[current]) {
+            observations.set(observation.attemptEventId, observation.signal);
+          }
+        }
+      }
+      const counts = { supports: 0, mixed: 0, challenges: 0 };
+      for (const signal of observations.values()) counts[signal] += 1;
+      return [dimension, counts];
+    })
+  ) as Record<UnderstandingDimension, { supports: number; mixed: number; challenges: number }>;
+}
+
+export function countUnderstandingFeedbackEvents(checks: UnderstandingCheckProjection[]): number {
+  return checks.reduce(
+    (total, check) =>
+      total +
+      check.attempts.length +
+      check.attempts.filter((attempt) => attempt.dispute).length +
+      check.preferences.length,
+    0
+  );
 }

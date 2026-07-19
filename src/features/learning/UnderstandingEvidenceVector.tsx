@@ -1,3 +1,4 @@
+import { summarizeEvidenceForTheoryElements } from "../../domain/understandingCheckProjection";
 import { type UnderstandingDimension, understandingDimensionSchema } from "../../domain/understandingChecks";
 import type { EvidenceVectorIndex } from "./types";
 
@@ -16,18 +17,9 @@ interface UnderstandingEvidenceVectorProps {
 }
 
 export function UnderstandingEvidenceVector({ theoryElementIds, vectorsByTheoryId }: UnderstandingEvidenceVectorProps) {
+  const summary = summarizeEvidenceForTheoryElements(vectorsByTheoryId.values(), theoryElementIds);
   const dimensions = understandingDimensionSchema.options.map((dimension) => {
-    const evidence = theoryElementIds
-      .map((id) => vectorsByTheoryId.get(id)?.dimensions[dimension])
-      .filter((item) => item !== undefined);
-    const counts = evidence.reduce(
-      (total, item) => ({
-        supports: total.supports + item.supports,
-        mixed: total.mixed + item.mixed,
-        challenges: total.challenges + item.challenges
-      }),
-      { supports: 0, mixed: 0, challenges: 0 }
-    );
+    const counts = summary[dimension];
     const state =
       counts.challenges > 0
         ? "Challenged"

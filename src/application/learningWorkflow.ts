@@ -70,6 +70,18 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
     if (check.status === "rejected") throw new Error(`Cannot record a response for rejected check ${check.id}`);
     const evaluation = evaluateUnderstandingResponse(check, response);
     const payload = understandingAttemptPayloadSchema.parse({ checkId: check.id, response, evaluation });
+    const checkTheoryElementIds = new Set(check.theoryElementIds);
+    const unknownSignalTheoryId = evaluation.signals
+      .flatMap((signal) => signal.theoryElementIds)
+      .find((theoryElementId) => !checkTheoryElementIds.has(theoryElementId));
+    if (unknownSignalTheoryId) {
+      throw new Error(`Understanding evaluation references undeclared theory element ${unknownSignalTheoryId}`);
+    }
+    const reviewSourceIds = [...new Set(evaluation.reviewItems.flatMap((item) => item.sourceIds))];
+    const unknownReviewSourceId = reviewSourceIds.find((sourceId) => !check.sourceIds.includes(sourceId));
+    if (unknownReviewSourceId) {
+      throw new Error(`Understanding evaluation review item references undeclared source ${unknownReviewSourceId}`);
+    }
     const event: EvidenceEvent = {
       id: createId("evt-understanding-attempt"),
       type: "learning.understanding_attempt_recorded",
@@ -77,7 +89,7 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
       createdAt: now(),
       actor: "human",
       summary: `Recorded a ${check.kind.replace("_", " ")} response for ${check.projectContext}.`,
-      sourceIds: [...new Set([...check.sourceIds, ...response.sourceSupport.sourceIds])],
+      sourceIds: [...new Set([...check.sourceIds, ...response.sourceSupport.sourceIds, ...reviewSourceIds])],
       payload
     };
     await dependencies.append(event);

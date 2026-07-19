@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { seedEvents } from "../data/sample";
 import type { EvidenceEvent } from "./types";
 import { createProvisionalEvaluation, generateUnderstandingChecks } from "./understandingCheckGeneration";
-import { deriveUnderstandingChecks } from "./understandingCheckProjection";
+import {
+  countUnderstandingFeedbackEvents,
+  deriveUnderstandingChecks,
+  summarizeEvidenceForTheoryElements
+} from "./understandingCheckProjection";
 import type { UnderstandingCheck, UnderstandingEvaluation, UnderstandingResponse } from "./understandingChecks";
 import { reduceWorkspace } from "./workspaceProjection";
 
@@ -98,12 +102,31 @@ describe("understanding checks", () => {
     );
   });
 
-  it("rotates prompt framing and cue variants between cycles", () => {
-    const { workspace, checks } = fixture();
-    const nextCycle = generateUnderstandingChecks({ theory: workspace.theory, activeProject, cycle: 2 });
+  it("requires semantic purpose and boundary elements rather than substituting arbitrary active elements", () => {
+    const { workspace } = fixture();
+    const withoutPurpose = {
+      ...workspace.theory,
+      elements: workspace.theory.elements.filter((element) => element.kind !== "purpose")
+    };
+    const withoutBoundary = {
+      ...workspace.theory,
+      elements: workspace.theory.elements.filter((element) => element.kind !== "boundary")
+    };
 
-    expect(nextCycle.map((check) => check.prompt)).not.toEqual(checks.map((check) => check.prompt));
-    expect(nextCycle.map((check) => check.cue.variant)).not.toEqual(checks.map((check) => check.cue.variant));
+    expect(() => generateUnderstandingChecks({ theory: withoutPurpose, activeProject })).toThrow("active purpose");
+    expect(() => generateUnderstandingChecks({ theory: withoutBoundary, activeProject })).toThrow("active boundary");
+  });
+
+  it("keeps prompts and cue variants unique beyond the initial framing rotation", () => {
+    const { workspace, context } = fixture();
+    const cycles = Array.from({ length: 6 }, (_, index) =>
+      generateUnderstandingChecks({ theory: workspace.theory, activeProject, cycle: index + 1 })
+    );
+    const generated = cycles.flat();
+
+    expect(new Set(generated.map((check) => check.prompt)).size).toBe(generated.length);
+    expect(new Set(generated.map((check) => `${check.cue.family}:${check.cue.variant}`)).size).toBe(generated.length);
+    expect(() => deriveUnderstandingChecks(generated.map(registration), context)).not.toThrow();
   });
 
   it("keeps supported recall separate from unobserved prediction and transfer", () => {
@@ -136,6 +159,9 @@ describe("understanding checks", () => {
     });
     expect(beforeDispute.reviewItems[0]?.sourceIds.length).toBeGreaterThan(0);
     expect(beforeDispute.evidenceVectors[0]?.dimensions.prediction.challenges).toBe(1);
+    const vectorsByTheoryId = new Map(beforeDispute.evidenceVectors.map((vector) => [vector.theoryElementId, vector]));
+    const summary = summarizeEvidenceForTheoryElements(vectorsByTheoryId.values(), prediction.theoryElementIds);
+    expect(summary.prediction.challenges).toBe(1);
 
     const dispute: EvidenceEvent = {
       id: "evt-dispute-prediction",
@@ -152,11 +178,64 @@ describe("understanding checks", () => {
         correction: "Treat the consequence and mechanism as separate supported claims."
       }
     };
-    const afterDispute = deriveUnderstandingChecks([registration(prediction), attemptEvent, dispute], context);
+    const preference: EvidenceEvent = {
+      id: "evt-preference-prediction",
+      type: "learning.understanding_check_preference_recorded",
+      kind: "user_interpretation",
+      createdAt: "2026-07-19T13:11:00.000Z",
+      actor: "human",
+      summary: "Requested a different prediction angle.",
+      sourceIds: prediction.sourceIds,
+      payload: { checkId: prediction.id, preference: "different_angle" }
+    };
+    const secondPreference: EvidenceEvent = {
+      ...preference,
+      id: "evt-preference-prediction-2",
+      createdAt: "2026-07-19T13:12:00.000Z",
+      summary: "Requested more prediction checks after changing the angle.",
+      payload: { checkId: prediction.id, preference: "more_like_this" }
+    };
+    const afterDispute = deriveUnderstandingChecks(
+      [registration(prediction), attemptEvent, dispute, preference, secondPreference],
+      context
+    );
 
     expect(afterDispute.reviewItems).toHaveLength(0);
     expect(afterDispute.evidenceVectors).toHaveLength(0);
     expect(afterDispute.checks[0]?.attempts[0]?.dispute?.evidenceEventId).toBe(dispute.id);
+    expect(afterDispute.checks[0]?.preferences).toHaveLength(2);
+    expect(countUnderstandingFeedbackEvents(afterDispute.checks)).toBe(4);
+  });
+
+  it("requires review provenance in both the check manifest and attempt envelope", () => {
+    const { workspace, checks, context } = fixture();
+    const prediction = checks.find((check) => check.kind === "prediction");
+    if (!prediction) throw new Error("Prediction check missing");
+    const externalSourceId = workspace.sources.find((source) => !prediction.sourceIds.includes(source.id))?.id;
+    if (!externalSourceId) throw new Error("External source fixture missing");
+    const evaluation = createProvisionalEvaluation(prediction, { ...response, answer: "Too short." });
+    const reviewItem = evaluation.reviewItems[0];
+    if (!reviewItem) throw new Error("Review item fixture missing");
+    const undeclaredReviewEvaluation = {
+      ...evaluation,
+      reviewItems: [{ ...reviewItem, sourceIds: [externalSourceId] }]
+    };
+    const undeclaredReviewAttempt = {
+      ...attempt(prediction, undeclaredReviewEvaluation),
+      sourceIds: [...prediction.sourceIds, externalSourceId]
+    };
+    expect(() => deriveUnderstandingChecks([registration(prediction), undeclaredReviewAttempt], context)).toThrow(
+      "unknown check source"
+    );
+
+    const expandedCheck = { ...prediction, sourceIds: [...prediction.sourceIds, externalSourceId] };
+    const missingEnvelopeAttempt = {
+      ...attempt(expandedCheck, undeclaredReviewEvaluation),
+      sourceIds: prediction.sourceIds
+    };
+    expect(() => deriveUnderstandingChecks([registration(expandedCheck), missingEnvelopeAttempt], context)).toThrow(
+      "missing provenance"
+    );
   });
 
   it("rejects repeated prompts, cue variants, and attempts after learner rejection", () => {

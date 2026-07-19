@@ -2,6 +2,7 @@ import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ExplainerProjection } from "../domain/explainer";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
+import { countUnderstandingFeedbackEvents } from "../domain/understandingCheckProjection";
 import type {
   ProjectedReviewItem,
   UnderstandingCheckProjection,
@@ -117,11 +118,7 @@ export function LearnView({
             <span>Feedback events</span>
             <strong>
               {explainers.reduce((total, item) => total + item.feedback.length, 0) +
-                checks.reduce(
-                  (total, item) =>
-                    total + item.attempts.length + item.attempts.filter((attempt) => attempt.dispute).length,
-                  0
-                )}
+                countUnderstandingFeedbackEvents(checks)}
             </strong>
           </p>
           <p>

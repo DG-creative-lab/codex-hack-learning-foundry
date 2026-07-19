@@ -1682,6 +1682,53 @@ button {
   padding: 24px 26px;
   border-bottom: 1px solid var(--line);
 }
+.attempt-history {
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--line);
+  background: #f3f4f1;
+}
+.attempt-history > .eyebrow {
+  margin: 0 0 10px;
+}
+.attempt-history > div {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+}
+.attempt-history button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 14px;
+  flex: 0 0 180px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.attempt-history button:hover,
+.attempt-history button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: #fff;
+}
+.attempt-history span,
+.attempt-history strong,
+.attempt-history time {
+  font:
+    var(--text-micro) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+.attempt-history strong {
+  color: var(--signal-dark);
+  text-align: right;
+}
+.attempt-history time {
+  grid-column: 1 / 3;
+  color: var(--muted);
+}
 .check-section-heading {
   display: flex;
   justify-content: space-between;
@@ -2569,6 +2616,7 @@ button {
     display: none;
   }
   .check-titlebar,
+  .attempt-history,
   .attempt-evaluation,
   .response-composer,
   .evidence-vector {

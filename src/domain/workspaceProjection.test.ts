@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { seedEvents } from "../data/sample";
 import { capabilities, learningArtifacts, workspaceSources } from "../data/workspace";
 import type { EvidenceEvent } from "./types";
+import { summarizeEvidenceForTheoryElements } from "./understandingCheckProjection";
 import { reduceWorkspace } from "./workspaceProjection";
 
 describe("workspace projection", () => {
@@ -29,6 +30,14 @@ describe("workspace projection", () => {
     expect(valueDensity?.dimensions.retrieval.supports).toBe(1);
     expect(valueDensity?.dimensions.transfer.supports).toBe(0);
     expect(valueDensity).not.toHaveProperty("mastery");
+
+    const prediction = workspace.understandingChecks.find((check) => check.kind === "prediction");
+    if (!prediction) throw new Error("Prepared prediction check missing");
+    const predictionSummary = summarizeEvidenceForTheoryElements(
+      workspace.understandingEvidenceVectors,
+      prediction.theoryElementIds
+    );
+    expect(predictionSummary.prediction.challenges).toBe(1);
   });
 
   it("is deterministic and does not mutate its input", () => {

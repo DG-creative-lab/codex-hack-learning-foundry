@@ -43,16 +43,19 @@ export function generateUnderstandingChecks({
   activeProject,
   cycle = 1
 }: GenerateUnderstandingChecksInput): UnderstandingCheck[] {
+  if (!Number.isInteger(cycle) || cycle < 1) throw new Error("Understanding-check cycle must be a positive integer");
   const active = theory.elements.filter((element) => element.status === "active");
   const concepts = active.filter((element) => element.kind === "concept").slice(0, 5);
-  const purpose = active.find((element) => element.kind === "purpose") ?? active[0];
-  const boundary = active.find((element) => element.kind === "boundary") ?? active.at(-1);
+  const purpose = active.find((element) => element.kind === "purpose");
+  const boundary = active.find((element) => element.kind === "boundary");
   const unresolved = theory.elements.find((element) => element.status === "unresolved");
-  if (!purpose || !boundary || concepts.length === 0) {
-    throw new Error("Understanding checks require an active purpose, boundary, and concept in the Living Theory");
-  }
+  if (!purpose) throw new Error("Understanding checks require an active purpose in the Living Theory");
+  if (!boundary) throw new Error("Understanding checks require an active boundary in the Living Theory");
+  if (concepts.length === 0) throw new Error("Understanding checks require an active concept in the Living Theory");
   const opener = promptOpeners[(cycle - 1) % promptOpeners.length];
   const context = `${activeProject.name}: ${activeProject.goal}`;
+  const cycleInstruction = cycle === 1 ? "" : ` Use a new example or framing for learning cycle ${cycle}.`;
+  const vary = (prompt: string) => `${prompt}${cycleInstruction}`;
 
   function createCheck(
     kind: UnderstandingCheckKind,
@@ -93,7 +96,7 @@ export function generateUnderstandingChecks({
       "recall",
       1,
       "concept-reconstruction",
-      `${opener}, reconstruct the key lenses in ${theory.title} and state what each helps you notice.`,
+      vary(`${opener}, reconstruct the key lenses in ${theory.title} and state what each helps you notice.`),
       "Test whether the conceptual distinctions are available without the original cue.",
       concepts,
       "retrieval"
@@ -102,7 +105,9 @@ export function generateUnderstandingChecks({
       "explanation",
       2,
       "causal-explanation",
-      `Explain to a project collaborator why “${purpose.title}” is a better decision rule for ${activeProject.name} than visual compactness alone.`,
+      vary(
+        `Explain to a project collaborator why “${purpose.title}” is a better decision rule for ${activeProject.name} than visual compactness alone.`
+      ),
       "Externalize the mechanism and practical purpose, not only the vocabulary.",
       [purpose, ...concepts.slice(0, 2)],
       "explanation"
@@ -111,7 +116,9 @@ export function generateUnderstandingChecks({
       "prediction",
       3,
       "consequence-prediction",
-      `Predict what would happen in ${activeProject.transferScenario} if “${boundary.title}” were ignored. State the mechanism and an observable result.`,
+      vary(
+        `Predict what would happen in ${activeProject.transferScenario} if “${boundary.title}” were ignored. State the mechanism and an observable result.`
+      ),
       "Use the theory to anticipate consequences before seeing the outcome.",
       unresolved ? [boundary, purpose, unresolved] : [boundary, purpose],
       "prediction"
@@ -120,7 +127,9 @@ export function generateUnderstandingChecks({
       "teach_back",
       4,
       "novice-teach-back",
-      `Teach back “${concepts[0].title}” to a capable designer who has not read the sources. Include one example and one boundary.`,
+      vary(
+        `Teach back “${concepts[0].title}” to a capable designer who has not read the sources. Include one example and one boundary.`
+      ),
       "Reveal whether the learner can reorganize the idea for another person.",
       [concepts[0], boundary, purpose],
       "explanation"
@@ -129,7 +138,9 @@ export function generateUnderstandingChecks({
       "transfer",
       5,
       "unfamiliar-transfer",
-      `Apply “${purpose.title}” to this unfamiliar case: ${activeProject.transferScenario} Make a recommendation, preserve a constraint, and name what evidence would change your decision.`,
+      vary(
+        `Apply “${purpose.title}” to this unfamiliar case: ${activeProject.transferScenario} Make a recommendation, preserve a constraint, and name what evidence would change your decision.`
+      ),
       "Test whether the model can guide action beyond the source example.",
       [purpose, boundary, ...concepts.slice(-2)],
       "transfer"

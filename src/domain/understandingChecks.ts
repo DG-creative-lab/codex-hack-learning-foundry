@@ -217,6 +217,7 @@ export interface UnderstandingAttemptRecord {
 export interface UnderstandingCheckProjection extends UnderstandingCheck {
   status: "ready" | "rejected";
   attempts: UnderstandingAttemptRecord[];
+  preferences: Array<CheckPreference & { evidenceEventId: string; createdAt: string }>;
   preference?: CheckPreference & { evidenceEventId: string; createdAt: string };
 }
 
@@ -225,6 +226,13 @@ export interface DimensionEvidence {
   mixed: number;
   challenges: number;
   lastObservedAt?: string;
+  observations: DimensionObservation[];
+}
+
+export interface DimensionObservation {
+  attemptEventId: string;
+  signal: UnderstandingSignal;
+  createdAt: string;
 }
 
 export interface UnderstandingEvidenceVector {

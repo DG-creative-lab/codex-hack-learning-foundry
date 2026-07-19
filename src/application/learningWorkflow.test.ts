@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { preparedExplainer, seedEvents } from "../data/sample";
 import type { EvidenceEvent } from "../domain/types";
-import { generateUnderstandingChecks } from "../domain/understandingCheckGeneration";
+import { createProvisionalEvaluation, generateUnderstandingChecks } from "../domain/understandingCheckGeneration";
 import type { UnderstandingCheckProjection } from "../domain/understandingChecks";
 import { reduceWorkspace } from "../domain/workspaceProjection";
 import { createLearningWorkflow } from "./learningWorkflow";
@@ -91,7 +91,8 @@ describe("learning workflow", () => {
         }
       })[2],
       status: "ready",
-      attempts: []
+      attempts: [],
+      preferences: []
     } satisfies UnderstandingCheckProjection;
     const evaluateUnderstandingResponse = vi.fn(() => ({
       outcome: "partial" as const,
@@ -146,6 +147,7 @@ describe("learning workflow", () => {
     const check: UnderstandingCheckProjection = {
       ...generated,
       status: "ready",
+      preferences: [],
       attempts: [
         {
           eventId: "evt-prepared-attempt",
@@ -193,5 +195,42 @@ describe("learning workflow", () => {
       "learning.understanding_check_preference_recorded"
     ]);
     expect(events.every((event) => event.actor === "human" && event.kind === "user_interpretation")).toBe(true);
+  });
+
+  it("rejects evaluator review sources that are absent from the check manifest", async () => {
+    const events: EvidenceEvent[] = [];
+    const workspace = reduceWorkspace(seedEvents);
+    const generated = generateUnderstandingChecks({
+      theory: workspace.theory,
+      activeProject: {
+        name: "Learning Foundry",
+        goal: "Improve review decisions.",
+        transferScenario: "An expert triages a dense queue."
+      }
+    })[2];
+    const check: UnderstandingCheckProjection = { ...generated, status: "ready", attempts: [], preferences: [] };
+    const externalSourceId = workspace.sources.find((source) => !check.sourceIds.includes(source.id))?.id;
+    if (!externalSourceId) throw new Error("External source fixture missing");
+    const workflow = createLearningWorkflow({
+      append: async (event) => events.push(event),
+      resolveExplainer: () => undefined,
+      resolveUnderstandingCheck: (checkId) => (checkId === check.id ? check : undefined),
+      evaluateUnderstandingResponse: (resolvedCheck, response) => {
+        const evaluation = createProvisionalEvaluation(resolvedCheck, response);
+        return {
+          ...evaluation,
+          reviewItems: evaluation.reviewItems.map((item) => ({ ...item, sourceIds: [externalSourceId] }))
+        };
+      }
+    });
+
+    await expect(
+      workflow.recordUnderstandingResponse(check.id, {
+        answer: "Too short.",
+        confidence: "high",
+        sourceSupport: { level: "none", sourceIds: [], fragmentIds: [] }
+      })
+    ).rejects.toThrow("review item references undeclared source");
+    expect(events).toHaveLength(0);
   });
 });

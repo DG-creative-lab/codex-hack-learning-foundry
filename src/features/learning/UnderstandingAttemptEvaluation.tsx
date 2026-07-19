@@ -39,7 +39,7 @@ export function UnderstandingAttemptEvaluation({
   return (
     <section className="attempt-evaluation">
       <div className="check-section-heading">
-        <p className="eyebrow">Latest evidence</p>
+        <p className="eyebrow">Attempt evidence</p>
         <span>{new Date(attempt.createdAt).toLocaleDateString()}</span>
       </div>
       <blockquote>{attempt.response.answer}</blockquote>
