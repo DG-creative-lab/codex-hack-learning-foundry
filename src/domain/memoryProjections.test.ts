@@ -23,7 +23,7 @@ function microWorldEvidence(): EvidenceEvent[] {
       payload: {
         artifactId: preparedDensityMicroWorld.id,
         optionId: preparedDensityMicroWorld.prediction.options[0]?.id,
-        variableValues: initialValues
+        variableValues: changedValues
       }
     },
     {
@@ -36,6 +36,7 @@ function microWorldEvidence(): EvidenceEvent[] {
       sourceIds: preparedDensityMicroWorld.sourceIds,
       payload: {
         artifactId: preparedDensityMicroWorld.id,
+        predictionEventId: "evt-memory-micro-world-prediction",
         variableValues: changedValues,
         changedVariableIds: ["queue-spacing"],
         outcomeValues: evaluateMicroWorld(preparedDensityMicroWorld, changedValues)

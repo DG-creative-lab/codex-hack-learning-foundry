@@ -24,6 +24,18 @@ interface MicroWorldPreviewProps {
 }
 
 function initialValues(artifact: MicroWorldProjection): MicroWorldVariableValues {
+  const pendingPrediction = artifact.predictions.find(
+    (prediction) =>
+      !artifact.interactions.some((interaction) => interaction.predictionEventId === prediction.evidenceEventId)
+  );
+  return (
+    pendingPrediction?.variableValues ??
+    artifact.interactions.at(-1)?.variableValues ??
+    Object.fromEntries(artifact.variables.map((variable) => [variable.id, variable.initialValue]))
+  );
+}
+
+function recordedValues(artifact: MicroWorldProjection): MicroWorldVariableValues {
   return (
     artifact.interactions.at(-1)?.variableValues ??
     Object.fromEntries(artifact.variables.map((variable) => [variable.id, variable.initialValue]))
@@ -48,24 +60,31 @@ export function MicroWorldPreview({
   onReflection
 }: MicroWorldPreviewProps) {
   const canonicalValues = useMemo(() => initialValues(artifact), [artifact]);
+  const canonicalCommittedValues = useMemo(() => recordedValues(artifact), [artifact]);
   const [values, setValues] = useState<MicroWorldVariableValues>(() => canonicalValues);
-  const [committedValues, setCommittedValues] = useState<MicroWorldVariableValues>(() => canonicalValues);
+  const [committedValues, setCommittedValues] = useState<MicroWorldVariableValues>(() => canonicalCommittedValues);
   const [predictionOptionId, setPredictionOptionId] = useState(artifact.prediction.options[0]?.id ?? "");
-  const [predictionSaved, setPredictionSaved] = useState(false);
+  const [predictionEventId, setPredictionEventId] = useState(
+    () =>
+      artifact.predictions.find(
+        (prediction) =>
+          !artifact.interactions.some((interaction) => interaction.predictionEventId === prediction.evidenceEventId)
+      )?.evidenceEventId
+  );
   const [reflectionPrompt, setReflectionPrompt] = useState(artifact.reflectionPrompts[0] ?? "");
   const [reflection, setReflection] = useState("");
   const [pending, setPending] = useState<"prediction" | "interaction" | "reflection">();
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
   const outcomeValues = evaluateMicroWorld(artifact, values);
-  const outcomesRevealed = artifact.predictions.length > 0 || predictionSaved;
+  const outcomesRevealed = Boolean(predictionEventId);
   const hasRecordedInteraction = artifact.interactions.length > 0;
   const configurationChanged = !valuesEqual(values, committedValues);
   const Stage = getMicroWorldStage(artifact.renderer);
 
   useEffect(() => {
-    setCommittedValues(canonicalValues);
-  }, [canonicalValues]);
+    setCommittedValues(canonicalCommittedValues);
+  }, [canonicalCommittedValues]);
 
   async function execute(kind: "prediction" | "interaction" | "reflection", action: () => Promise<void>) {
     if (pending) return false;
@@ -86,15 +105,23 @@ export function MicroWorldPreview({
   }
 
   async function submitPrediction() {
-    if (!predictionOptionId) return;
-    const recorded = await execute("prediction", () => onPrediction(artifact.id, predictionOptionId, values));
-    if (recorded) setPredictionSaved(true);
+    if (!predictionOptionId || !configurationChanged) return;
+    let recordedPredictionEventId: string | undefined;
+    const recorded = await execute("prediction", async () => {
+      recordedPredictionEventId = await onPrediction(artifact.id, predictionOptionId, values);
+    });
+    if (recorded && recordedPredictionEventId) {
+      setPredictionEventId(recordedPredictionEventId);
+    }
   }
 
   async function recordConfiguration() {
-    if (!outcomesRevealed || !configurationChanged) return;
-    const recorded = await execute("interaction", () => onInteraction(artifact.id, values));
-    if (recorded) setCommittedValues(values);
+    if (!outcomesRevealed || !configurationChanged || !predictionEventId) return;
+    const recorded = await execute("interaction", () => onInteraction(artifact.id, predictionEventId, values));
+    if (recorded) {
+      setCommittedValues(values);
+      setPredictionEventId(undefined);
+    }
   }
 
   async function submitReflection() {
@@ -140,6 +167,7 @@ export function MicroWorldPreview({
           values={values}
           outcomesRevealed={outcomesRevealed}
           configurationChanged={configurationChanged}
+          configurationLocked={Boolean(predictionEventId)}
           pending={Boolean(pending)}
           saved={saved === "interaction"}
           onValueChange={(variableId, value) => setValues((current) => ({ ...current, [variableId]: value }))}
@@ -171,7 +199,7 @@ export function MicroWorldPreview({
               <button
                 type="button"
                 className="primary-button"
-                disabled={!predictionOptionId || Boolean(pending)}
+                disabled={!predictionOptionId || !configurationChanged || Boolean(pending)}
                 onClick={() => void submitPrediction()}
               >
                 Reveal outcomes

@@ -127,10 +127,9 @@ function actualDirection(before: number, after: number): PredictionChangeDirecti
 function microWorldGaps(worlds: MicroWorldProjection[], eventsById: Map<string, EvidenceEvent>): UnderstandingGap[] {
   return worlds.flatMap((world) =>
     world.interactions.flatMap((interaction) => {
-      const prediction = world.predictions
-        .filter((candidate) => candidate.createdAt <= interaction.createdAt)
-        .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
-        .at(-1);
+      const prediction = world.predictions.find(
+        (candidate) => candidate.evidenceEventId === interaction.predictionEventId
+      );
       if (!prediction) return [];
       const option = world.prediction.options.find((candidate) => candidate.id === prediction.optionId);
       if (!option) return [];

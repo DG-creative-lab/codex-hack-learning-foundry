@@ -165,13 +165,26 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
       payload
     };
     await dependencies.append(event);
+    return event.id;
   }
 
-  async function recordMicroWorldInteraction(artifactId: string, variableValues: MicroWorldVariableValues) {
+  async function recordMicroWorldInteraction(
+    artifactId: string,
+    predictionEventId: string,
+    variableValues: MicroWorldVariableValues
+  ) {
     const artifact = dependencies.resolveMicroWorld(artifactId);
     if (!artifact) throw new Error(`Cannot interact with unknown micro-world ${artifactId}`);
-    if (artifact.predictions.length === 0) {
-      throw new Error(`Micro-world ${artifact.id} requires a prediction before recording an interaction`);
+    const prediction = artifact.predictions.find((candidate) => candidate.evidenceEventId === predictionEventId);
+    if (!prediction) throw new Error(`Micro-world interaction references unknown prediction ${predictionEventId}`);
+    if (artifact.interactions.some((interaction) => interaction.predictionEventId === predictionEventId)) {
+      throw new Error(`Micro-world prediction ${predictionEventId} already has a recorded interaction`);
+    }
+    const mismatchedPredictionVariableId = artifact.variables
+      .map((variable) => variable.id)
+      .find((id) => prediction.variableValues[id] !== variableValues[id]);
+    if (mismatchedPredictionVariableId) {
+      throw new Error(`Micro-world interaction does not match the predicted target configuration`);
     }
     const previousValues =
       artifact.interactions.at(-1)?.variableValues ??
@@ -183,6 +196,7 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
     const outcomeValues = evaluateMicroWorld(artifact, variableValues);
     const payload = microWorldInteractionPayloadSchema.parse({
       artifactId,
+      predictionEventId,
       variableValues,
       changedVariableIds,
       outcomeValues

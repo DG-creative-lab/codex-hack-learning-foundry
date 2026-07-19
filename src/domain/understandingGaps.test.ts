@@ -22,6 +22,20 @@ function microWorldMismatchEvents(): EvidenceEvent[] {
       payload: {
         artifactId: preparedDensityMicroWorld.id,
         optionId: "prediction-faster",
+        variableValues: changedValues
+      }
+    },
+    {
+      id: "evt-gap-unrelated-later-prediction",
+      type: "learning.micro_world_prediction_recorded",
+      kind: "hypothesis",
+      createdAt: "2026-07-14T12:20:30.000Z",
+      actor: "human",
+      summary: "Recorded a later prediction for a different experiment.",
+      sourceIds: preparedDensityMicroWorld.sourceIds,
+      payload: {
+        artifactId: preparedDensityMicroWorld.id,
+        optionId: "prediction-tradeoff",
         variableValues: initialValues
       }
     },
@@ -35,6 +49,7 @@ function microWorldMismatchEvents(): EvidenceEvent[] {
       sourceIds: preparedDensityMicroWorld.sourceIds,
       payload: {
         artifactId: preparedDensityMicroWorld.id,
+        predictionEventId: "evt-gap-micro-prediction",
         variableValues: changedValues,
         changedVariableIds: ["queue-spacing", "queue-information"],
         outcomeValues: evaluateMicroWorld(preparedDensityMicroWorld, changedValues)

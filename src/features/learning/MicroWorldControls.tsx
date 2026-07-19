@@ -6,6 +6,7 @@ interface MicroWorldControlsProps {
   values: MicroWorldVariableValues;
   outcomesRevealed: boolean;
   configurationChanged: boolean;
+  configurationLocked: boolean;
   pending: boolean;
   saved: boolean;
   onValueChange: (variableId: string, value: number) => void;
@@ -23,6 +24,7 @@ export function MicroWorldControls({
   values,
   outcomesRevealed,
   configurationChanged,
+  configurationLocked,
   pending,
   saved,
   onValueChange,
@@ -36,7 +38,13 @@ export function MicroWorldControls({
           <p className="eyebrow">Variables</p>
           <h3>Tune the queue</h3>
         </div>
-        <button type="button" className="icon-button" title="Reset variables" disabled={pending} onClick={onReset}>
+        <button
+          type="button"
+          className="icon-button"
+          title="Reset variables"
+          disabled={pending || configurationLocked}
+          onClick={onReset}
+        >
           <RotateCcw size={14} />
         </button>
       </div>
@@ -58,7 +66,7 @@ export function MicroWorldControls({
               step={variable.step}
               value={value}
               aria-label={variable.label}
-              disabled={pending}
+              disabled={pending || configurationLocked}
               onInput={(event) => onValueChange(variable.id, Number(event.currentTarget.value))}
             />
             <small>{variable.description}</small>

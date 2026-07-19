@@ -23,9 +23,10 @@ export type RecordMicroWorldPrediction = (
   artifactId: string,
   optionId: string,
   variableValues: MicroWorldVariableValues
-) => Promise<void>;
+) => Promise<string>;
 export type RecordMicroWorldInteraction = (
   artifactId: string,
+  predictionEventId: string,
   variableValues: MicroWorldVariableValues
 ) => Promise<void>;
 export type RecordMicroWorldReflection = (artifactId: string, prompt: string, response: string) => Promise<void>;

@@ -268,6 +268,7 @@ export const microWorldPredictionPayloadSchema = z
 export const microWorldInteractionPayloadSchema = z
   .object({
     artifactId: boundedIdSchema,
+    predictionEventId: boundedIdSchema,
     variableValues: variableValuesSchema,
     changedVariableIds: boundedIds(MICRO_WORLD_LIMITS.variables).min(1),
     outcomeValues: outcomeValuesSchema
@@ -422,10 +423,26 @@ export function deriveMicroWorlds(events: EvidenceEvent[], context: MicroWorldCo
       const interaction = microWorldInteractionPayloadSchema.parse(event.payload);
       const artifact = worlds.get(interaction.artifactId);
       if (!artifact) throw new Error(`Cannot interact with unknown micro-world ${interaction.artifactId}`);
-      if (artifact.predictions.length === 0) {
-        throw new Error(`Micro-world ${artifact.id} requires a prediction before recording an interaction`);
+      const prediction = artifact.predictions.find(
+        (candidate) => candidate.evidenceEventId === interaction.predictionEventId
+      );
+      if (!prediction) {
+        throw new Error(
+          `Micro-world interaction ${event.id} references unknown prediction ${interaction.predictionEventId}`
+        );
+      }
+      if (artifact.interactions.some((candidate) => candidate.predictionEventId === interaction.predictionEventId)) {
+        throw new Error(`Micro-world prediction ${interaction.predictionEventId} already has a recorded interaction`);
       }
       validateVariableValues(artifact, interaction.variableValues, `Micro-world interaction ${event.id}`);
+      const mismatchedPredictionVariableId = artifact.variables
+        .map((variable) => variable.id)
+        .find((id) => prediction.variableValues[id] !== interaction.variableValues[id]);
+      if (mismatchedPredictionVariableId) {
+        throw new Error(
+          `Micro-world interaction ${event.id} does not match prediction ${interaction.predictionEventId} target configuration`
+        );
+      }
       validateOutcomeValues(artifact, interaction.outcomeValues, `Micro-world interaction ${event.id}`);
       const expectedOutcomeValues = evaluateMicroWorld(artifact, interaction.variableValues);
       const mismatchedOutcomeId = artifact.outcomes
