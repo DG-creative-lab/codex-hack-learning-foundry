@@ -206,12 +206,14 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
     if (artifact.interactions.length === 0) {
       throw new Error(`Micro-world ${artifact.id} requires an interaction before recording a reflection`);
     }
+    const interaction = artifact.interactions.at(-1);
+    if (!interaction) throw new Error(`Micro-world ${artifact.id} has no interaction to reflect on`);
     if (!artifact.reflectionPrompts.includes(prompt)) throw new Error(`Micro-world reflection uses an unknown prompt`);
     const payload = microWorldReflectionPayloadSchema.parse({
       artifactId,
       prompt,
       response,
-      interactionEventId: artifact.interactions.at(-1)?.evidenceEventId
+      interactionEventId: interaction.evidenceEventId
     });
     const event: EvidenceEvent = {
       id: createId("evt-micro-world-reflection"),

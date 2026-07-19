@@ -61,6 +61,14 @@ describe("micro-world artifacts", () => {
         limitations: ["x".repeat(2000)]
       })
     ).toThrow();
+    expect(() =>
+      microWorldArtifactSchema.parse({
+        ...preparedDensityMicroWorld,
+        variables: preparedDensityMicroWorld.variables.map((variable, index) =>
+          index === 0 ? { ...variable, initialValue: variable.min + variable.step / 2 } : variable
+        )
+      })
+    ).toThrow("initial value must align");
   });
 
   it("replays prediction, interaction, and reflection as separate immutable evidence", () => {
@@ -103,6 +111,28 @@ describe("micro-world artifacts", () => {
     expect(projected?.predictions).toHaveLength(1);
     expect(projected?.interactions[0]?.outcomeValues).toEqual(outcomes);
     expect(projected?.reflections[0]?.interactionEventId).toBe(interaction.id);
+
+    const missingLinkReflection = {
+      ...reflection,
+      id: "evt-test-reflection-missing-link",
+      payload: {
+        artifactId: preparedDensityMicroWorld.id,
+        prompt: preparedDensityMicroWorld.reflectionPrompts[0],
+        response: "This reflection does not identify its observation."
+      }
+    };
+    expect(() =>
+      deriveMicroWorlds([registration, prediction(values), interaction, missingLinkReflection], context)
+    ).toThrow();
+
+    const unknownLinkReflection = {
+      ...reflection,
+      id: "evt-test-reflection-unknown-link",
+      payload: { ...reflection.payload, interactionEventId: "evt-missing-interaction" }
+    };
+    expect(() =>
+      deriveMicroWorlds([registration, prediction(values), interaction, unknownLinkReflection], context)
+    ).toThrow("unknown interaction");
   });
 
   it("requires a prediction before interaction evidence", () => {

@@ -27,6 +27,11 @@ const boundedIds = (maximum: number) => z.array(boundedIdSchema).max(maximum);
 export const microWorldVariableRoleSchema = z.enum(["spacing", "hierarchy", "information_density"]);
 export const microWorldRendererSchema = z.enum(["design_density_queue"]);
 
+function isStepAligned(value: number, minimum: number, step: number): boolean {
+  const stepOffset = (value - minimum) / step;
+  return Math.abs(stepOffset - Math.round(stepOffset)) <= 1e-8;
+}
+
 export const microWorldVariableSchema = z
   .object({
     id: boundedIdSchema,
@@ -48,6 +53,13 @@ export const microWorldVariableSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Variable initial value must fall within its range.",
+        path: ["initialValue"]
+      });
+    }
+    if (!isStepAligned(variable.initialValue, variable.min, variable.step)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Variable initial value must align with its declared step.",
         path: ["initialValue"]
       });
     }
@@ -210,7 +222,7 @@ export const microWorldReflectionPayloadSchema = z
     artifactId: boundedIdSchema,
     prompt: z.string().min(1).max(MICRO_WORLD_LIMITS.reflectionCharacters),
     response: z.string().trim().min(3).max(MICRO_WORLD_LIMITS.reflectionCharacters),
-    interactionEventId: boundedIdSchema.optional()
+    interactionEventId: boundedIdSchema
   })
   .strict();
 
@@ -288,8 +300,7 @@ function validateVariableValues(artifact: MicroWorldArtifact, values: MicroWorld
     if (value === undefined || value < variable.min || value > variable.max) {
       throw new Error(`${entity} value for ${variable.id} falls outside its declared range`);
     }
-    const stepOffset = (value - variable.min) / variable.step;
-    if (Math.abs(stepOffset - Math.round(stepOffset)) > 1e-8) {
+    if (!isStepAligned(value, variable.min, variable.step)) {
       throw new Error(`${entity} value for ${variable.id} does not align with its declared step`);
     }
   }
@@ -411,10 +422,7 @@ export function deriveMicroWorlds(events: EvidenceEvent[], context: MicroWorldCo
       if (!artifact.reflectionPrompts.includes(reflection.prompt)) {
         throw new Error(`Micro-world reflection references an unknown prompt`);
       }
-      if (
-        reflection.interactionEventId &&
-        !artifact.interactions.some((interaction) => interaction.evidenceEventId === reflection.interactionEventId)
-      ) {
+      if (!artifact.interactions.some((interaction) => interaction.evidenceEventId === reflection.interactionEventId)) {
         throw new Error(`Micro-world reflection references unknown interaction ${reflection.interactionEventId}`);
       }
       requireEventSources(event, `Micro-world reflection ${event.id}`, artifact.sourceIds);

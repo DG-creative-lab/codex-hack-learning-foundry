@@ -36,7 +36,7 @@ export function MicroWorldControls({
           <p className="eyebrow">Variables</p>
           <h3>Tune the queue</h3>
         </div>
-        <button type="button" className="icon-button" title="Reset variables" onClick={onReset}>
+        <button type="button" className="icon-button" title="Reset variables" disabled={pending} onClick={onReset}>
           <RotateCcw size={14} />
         </button>
       </div>
@@ -58,6 +58,7 @@ export function MicroWorldControls({
               step={variable.step}
               value={value}
               aria-label={variable.label}
+              disabled={pending}
               onInput={(event) => onValueChange(variable.id, Number(event.currentTarget.value))}
             />
             <small>{variable.description}</small>
