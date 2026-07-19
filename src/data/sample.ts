@@ -1,5 +1,6 @@
 import { explainerArtifactSchema } from "../domain/explainer";
 import { deriveLivingTheory, type LivingTheoryMetadata } from "../domain/livingTheory";
+import { microWorldArtifactSchema } from "../domain/microWorld";
 import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "../domain/sourcePipeline";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
 import { generateUnderstandingChecks } from "../domain/understandingCheckGeneration";
@@ -218,6 +219,120 @@ export const preparedExplainer = explainerArtifactSchema.parse({
   }
 });
 
+export const preparedDensityMicroWorld = microWorldArtifactSchema.parse({
+  id: "micro-world-density-queue",
+  renderer: "design_density_queue",
+  title: "Operational queue density lab",
+  purpose:
+    "Test how spacing, hierarchy, and visible information interact before applying a density recommendation to a real workflow.",
+  scenario:
+    "Tune a triage queue for an expert operator who must identify urgency, understand context, and act without losing target size or recovery cues.",
+  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+  fragmentIds: [preparedTranscriptExtraction.fragments[0].id],
+  theoryElementIds: [
+    "theory-purpose-review-value",
+    "theory-concept-visual-density",
+    "theory-concept-information-density",
+    "theory-concept-meaning-density",
+    "theory-concept-time-density",
+    "theory-concept-value-density",
+    "theory-boundary-accessibility"
+  ],
+  variables: [
+    {
+      id: "queue-spacing",
+      role: "spacing",
+      label: "Row spacing",
+      description: "Changes separation and visible capacity without shrinking the interaction target.",
+      min: 8,
+      max: 24,
+      step: 2,
+      initialValue: 16,
+      unit: "px"
+    },
+    {
+      id: "queue-hierarchy",
+      role: "hierarchy",
+      label: "Hierarchy strength",
+      description: "Changes the contrast between urgency, task identity, and supporting context.",
+      min: 20,
+      max: 100,
+      step: 10,
+      initialValue: 60,
+      unit: "percent"
+    },
+    {
+      id: "queue-information",
+      role: "information_density",
+      label: "Visible fields",
+      description: "Changes how much task context is shown in each row.",
+      min: 3,
+      max: 7,
+      step: 1,
+      initialValue: 5,
+      unit: "fields"
+    }
+  ],
+  controls: [
+    { id: "control-spacing", variableId: "queue-spacing", kind: "range" },
+    { id: "control-hierarchy", variableId: "queue-hierarchy", kind: "range" },
+    { id: "control-information", variableId: "queue-information", kind: "range" }
+  ],
+  outcomes: [
+    {
+      id: "outcome-visible-capacity",
+      kind: "visible_capacity",
+      label: "Visible capacity",
+      description: "Estimated number of queue items visible in the fixed work area.",
+      unit: "items",
+      betterDirection: "higher",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+      theoryElementIds: ["theory-concept-visual-density", "theory-concept-information-density"]
+    },
+    {
+      id: "outcome-scan-effort",
+      kind: "scan_effort",
+      label: "Estimated scan effort",
+      description: "A modelled comparison signal for locating and interpreting the next urgent item.",
+      unit: "seconds",
+      betterDirection: "lower",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+      theoryElementIds: ["theory-concept-time-density", "theory-concept-value-density"]
+    },
+    {
+      id: "outcome-hierarchy-clarity",
+      kind: "hierarchy_clarity",
+      label: "Hierarchy clarity",
+      description: "A modelled signal for how strongly urgency and task identity stand apart from context.",
+      unit: "percent",
+      betterDirection: "higher",
+      sourceIds: ["source-ui-density-2024", "source-wcag-target-size"],
+      theoryElementIds: ["theory-concept-meaning-density", "theory-boundary-accessibility"]
+    }
+  ],
+  prediction: {
+    prompt: "If you show more fields and reduce spacing, what do you expect to happen before hierarchy is adjusted?",
+    options: [
+      { id: "prediction-faster", label: "Capacity and scanning both improve" },
+      { id: "prediction-tradeoff", label: "Capacity improves, but scanning becomes harder" },
+      { id: "prediction-no-change", label: "The workflow remains effectively unchanged" }
+    ]
+  },
+  assumptions: [
+    "The operator already understands the queue vocabulary and urgency codes.",
+    "The work area remains fixed while the controls change.",
+    "The outcome model compares configurations; it does not measure human cognition."
+  ],
+  limitations: [
+    "The scan-effort and clarity values are transparent heuristics, not observed user-performance data.",
+    "The renderer preserves a minimum row target and cannot model every assistive technology or input method."
+  ],
+  reflectionPrompts: [
+    "Which change improved useful density without merely making the queue look compact?",
+    "What evidence would you collect before shipping this configuration to novice operators?"
+  ]
+});
+
 const preparedTranscriptEvents: EvidenceEvent[] = [
   {
     id: "evt-source-dense-by-design-synthesized",
@@ -248,6 +363,17 @@ const preparedExplainerEvent: EvidenceEvent = {
   summary: "Generated a source-grounded explainer for the prepared transfer journey.",
   sourceIds: preparedExplainer.sourceIds,
   payload: { artifact: preparedExplainer }
+};
+
+const preparedMicroWorldEvent: EvidenceEvent = {
+  id: "evt-learning-micro-world-001",
+  type: "learning.micro_world_registered",
+  kind: "agent_synthesis",
+  createdAt: "2026-07-14T10:35:00.000Z",
+  actor: "agent",
+  summary: "Generated a constrained design-density micro-world for the prepared learning journey.",
+  sourceIds: preparedDensityMicroWorld.sourceIds,
+  payload: { artifact: preparedDensityMicroWorld }
 };
 
 function learningSeedEvents(): EvidenceEvent[] {
@@ -450,6 +576,7 @@ const baseSeedEvents: EvidenceEvent[] = [
   },
   ...preparedTranscriptEvents,
   preparedExplainerEvent,
+  preparedMicroWorldEvent,
   ...learningSeedEvents(),
   ...capabilitySeedEvents()
 ];

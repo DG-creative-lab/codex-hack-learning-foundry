@@ -28,15 +28,20 @@ function App() {
     () => new Map(workspace.understandingChecks.map((check) => [check.id, check])),
     [workspace.understandingChecks]
   );
+  const microWorldsById = useMemo(
+    () => new Map(workspace.microWorlds.map((microWorld) => [microWorld.id, microWorld])),
+    [workspace.microWorlds]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
     () =>
       createLearningWorkflow({
         append,
         resolveExplainer: (artifactId) => explainersById.get(artifactId),
+        resolveMicroWorld: (artifactId) => microWorldsById.get(artifactId),
         resolveUnderstandingCheck: (checkId) => understandingChecksById.get(checkId)
       }),
-    [append, explainersById, understandingChecksById]
+    [append, explainersById, microWorldsById, understandingChecksById]
   );
   const { sources } = workspace;
 
@@ -111,6 +116,7 @@ function App() {
           <LearnView
             artifacts={workspace.learningArtifacts}
             explainers={workspace.explainers}
+            microWorlds={workspace.microWorlds}
             checks={workspace.understandingChecks}
             evidenceVectors={workspace.understandingEvidenceVectors}
             reviewItems={workspace.targetedReviewItems}
@@ -120,6 +126,9 @@ function App() {
             onResponse={learningWorkflow.recordUnderstandingResponse}
             onDispute={learningWorkflow.disputeUnderstandingEvaluation}
             onPreference={learningWorkflow.recordCheckPreference}
+            onMicroWorldPrediction={learningWorkflow.recordMicroWorldPrediction}
+            onMicroWorldInteraction={learningWorkflow.recordMicroWorldInteraction}
+            onMicroWorldReflection={learningWorkflow.recordMicroWorldReflection}
           />
         )}
         {view === "memory" && <MemoryView events={events} theory={workspace.theory} projections={workspace.memories} />}

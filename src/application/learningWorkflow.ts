@@ -1,4 +1,12 @@
 import { type ExplainerArtifact, type ExplainerFeedback, explainerFeedbackPayloadSchema } from "../domain/explainer";
+import {
+  evaluateMicroWorld,
+  type MicroWorldProjection,
+  type MicroWorldVariableValues,
+  microWorldInteractionPayloadSchema,
+  microWorldPredictionPayloadSchema,
+  microWorldReflectionPayloadSchema
+} from "../domain/microWorld";
 import type { EvidenceEvent } from "../domain/types";
 import { createProvisionalEvaluation } from "../domain/understandingCheckGeneration";
 import {
@@ -16,6 +24,7 @@ import {
 interface LearningWorkflowDependencies {
   append: (event: EvidenceEvent) => Promise<unknown>;
   resolveExplainer: (artifactId: string) => ExplainerArtifact | undefined;
+  resolveMicroWorld: (artifactId: string) => MicroWorldProjection | undefined;
   resolveUnderstandingCheck: (checkId: string) => UnderstandingCheckProjection | undefined;
   evaluateUnderstandingResponse?: (
     check: UnderstandingCheckProjection,
@@ -133,11 +142,98 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
     await dependencies.append(event);
   }
 
+  async function recordMicroWorldPrediction(
+    artifactId: string,
+    optionId: string,
+    variableValues: MicroWorldVariableValues
+  ) {
+    const artifact = dependencies.resolveMicroWorld(artifactId);
+    if (!artifact) throw new Error(`Cannot predict in unknown micro-world ${artifactId}`);
+    if (!artifact.prediction.options.some((option) => option.id === optionId)) {
+      throw new Error(`Micro-world prediction references unknown option ${optionId}`);
+    }
+    evaluateMicroWorld(artifact, variableValues);
+    const payload = microWorldPredictionPayloadSchema.parse({ artifactId, optionId, variableValues });
+    const event: EvidenceEvent = {
+      id: createId("evt-micro-world-prediction"),
+      type: "learning.micro_world_prediction_recorded",
+      kind: "hypothesis",
+      createdAt: now(),
+      actor: "human",
+      summary: `Predicted an outcome in ${artifact.title}.`,
+      sourceIds: artifact.sourceIds,
+      payload
+    };
+    await dependencies.append(event);
+  }
+
+  async function recordMicroWorldInteraction(artifactId: string, variableValues: MicroWorldVariableValues) {
+    const artifact = dependencies.resolveMicroWorld(artifactId);
+    if (!artifact) throw new Error(`Cannot interact with unknown micro-world ${artifactId}`);
+    if (artifact.predictions.length === 0) {
+      throw new Error(`Micro-world ${artifact.id} requires a prediction before recording an interaction`);
+    }
+    const previousValues =
+      artifact.interactions.at(-1)?.variableValues ??
+      Object.fromEntries(artifact.variables.map((variable) => [variable.id, variable.initialValue]));
+    const changedVariableIds = artifact.variables
+      .filter((variable) => previousValues[variable.id] !== variableValues[variable.id])
+      .map((variable) => variable.id);
+    if (changedVariableIds.length === 0) throw new Error(`Micro-world interaction records no changed variables`);
+    const outcomeValues = evaluateMicroWorld(artifact, variableValues);
+    const payload = microWorldInteractionPayloadSchema.parse({
+      artifactId,
+      variableValues,
+      changedVariableIds,
+      outcomeValues
+    });
+    const event: EvidenceEvent = {
+      id: createId("evt-micro-world-interaction"),
+      type: "learning.micro_world_interaction_recorded",
+      kind: "practical_observation",
+      createdAt: now(),
+      actor: "human",
+      summary: `Recorded a changed configuration in ${artifact.title}.`,
+      sourceIds: artifact.sourceIds,
+      payload
+    };
+    await dependencies.append(event);
+  }
+
+  async function recordMicroWorldReflection(artifactId: string, prompt: string, response: string) {
+    const artifact = dependencies.resolveMicroWorld(artifactId);
+    if (!artifact) throw new Error(`Cannot reflect on unknown micro-world ${artifactId}`);
+    if (artifact.interactions.length === 0) {
+      throw new Error(`Micro-world ${artifact.id} requires an interaction before recording a reflection`);
+    }
+    if (!artifact.reflectionPrompts.includes(prompt)) throw new Error(`Micro-world reflection uses an unknown prompt`);
+    const payload = microWorldReflectionPayloadSchema.parse({
+      artifactId,
+      prompt,
+      response,
+      interactionEventId: artifact.interactions.at(-1)?.evidenceEventId
+    });
+    const event: EvidenceEvent = {
+      id: createId("evt-micro-world-reflection"),
+      type: "learning.micro_world_reflection_recorded",
+      kind: "user_interpretation",
+      createdAt: now(),
+      actor: "human",
+      summary: `Reflected on an observed trade-off in ${artifact.title}.`,
+      sourceIds: artifact.sourceIds,
+      payload
+    };
+    await dependencies.append(event);
+  }
+
   return {
     recordExplainerFeedback,
     recordUnderstandingResponse,
     disputeUnderstandingEvaluation,
-    recordCheckPreference
+    recordCheckPreference,
+    recordMicroWorldPrediction,
+    recordMicroWorldInteraction,
+    recordMicroWorldReflection
   };
 }
 
