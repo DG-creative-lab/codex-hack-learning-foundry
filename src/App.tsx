@@ -1,5 +1,6 @@
 import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
@@ -20,6 +21,7 @@ function App() {
   const [sourceInput, setSourceInput] = useState("");
   const workspace = useMemo(() => reduceWorkspace(events), [events]);
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
+  const learningWorkflow = useMemo(() => createLearningWorkflow({ append }), [append]);
   const { sources } = workspace;
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];
@@ -89,7 +91,15 @@ function App() {
             }
           />
         )}
-        {view === "learn" && <LearnView artifacts={workspace.learningArtifacts} />}
+        {view === "learn" && (
+          <LearnView
+            artifacts={workspace.learningArtifacts}
+            explainers={workspace.explainers}
+            fragments={workspace.sourceFragments}
+            sources={workspace.sources}
+            onFeedback={learningWorkflow.recordExplainerFeedback}
+          />
+        )}
         {view === "memory" && <MemoryView events={events} theory={workspace.theory} projections={workspace.memories} />}
         {view === "foundry" && <FoundryView capabilities={workspace.capabilities} />}
         {view === "about" && <AboutView />}

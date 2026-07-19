@@ -10,6 +10,7 @@ describe("workspace projection", () => {
 
     expect(workspace.sources).toEqual([...workspaceSources].reverse());
     expect(workspace.learningArtifacts).toEqual(learningArtifacts);
+    expect(workspace.explainers[0]?.id).toBe("explainer-value-density");
     expect(workspace.capabilities).toEqual(capabilities);
     expect(workspace.theory.id).toBe("theory-design-density");
     expect(workspace.memories.human.theoryId).toBe(workspace.theory.id);

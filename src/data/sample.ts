@@ -1,3 +1,4 @@
+import { explainerArtifactSchema } from "../domain/explainer";
 import type { LivingTheoryMetadata } from "../domain/livingTheory";
 import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "../domain/sourcePipeline";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
@@ -96,6 +97,125 @@ const preparedTranscriptProposal = {
   }))
 };
 
+export const preparedExplainer = explainerArtifactSchema.parse({
+  id: "explainer-value-density",
+  title: "Density is a value equation",
+  objective: "Build a working model of density before diagnosing an unfamiliar operational interface.",
+  projectContext:
+    "Apply the model to Learning Foundry itself: preserve useful context for repeated work while reducing avoidable time and attention.",
+  sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+  theoryElementIds: [
+    "theory-purpose-review-value",
+    "theory-concept-visual-density",
+    "theory-concept-information-density",
+    "theory-concept-meaning-density",
+    "theory-concept-time-density",
+    "theory-concept-value-density",
+    "theory-boundary-accessibility"
+  ],
+  sections: [
+    {
+      id: "explainer-density-background",
+      kind: "background",
+      title: "Start with the outcome, not the amount",
+      content:
+        "Interfaces are often called dense because they look busy. That description is incomplete: it says how much is visible, but not whether the visible material helps a person decide or act.",
+      epistemicKind: "agent_synthesis",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+      fragmentIds: [preparedTranscriptExtraction.fragments[0].id],
+      theoryElementIds: ["theory-concept-visual-density", "theory-concept-information-density"]
+    },
+    {
+      id: "explainer-density-purpose",
+      kind: "purpose",
+      title: "Review for situated user value",
+      content:
+        "The model gives this project a decision rule: keep information that improves the active workflow, compress friction that does not, and name the user before judging either choice.",
+      epistemicKind: "agent_synthesis",
+      sourceIds: ["source-ui-density-2024"],
+      fragmentIds: [],
+      theoryElementIds: ["theory-purpose-review-value"]
+    },
+    {
+      id: "explainer-density-intuition",
+      kind: "intuition",
+      title: "Value per second per pixel",
+      content:
+        "The prepared talk states the compact intuition directly: density should be evaluated as value delivered across the time and space the interface consumes.",
+      epistemicKind: "source_fact",
+      sourceIds: ["source-dense-by-design"],
+      fragmentIds: [preparedTranscriptExtraction.fragments[0].id],
+      theoryElementIds: ["theory-concept-time-density", "theory-concept-value-density"]
+    },
+    {
+      id: "explainer-density-mechanism",
+      kind: "mechanism",
+      title: "Trace five linked lenses",
+      content:
+        "Move from appearance to consequence: inspect visual load, identify information-bearing marks, read relationships created by arrangement, measure workflow time, then judge the useful outcome.",
+      epistemicKind: "agent_synthesis",
+      sourceIds: ["source-ui-density-2024", "source-dense-by-design"],
+      fragmentIds: [preparedTranscriptExtraction.fragments[0].id],
+      theoryElementIds: [
+        "theory-concept-visual-density",
+        "theory-concept-information-density",
+        "theory-concept-meaning-density",
+        "theory-concept-time-density",
+        "theory-concept-value-density"
+      ]
+    },
+    {
+      id: "explainer-density-details",
+      kind: "details",
+      title: "Constraints remain part of the equation",
+      content:
+        "A faster or more compact interface is not automatically better. Recommendations remain bounded by legibility, target size, expertise, error cost, and the context a person needs to recover their place.",
+      epistemicKind: "agent_synthesis",
+      sourceIds: ["source-wcag-target-size", "source-ui-density-2024"],
+      fragmentIds: [],
+      theoryElementIds: ["theory-boundary-accessibility"]
+    },
+    {
+      id: "explainer-density-assumptions",
+      kind: "assumptions",
+      title: "What this explanation is assuming",
+      content:
+        "We are assuming the workflow has a named user and observable objective. We have not yet established how much the right density changes between novice and expert use.",
+      epistemicKind: "hypothesis",
+      sourceIds: [],
+      fragmentIds: [],
+      theoryElementIds: []
+    }
+  ],
+  understandingCheckSeeds: [
+    {
+      id: "check-density-distinction",
+      prompt: "Explain why a visually busy interface can still have high value density.",
+      sectionIds: ["explainer-density-background", "explainer-density-intuition"]
+    },
+    {
+      id: "check-density-boundary",
+      prompt: "Name one density improvement you would reject and the constraint that rejects it.",
+      sectionIds: ["explainer-density-mechanism", "explainer-density-details"]
+    }
+  ],
+  microWorldSeed: {
+    title: "Operational queue trade-off",
+    scenario: "Tune a triage queue for an expert operator without hiding urgency or shrinking interaction targets.",
+    variables: [
+      { id: "visible-context", label: "Visible context", lowLabel: "Minimal", highLabel: "Complete", initialValue: 62 },
+      {
+        id: "interaction-steps",
+        label: "Interaction steps",
+        lowLabel: "Direct",
+        highLabel: "Layered",
+        initialValue: 38
+      },
+      { id: "control-size", label: "Control size", lowLabel: "Compact", highLabel: "Generous", initialValue: 70 }
+    ]
+  }
+});
+
 const preparedTranscriptEvents: EvidenceEvent[] = [
   {
     id: "evt-source-dense-by-design-synthesized",
@@ -116,6 +236,17 @@ const preparedTranscriptEvents: EvidenceEvent[] = [
   },
   proposalReviewEvent(preparedTranscriptProposal, "approved", "2026-07-14T10:00:20.000Z")
 ];
+
+const preparedExplainerEvent: EvidenceEvent = {
+  id: "evt-learning-explainer-001",
+  type: "learning.explainer_registered",
+  kind: "agent_synthesis",
+  createdAt: "2026-07-14T10:30:00.000Z",
+  actor: "agent",
+  summary: "Generated a source-grounded explainer for the prepared transfer journey.",
+  sourceIds: preparedExplainer.sourceIds,
+  payload: { artifact: preparedExplainer }
+};
 
 function learningSeedEvents(): EvidenceEvent[] {
   return learningArtifacts.map((artifact, index) => ({
@@ -315,9 +446,10 @@ export const seedEvents: EvidenceEvent[] = [
       }
     }
   },
+  ...preparedTranscriptEvents,
+  preparedExplainerEvent,
   ...learningSeedEvents(),
-  ...capabilitySeedEvents(),
-  ...preparedTranscriptEvents
+  ...capabilitySeedEvents()
 ];
 
 export const evaluationCases: EvaluationCase[] = [

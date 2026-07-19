@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deriveExplainers } from "./explainer";
 import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
 import { deriveSourcePipeline } from "./sourceProjection";
@@ -97,6 +98,11 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
   ];
   const unknownTheoryFragmentId = theoryFragmentIds.find((fragmentId) => !knownFragmentIds.has(fragmentId));
   if (unknownTheoryFragmentId) throw new Error(`Living Theory references unknown fragment ${unknownTheoryFragmentId}`);
+  const explainers = deriveExplainers(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(theory.elements.map((element) => element.id))
+  });
 
   return {
     sources,
@@ -106,6 +112,7 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     theory,
     memories: deriveMemoryProjections(theory, events),
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
+    explainers,
     capabilities: deriveCapabilities(events, knownSourceIds)
   };
 }
