@@ -1,4 +1,4 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ExplainerProjection } from "../domain/explainer";
 import { countMicroWorldEvidence, type MicroWorldProjection } from "../domain/microWorld";
@@ -35,6 +35,8 @@ const checkTypeLabels = {
 
 interface LearnViewProps {
   requestedItemId?: string;
+  onReturnToTheory?: () => void;
+  contextTitle?: string;
   artifacts: LearningArtifact[];
   explainers: ExplainerProjection[];
   microWorlds: MicroWorldProjection[];
@@ -54,6 +56,8 @@ interface LearnViewProps {
 
 export function LearnView({
   requestedItemId,
+  onReturnToTheory,
+  contextTitle,
   artifacts,
   explainers,
   microWorlds,
@@ -139,6 +143,14 @@ export function LearnView({
 
   return (
     <div className="page-scroll learn-view">
+      {onReturnToTheory && (
+        <section className="understanding-action-context">
+          <button type="button" onClick={onReturnToTheory}>
+            <ArrowLeft size={15} aria-hidden="true" /> Living Theory
+          </button>
+          <span>{contextTitle}</span>
+        </section>
+      )}
       <section className="learning-header">
         <div>
           <p className="eyebrow">Human learning state</p>

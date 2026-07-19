@@ -39,6 +39,8 @@ describe("App understanding-gap intervention routing", () => {
     document.body.append(view);
     root = createRoot(view);
     await act(async () => root?.render(<App />));
+    expect(view.textContent).toContain("Understanding");
+    expect(view.textContent).toContain("Next meaningful action");
 
     await act(async () => requiredElement<HTMLButtonElement>(view, 'button[aria-label="Memory"]').click());
     expect(view.textContent).toContain("Shared memory");
@@ -50,7 +52,7 @@ describe("App understanding-gap intervention routing", () => {
     await act(async () => predictionSignal.click());
     await act(async () => requiredElement<HTMLButtonElement>(view, ".gap-intervention button").click());
 
-    expect(view.textContent).toContain("Learning studio");
+    expect(view.textContent).toContain("Understanding");
     const selectedJourneyItem = requiredElement<HTMLButtonElement>(view, ".artifact-list button.selected");
     expect(selectedJourneyItem.textContent).toContain("Prediction");
     expect(requiredElement(view, ".understanding-check-preview").textContent).toContain("Predict what would happen");

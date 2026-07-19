@@ -7,16 +7,16 @@ import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
 import type { UnderstandingGapDestination } from "./domain/understandingGaps";
 import { reduceWorkspace } from "./domain/workspaceProjection";
+import { UnderstandingView } from "./features/understanding/UnderstandingView";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 import { AboutView } from "./views/AboutView";
 import { FoundryView } from "./views/FoundryView";
-import { LearnView } from "./views/LearnView";
 import { MemoryView } from "./views/MemoryView";
 import { SourcesView } from "./views/SourcesView";
 
 function App() {
-  const { events, append, error: ledgerError, rejectedCount } = useEvidenceLedger();
-  const [view, setView] = useState<ViewId>("sources");
+  const { events, append, ready, error: ledgerError, rejectedCount } = useEvidenceLedger();
+  const [view, setView] = useState<ViewId>("learn");
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
@@ -65,7 +65,7 @@ function App() {
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];
   const pageTitles: Record<ViewId, [string, string]> = {
     sources: ["Source library", "Capture, process, and trace knowledge"],
-    learn: ["Learning studio", "Study, practice, recall, and reflect"],
+    learn: ["Understanding", "Maintain the shared theory and choose the next meaningful action"],
     memory: ["Shared memory", "One ledger, three distinct projections"],
     foundry: ["Capability foundry", "Build, evaluate, approve, and revise"],
     about: ["System model", "Local-first shared human-agent learning"]
@@ -87,6 +87,21 @@ function App() {
     setView(destination.view);
   }
 
+  function openSource(sourceId: string) {
+    setSelectedSourceId(sourceId);
+    setView("sources");
+  }
+
+  function openMemory(theoryElementId: string) {
+    setRequestedTheoryElementId(theoryElementId);
+    setView("memory");
+  }
+
+  function openFoundry(capabilityId: string) {
+    setRequestedCapabilityId(capabilityId);
+    setView("foundry");
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -94,6 +109,7 @@ function App() {
         setView={setView}
         eventCount={events.length}
         sourceCount={sources.length}
+        theoryCount={workspace.theory.elements.filter((element) => element.status !== "superseded").length}
         atomCount={sources.reduce((total, source) => total + source.outputs.atoms, 0)}
       />
       <main className="main-shell">
@@ -138,23 +154,31 @@ function App() {
           />
         )}
         {view === "learn" && (
-          <LearnView
+          <UnderstandingView
+            workspace={workspace}
+            loading={!ready}
             requestedItemId={requestedLearnItemId}
-            artifacts={workspace.learningArtifacts}
-            explainers={workspace.explainers}
-            microWorlds={workspace.microWorlds}
-            checks={workspace.understandingChecks}
-            evidenceVectors={workspace.understandingEvidenceVectors}
-            reviewItems={workspace.targetedReviewItems}
-            fragments={workspace.sourceFragments}
-            sources={workspace.sources}
-            onFeedback={learningWorkflow.recordExplainerFeedback}
-            onResponse={learningWorkflow.recordUnderstandingResponse}
-            onDispute={learningWorkflow.disputeUnderstandingEvaluation}
-            onPreference={learningWorkflow.recordCheckPreference}
-            onMicroWorldPrediction={learningWorkflow.recordMicroWorldPrediction}
-            onMicroWorldInteraction={learningWorkflow.recordMicroWorldInteraction}
-            onMicroWorldReflection={learningWorkflow.recordMicroWorldReflection}
+            learningProps={{
+              artifacts: workspace.learningArtifacts,
+              explainers: workspace.explainers,
+              microWorlds: workspace.microWorlds,
+              checks: workspace.understandingChecks,
+              evidenceVectors: workspace.understandingEvidenceVectors,
+              reviewItems: workspace.targetedReviewItems,
+              fragments: workspace.sourceFragments,
+              sources: workspace.sources,
+              onFeedback: learningWorkflow.recordExplainerFeedback,
+              onResponse: learningWorkflow.recordUnderstandingResponse,
+              onDispute: learningWorkflow.disputeUnderstandingEvaluation,
+              onPreference: learningWorkflow.recordCheckPreference,
+              onMicroWorldPrediction: learningWorkflow.recordMicroWorldPrediction,
+              onMicroWorldInteraction: learningWorkflow.recordMicroWorldInteraction,
+              onMicroWorldReflection: learningWorkflow.recordMicroWorldReflection
+            }}
+            onAddSource={() => setShowAddSource(true)}
+            onOpenSource={openSource}
+            onOpenMemory={openMemory}
+            onOpenFoundry={openFoundry}
           />
         )}
         {view === "memory" && (

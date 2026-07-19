@@ -1,4 +1,4 @@
-import { CircleDot, GraduationCap, Info, Library, Network, ShieldCheck, Wrench } from "lucide-react";
+import { BrainCircuit, CircleDot, Info, Library, Network, ShieldCheck, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type ViewId = "sources" | "learn" | "memory" | "foundry" | "about";
@@ -8,13 +8,14 @@ interface SidebarProps {
   setView: (view: ViewId) => void;
   eventCount: number;
   sourceCount: number;
+  theoryCount: number;
   atomCount: number;
 }
 
-export function Sidebar({ view, setView, eventCount, sourceCount, atomCount }: SidebarProps) {
+export function Sidebar({ view, setView, eventCount, sourceCount, theoryCount, atomCount }: SidebarProps) {
   const items: Array<[ViewId, string, ReactNode, string]> = [
     ["sources", "Sources", <Library key="sources" size={17} />, "01"],
-    ["learn", "Learn", <GraduationCap key="learn" size={17} />, "02"],
+    ["learn", "Understanding", <BrainCircuit key="learn" size={17} />, theoryCount.toString().padStart(2, "0")],
     ["memory", "Memory", <Network key="memory" size={17} />, eventCount.toString().padStart(2, "0")],
     ["foundry", "Foundry", <Wrench key="foundry" size={17} />, "03"]
   ];
