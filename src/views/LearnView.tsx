@@ -18,6 +18,7 @@ import type {
   RecordUnderstandingResponse
 } from "../features/learning/types";
 import { UnderstandingCheckPreview } from "../features/learning/UnderstandingCheckPreview";
+import "../features/learning/learning.css";
 
 const checkTypeLabels = {
   recall: "Recall",

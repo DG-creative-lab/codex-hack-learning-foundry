@@ -207,6 +207,63 @@ describe("understanding checks", () => {
     expect(countUnderstandingFeedbackEvents(afterDispute.checks)).toBe(4);
   });
 
+  it("disputes an older attempt without removing evidence from a later interleaved attempt", () => {
+    const { checks, context } = fixture();
+    const prediction = checks.find((check) => check.kind === "prediction");
+    if (!prediction) throw new Error("Prediction check missing");
+    const olderAttempt = attempt(
+      prediction,
+      createProvisionalEvaluation(prediction, { ...response, answer: "It would get worse." }),
+      "evt-attempt-prediction-older"
+    );
+    const laterEvaluation: UnderstandingEvaluation = {
+      outcome: "supported",
+      evaluator: "prepared",
+      feedback: "The later response predicts the consequence and explains the mechanism.",
+      signals: [
+        {
+          dimension: "prediction",
+          signal: "supports",
+          rationale: "The response connects the changed condition to a plausible outcome.",
+          theoryElementIds: prediction.theoryElementIds
+        }
+      ],
+      reviewItems: []
+    };
+    const laterAttempt = {
+      ...attempt(prediction, laterEvaluation, "evt-attempt-prediction-later"),
+      createdAt: "2026-07-19T13:06:00.000Z"
+    };
+    const dispute: EvidenceEvent = {
+      id: "evt-dispute-prediction-older",
+      type: "learning.understanding_evaluation_disputed",
+      kind: "user_interpretation",
+      createdAt: "2026-07-19T13:07:00.000Z",
+      actor: "human",
+      summary: "Disputed the older prediction evaluation.",
+      sourceIds: prediction.sourceIds,
+      payload: {
+        checkId: prediction.id,
+        attemptEventId: olderAttempt.id,
+        reason: "The earlier evaluation overlooked a supported causal step.",
+        correction: "Treat the causal step as supported while preserving the later attempt as separate evidence."
+      }
+    };
+
+    const projection = deriveUnderstandingChecks(
+      [registration(prediction), olderAttempt, laterAttempt, dispute],
+      context
+    );
+    const projectedCheck = projection.checks[0];
+    const summary = summarizeEvidenceForTheoryElements(projection.evidenceVectors, prediction.theoryElementIds);
+
+    expect(projectedCheck?.attempts).toHaveLength(2);
+    expect(projectedCheck?.attempts[0]?.dispute?.evidenceEventId).toBe(dispute.id);
+    expect(projectedCheck?.attempts[1]?.dispute).toBeUndefined();
+    expect(projection.reviewItems).toHaveLength(0);
+    expect(summary.prediction).toMatchObject({ supports: 1, challenges: 0 });
+  });
+
   it("requires review provenance in both the check manifest and attempt envelope", () => {
     const { workspace, checks, context } = fixture();
     const prediction = checks.find((check) => check.kind === "prediction");
