@@ -39,10 +39,17 @@ export function Sidebar({ view, setView, eventCount, sourceCount, atomCount }: S
       </div>
       <nav className="primary-nav" aria-label="Primary navigation">
         {items.map(([id, label, icon, count]) => (
-          <button type="button" key={id} className={view === id ? "active" : ""} onClick={() => setView(id)}>
+          <button
+            type="button"
+            key={id}
+            className={view === id ? "active" : ""}
+            aria-label={label}
+            title={label}
+            onClick={() => setView(id)}
+          >
             {icon}
-            {label}
-            <span>{count}</span>
+            <span className="nav-label">{label}</span>
+            <span className="nav-count">{count}</span>
           </button>
         ))}
       </nav>
@@ -56,9 +63,11 @@ export function Sidebar({ view, setView, eventCount, sourceCount, atomCount }: S
       <button
         type="button"
         className={`about-nav ${view === "about" ? "active" : ""}`}
+        aria-label="System model"
+        title="System model"
         onClick={() => setView("about")}
       >
-        <Info size={16} /> System model
+        <Info size={16} /> <span>System model</span>
       </button>
       <div className="sidebar-status">
         <p className="eyebrow">Canonical memory</p>
