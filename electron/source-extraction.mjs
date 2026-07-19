@@ -6,8 +6,14 @@ import { isIP } from "node:net";
 import { basename, extname } from "node:path";
 import { load } from "cheerio";
 import ipaddr from "ipaddr.js";
+import {
+  createWebSourceDocument,
+  normalizeSourceText,
+  normalizeSourceUnits,
+  SOURCE_CONTENT_LIMITS,
+  SOURCE_HTML_RULES
+} from "../shared/source-content.js";
 
-const maxSourceBytes = 12 * 1024 * 1024;
 const requestDeadlineMs = 15_000;
 const allowedTextExtensions = new Set([".txt", ".md", ".markdown"]);
 
@@ -28,7 +34,7 @@ function textUnits(text) {
   let start = 0;
   let current = [];
   function flush(end) {
-    const content = current.join(" ").replace(/\s+/g, " ").trim();
+    const content = normalizeSourceText(current.join(" "));
     if (content) {
       units.push({
         content,
@@ -44,7 +50,7 @@ function textUnits(text) {
     } else if (current.length > 0) flush(index - 1);
   });
   if (current.length > 0) flush(lines.length - 1);
-  return units;
+  return normalizeSourceUnits(units);
 }
 
 async function pdfUnits(buffer) {
@@ -61,7 +67,7 @@ async function pdfUnits(buffer) {
       .trim();
     if (content) units.push({ content, location: { kind: "pdf", label: `Page ${pageNumber}`, page: pageNumber } });
   }
-  return units;
+  return normalizeSourceUnits(units);
 }
 
 export async function extractLocalSource(path) {
@@ -74,9 +80,10 @@ export async function extractLocalSource(path) {
   try {
     const file = await handle.stat();
     if (!file.isFile()) throw extractionError("invalid_source", "The selected source is not a file.", false);
-    if (file.size > maxSourceBytes) throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
+    if (file.size > SOURCE_CONTENT_LIMITS.maxBytes)
+      throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
     buffer = await handle.readFile();
-    if (buffer.byteLength > maxSourceBytes)
+    if (buffer.byteLength > SOURCE_CONTENT_LIMITS.maxBytes)
       throw extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
   } finally {
     await handle.close();
@@ -164,7 +171,7 @@ function requestPinnedHtml(url, target, requestImpl, deadlineMs) {
       },
       (response) => {
         const contentLength = Number(response.headers["content-length"] ?? 0);
-        if (Number.isFinite(contentLength) && contentLength > maxSourceBytes) {
+        if (Number.isFinite(contentLength) && contentLength > SOURCE_CONTENT_LIMITS.maxBytes) {
           response.destroy();
           finish(extractionError("source_too_large", "Source exceeds the 12 MB limit.", false));
           return;
@@ -173,7 +180,7 @@ function requestPinnedHtml(url, target, requestImpl, deadlineMs) {
         let bytes = 0;
         response.on("data", (chunk) => {
           bytes += chunk.length;
-          if (bytes > maxSourceBytes) {
+          if (bytes > SOURCE_CONTENT_LIMITS.maxBytes) {
             const error = extractionError("source_too_large", "Source exceeds the 12 MB limit.", false);
             response.destroy();
             request.destroy();
@@ -205,20 +212,16 @@ function requestPinnedHtml(url, target, requestImpl, deadlineMs) {
 
 function htmlUnits(html, url) {
   const $ = load(html);
-  $("script, style, noscript, nav, footer, form").remove();
-  const root = $("article").first().length
-    ? $("article").first()
-    : $("main").first().length
-      ? $("main").first()
-      : $("body");
+  $(SOURCE_HTML_RULES.removeSelector).remove();
+  const root = $(SOURCE_HTML_RULES.rootSelector).first().length ? $(SOURCE_HTML_RULES.rootSelector).first() : $("body");
   const units = [];
-  root.find("h1, h2, h3, p, li, blockquote").each((index, element) => {
-    const content = $(element).text().replace(/\s+/g, " ").trim();
-    if (content.length >= 24) {
-      units.push({ content, location: { kind: "web", label: `Block ${index + 1}`, url: url.toString() } });
-    }
+  root.find(SOURCE_HTML_RULES.contentSelector).each((index, element) => {
+    units.push({
+      content: $(element).text(),
+      location: { kind: "web", label: `Block ${index + 1}`, url: url.toString() }
+    });
   });
-  return units.slice(0, 120);
+  return units;
 }
 
 export async function extractOnlineSource(rawUrl, dependencies = {}) {
@@ -237,16 +240,17 @@ export async function extractOnlineSource(rawUrl, dependencies = {}) {
     }
     if (response.status < 200 || response.status >= 300)
       throw extractionError("fetch_failed", `The source returned HTTP ${response.status}.`);
-    const units = htmlUnits(response.html, current.url);
-    if (units.length === 0) throw extractionError("empty_source", "No readable article text was found at this URL.");
     const $ = load(response.html);
-    return {
-      title: $("title").first().text().trim() || current.url.hostname,
-      author: $("meta[name='author']").attr("content")?.trim() || current.url.hostname,
-      format: "Web page",
+    const document = createWebSourceDocument({
+      url: current.url.toString(),
+      title: $("title").first().text(),
+      author: $("meta[name='author']").attr("content") ?? "",
       fingerprint: fingerprint(Buffer.from(response.html)),
-      units
-    };
+      units: htmlUnits(response.html, current.url)
+    });
+    if (document.units.length === 0)
+      throw extractionError("empty_source", "No readable article text was found at this URL.");
+    return document;
   }
   throw extractionError("fetch_failed", "Unable to fetch this source.");
 }

@@ -1,3 +1,4 @@
+import { createWebSourceDocument, SOURCE_CONTENT_LIMITS, SOURCE_HTML_RULES } from "../../shared/source-content.js";
 import {
   type ExtractedSourceDocument,
   extractedSourceDocumentSchema,
@@ -22,29 +23,34 @@ async function extractOnlineInBrowser(provenance: string): Promise<SourceExtract
     }
     const response = await fetch(url);
     if (!response.ok) throw new Error(`The source returned HTTP ${response.status}.`);
+    const contentLength = Number(response.headers.get("content-length") ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > SOURCE_CONTENT_LIMITS.maxBytes) {
+      throw new Error("Source exceeds the 12 MB limit.");
+    }
     const html = await response.text();
+    if (new TextEncoder().encode(html).byteLength > SOURCE_CONTENT_LIMITS.maxBytes) {
+      throw new Error("Source exceeds the 12 MB limit.");
+    }
     const documentNode = new DOMParser().parseFromString(html, "text/html");
-    documentNode.querySelectorAll("script, style, noscript, nav, footer, form").forEach((node) => {
+    documentNode.querySelectorAll(SOURCE_HTML_RULES.removeSelector).forEach((node) => {
       node.remove();
     });
-    const root = documentNode.querySelector("article, main") ?? documentNode.body;
-    const units = [...root.querySelectorAll("h1, h2, h3, p, li, blockquote")]
-      .map((node, index) => ({
-        content: node.textContent?.replace(/\s+/g, " ").trim() ?? "",
-        location: { kind: "web" as const, label: `Block ${index + 1}`, url: url.toString() }
-      }))
-      .filter((unit) => unit.content.length >= 24)
-      .slice(0, 120);
-    if (units.length === 0) throw new Error("No readable article text was found at this URL.");
+    const root = documentNode.querySelector(SOURCE_HTML_RULES.rootSelector) ?? documentNode.body;
+    const units = [...root.querySelectorAll(SOURCE_HTML_RULES.contentSelector)].map((node, index) => ({
+      content: node.textContent ?? "",
+      location: { kind: "web" as const, label: `Block ${index + 1}`, url: url.toString() }
+    }));
+    const extracted = createWebSourceDocument({
+      url: url.toString(),
+      title: documentNode.title,
+      author: documentNode.querySelector("meta[name='author']")?.getAttribute("content") ?? "",
+      fingerprint: await fingerprint(html),
+      units
+    });
+    if (extracted.units.length === 0) throw new Error("No readable article text was found at this URL.");
     return {
       ok: true,
-      document: extractedSourceDocumentSchema.parse({
-        title: documentNode.title || url.hostname,
-        author: documentNode.querySelector("meta[name='author']")?.getAttribute("content") || url.hostname,
-        format: "Web page",
-        fingerprint: await fingerprint(html),
-        units
-      })
+      document: extractedSourceDocumentSchema.parse(extracted)
     };
   } catch (error) {
     return {
