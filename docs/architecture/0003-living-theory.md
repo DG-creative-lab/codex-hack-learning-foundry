@@ -40,3 +40,4 @@ Projection boundaries enforce the following invariants:
 - Relationship endpoints are validated during projection so broken theory graphs fail visibly.
 - Later learning and memory work can add evidence without changing the canonical storage contract.
 - Product UI must distinguish active, unresolved, and superseded theory elements.
+- Approved source-derived elements and relationships retain both `sourceIds` and `fragmentIds`, allowing the inspector to recover the exact text and source location used by a derivation.

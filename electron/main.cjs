@@ -32,6 +32,8 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   const { appendMemoryEntry, loadMemoryFile, resetMemoryFile } = await import("./memory.mjs");
+  const { extractLocalSource, extractOnlineSource, serializeExtractionError } = await import("./source-extraction.mjs");
+  const { sourceExtractRequestSchema } = await import("../shared/source-contract.js");
 
   ipcMain.handle("memory:load", async () => {
     return loadMemoryFile(memoryPath());
@@ -45,6 +47,19 @@ app.whenReady().then(async () => {
   ipcMain.handle("memory:reset", async () => {
     await resetMemoryFile(memoryPath());
     return true;
+  });
+
+  ipcMain.handle("source:extract", async (_event, request) => {
+    try {
+      const parsedRequest = sourceExtractRequestSchema.parse(request);
+      const document =
+        parsedRequest.origin === "local"
+          ? await extractLocalSource(parsedRequest.provenance)
+          : await extractOnlineSource(parsedRequest.provenance);
+      return { ok: true, document };
+    } catch (error) {
+      return { ok: false, error: serializeExtractionError(error) };
+    }
   });
 
   await createWindow();

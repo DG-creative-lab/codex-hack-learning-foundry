@@ -1,4 +1,5 @@
 import type { LivingTheoryMetadata } from "../domain/livingTheory";
+import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "../domain/sourcePipeline";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
 import { capabilities, learningArtifacts, workspaceSources } from "./workspace";
 
@@ -62,6 +63,59 @@ export const designDensityTheoryMetadata: LivingTheoryMetadata = {
     "A source-grounded theory for evaluating interface density by user value, time, space, meaning, and constraints.",
   sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"]
 };
+
+const preparedTranscriptExtraction = normalizeExtractedDocument(
+  "source-dense-by-design",
+  {
+    title: "Dense by Design",
+    author: "Matthew Ström-Awn / Config 2026",
+    format: "Prepared transcript",
+    fingerprint: "1".repeat(64),
+    units: [
+      {
+        content: "Value per second per pixel. That is what we're really after.",
+        location: { kind: "transcript", label: "17:38-17:42" }
+      }
+    ]
+  },
+  "2026-07-14T10:00:10.000Z"
+);
+
+const generatedTranscriptProposal = createSynthesisProposal(
+  "source-dense-by-design",
+  preparedTranscriptExtraction.version,
+  preparedTranscriptExtraction.fragments,
+  "synthesis-dense-by-design-prepared",
+  "2026-07-14T10:00:15.000Z"
+);
+const preparedTranscriptProposal = {
+  ...generatedTranscriptProposal,
+  elements: generatedTranscriptProposal.elements.map((candidate) => ({
+    ...candidate,
+    element: { ...candidate.element, kind: "claim" as const }
+  }))
+};
+
+const preparedTranscriptEvents: EvidenceEvent[] = [
+  {
+    id: "evt-source-dense-by-design-synthesized",
+    type: "source.synthesis_completed",
+    kind: "agent_synthesis",
+    createdAt: "2026-07-14T10:00:10.000Z",
+    actor: "system",
+    summary: "Prepared transcript fragment normalized with timestamp provenance.",
+    sourceIds: ["source-dense-by-design"],
+    payload: {
+      sourceId: "source-dense-by-design",
+      author: "Matthew Ström-Awn / Config 2026",
+      outputs: { atoms: 9, lessons: 1, capabilities: 1 },
+      version: preparedTranscriptExtraction.version,
+      fragments: preparedTranscriptExtraction.fragments,
+      proposal: preparedTranscriptProposal
+    }
+  },
+  proposalReviewEvent(preparedTranscriptProposal, "approved", "2026-07-14T10:00:20.000Z")
+];
 
 function learningSeedEvents(): EvidenceEvent[] {
   return learningArtifacts.map((artifact, index) => ({
@@ -262,7 +316,8 @@ export const seedEvents: EvidenceEvent[] = [
     }
   },
   ...learningSeedEvents(),
-  ...capabilitySeedEvents()
+  ...capabilitySeedEvents(),
+  ...preparedTranscriptEvents
 ];
 
 export const evaluationCases: EvaluationCase[] = [

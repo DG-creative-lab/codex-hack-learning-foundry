@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { synthesisReviewPayloadSchema } from "./sourcePipeline";
 import {
   type EvidenceEvent,
   evidenceEventSchema,
@@ -28,23 +29,25 @@ function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
 
-function elementFromEvent(event: EvidenceEvent): TheoryElement {
-  const rawElement = theoryElementPayloadSchema.parse(event.payload.element);
-  if (rawElement.epistemicKind !== event.kind) {
+function elementFromPayload(raw: unknown, event: EvidenceEvent, enforceEventKind: boolean): TheoryElement {
+  const rawElement = theoryElementPayloadSchema.parse(raw);
+  if (enforceEventKind && rawElement.epistemicKind !== event.kind) {
     throw new Error(`Theory element ${rawElement.id} must use the epistemic kind of its evidence event.`);
   }
   return theoryElementSchema.parse({
     ...rawElement,
     sourceIds: unique([...rawElement.sourceIds, ...event.sourceIds]),
+    fragmentIds: unique(rawElement.fragmentIds),
     evidenceEventIds: unique([...rawElement.evidenceEventIds, event.id])
   });
 }
 
-function relationshipFromEvent(event: EvidenceEvent): TheoryRelationship {
-  const rawRelationship = theoryRelationshipSchema.parse(event.payload.relationship);
+function relationshipFromPayload(raw: unknown, event: EvidenceEvent): TheoryRelationship {
+  const rawRelationship = theoryRelationshipSchema.parse(raw);
   return {
     ...rawRelationship,
     sourceIds: unique([...rawRelationship.sourceIds, ...event.sourceIds]),
+    fragmentIds: unique(rawRelationship.fragmentIds),
     evidenceEventIds: unique([...rawRelationship.evidenceEventIds, event.id])
   };
 }
@@ -56,6 +59,33 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
   const relationships = new Map<string, TheoryRelationship>();
   const theoryEventIds: string[] = [];
 
+  function recordElement(element: TheoryElement, event: EvidenceEvent, revision: boolean) {
+    if (revision && element.id === element.revisesElementId) {
+      throw new Error(`Theory revision ${event.id} must use a new element ID.`);
+    }
+    if (elements.has(element.id)) throw new Error(`Theory element ID ${element.id} is duplicated.`);
+    if (revision) {
+      if (!element.revisesElementId) {
+        throw new Error(`Theory revision ${event.id} must identify the element it revises.`);
+      }
+      const previous = elements.get(element.revisesElementId);
+      if (!previous) {
+        throw new Error(`Theory revision ${event.id} references missing element ${element.revisesElementId}.`);
+      }
+      elements.set(previous.id, { ...previous, status: "superseded" });
+    }
+    elements.set(element.id, element);
+    theoryEventIds.push(event.id);
+  }
+
+  function recordRelationship(relationship: TheoryRelationship, event: EvidenceEvent) {
+    if (relationships.has(relationship.id)) {
+      throw new Error(`Theory relationship ID ${relationship.id} is duplicated.`);
+    }
+    relationships.set(relationship.id, relationship);
+    theoryEventIds.push(event.id);
+  }
+
   for (const event of events) {
     if (eventIds.has(event.id)) {
       throw new Error(`Evidence event ID ${event.id} is duplicated.`);
@@ -63,37 +93,28 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
     eventIds.add(event.id);
 
     if (elementEventTypes.has(event.type)) {
-      const element = elementFromEvent(event);
-
-      if (event.type === "theory.element_revised" && element.id === element.revisesElementId) {
-        throw new Error(`Theory revision ${event.id} must use a new element ID.`);
-      }
-      if (elements.has(element.id)) {
-        throw new Error(`Theory element ID ${element.id} is duplicated.`);
-      }
-
-      if (event.type === "theory.element_revised") {
-        if (!element.revisesElementId) {
-          throw new Error(`Theory revision ${event.id} must identify the element it revises.`);
-        }
-        const previous = elements.get(element.revisesElementId);
-        if (!previous) {
-          throw new Error(`Theory revision ${event.id} references missing element ${element.revisesElementId}.`);
-        }
-        elements.set(previous.id, { ...previous, status: "superseded" });
-      }
-
-      elements.set(element.id, element);
-      theoryEventIds.push(event.id);
+      recordElement(
+        elementFromPayload(event.payload.element, event, true),
+        event,
+        event.type === "theory.element_revised"
+      );
     }
 
     if (event.type === "theory.relationship_recorded") {
-      const relationship = relationshipFromEvent(event);
-      if (relationships.has(relationship.id)) {
-        throw new Error(`Theory relationship ID ${relationship.id} is duplicated.`);
+      recordRelationship(relationshipFromPayload(event.payload.relationship, event), event);
+    }
+
+    if (event.type === "theory.synthesis_reviewed") {
+      const review = synthesisReviewPayloadSchema.parse(event.payload);
+      if (review.decision === "approved") {
+        for (const rawElement of review.elements) {
+          const element = elementFromPayload(rawElement, event, false);
+          recordElement(element, event, Boolean(element.revisesElementId));
+        }
+        for (const rawRelationship of review.relationships) {
+          recordRelationship(relationshipFromPayload(rawRelationship, event), event);
+        }
       }
-      relationships.set(relationship.id, relationship);
-      theoryEventIds.push(event.id);
     }
   }
 

@@ -2,10 +2,12 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar, type ViewId } from "./components/Sidebar";
+import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "./domain/sourcePipeline";
 import type { SourceOrigin, SourceRecord } from "./domain/sourceProjection";
 import type { EvidenceEvent, EvidenceKind } from "./domain/types";
 import { reduceWorkspace } from "./domain/workspaceProjection";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
+import { extractSource } from "./services/sourceExtraction";
 import { AboutView } from "./views/AboutView";
 import { FoundryView } from "./views/FoundryView";
 import { LearnView } from "./views/LearnView";
@@ -86,7 +88,8 @@ function App() {
   }
 
   async function processSelectedSource() {
-    if (!selectedSource || selectedSource.status === "ready") return;
+    if (!selectedSource || selectedSource.status === "processing") return;
+    const now = new Date().toISOString();
     await append(
       makeEvent(
         "source.processing_started",
@@ -94,25 +97,98 @@ function App() {
         "system",
         `Extraction and provenance capture started for ${selectedSource.title}.`,
         [selectedSource.id],
-        { sourceId: selectedSource.id, progress: 42 }
+        { sourceId: selectedSource.id, progress: 18 }
       )
     );
-    window.setTimeout(() => {
-      void append(
+    const result = await extractSource({
+      origin: selectedSource.origin === "web" ? "web" : "local",
+      provenance: selectedSource.provenance
+    });
+    if (!result.ok) {
+      await append(
         makeEvent(
-          "source.processing_completed",
-          "agent_synthesis",
-          "agent",
-          `Structured knowledge and a learning-module proposal were produced from ${selectedSource.title}.`,
+          "source.processing_failed",
+          "practical_observation",
+          "system",
+          result.error.message,
           [selectedSource.id],
           {
             sourceId: selectedSource.id,
-            author: "Extracted source",
-            outputs: { atoms: 7, lessons: 1, capabilities: 0 }
+            error: result.error
           }
         )
-      ).catch(() => undefined);
-    }, 900);
+      );
+      return;
+    }
+
+    const normalized = normalizeExtractedDocument(
+      selectedSource.id,
+      result.document,
+      now,
+      selectedSource.currentVersionId
+    );
+    if (normalized.version.id === selectedSource.currentVersionId) {
+      await append(
+        makeEvent(
+          "source.processing_completed",
+          "practical_observation",
+          "system",
+          `${selectedSource.title} is unchanged.`,
+          [selectedSource.id],
+          {
+            sourceId: selectedSource.id,
+            author: result.document.author,
+            title: result.document.title,
+            format: result.document.format,
+            outputs: selectedSource.outputs
+          }
+        )
+      );
+      return;
+    }
+    const previousApproved = workspace.synthesisProposals.find(
+      (proposal) => proposal.sourceId === selectedSource.id && proposal.status === "approved"
+    );
+    const proposalId = `synthesis-${selectedSource.id}-${Date.now()}`;
+    const proposal = createSynthesisProposal(
+      selectedSource.id,
+      normalized.version,
+      normalized.fragments,
+      proposalId,
+      now,
+      previousApproved
+    );
+    await append(
+      makeEvent(
+        "source.synthesis_completed",
+        "agent_synthesis",
+        "agent",
+        `Extracted ${normalized.fragments.length} fragments and proposed ${proposal.elements.length} theory elements for review.`,
+        [selectedSource.id],
+        {
+          sourceId: selectedSource.id,
+          author: result.document.author,
+          title: result.document.title,
+          format: result.document.format,
+          outputs: { ...selectedSource.outputs, atoms: proposal.elements.length },
+          version: normalized.version,
+          fragments: normalized.fragments,
+          proposal
+        }
+      )
+    );
+  }
+
+  async function approveProposal(proposalId: string) {
+    const proposal = workspace.synthesisProposals.find((candidate) => candidate.id === proposalId);
+    if (proposal?.status !== "pending") return;
+    await append(proposalReviewEvent(proposal, "approved", new Date().toISOString()));
+  }
+
+  async function rejectProposal(proposalId: string) {
+    const proposal = workspace.synthesisProposals.find((candidate) => candidate.id === proposalId);
+    if (proposal?.status !== "pending") return;
+    await append(proposalReviewEvent(proposal, "rejected", new Date().toISOString()));
   }
 
   return (
@@ -153,8 +229,12 @@ function App() {
           <SourcesView
             sources={sources}
             selectedSource={selectedSource}
+            fragments={workspace.sourceFragments}
+            proposals={workspace.synthesisProposals}
             setSelectedSourceId={setSelectedSourceId}
             onProcess={() => void processSelectedSource().catch(() => undefined)}
+            onApprove={(proposalId) => void approveProposal(proposalId).catch(() => undefined)}
+            onReject={(proposalId) => void rejectProposal(proposalId).catch(() => undefined)}
           />
         )}
         {view === "learn" && <LearnView artifacts={workspace.learningArtifacts} />}

@@ -33,6 +33,7 @@ export const workspaceSources = sourceRecordSchema.array().parse([
     progress: 100,
     addedAt: "14 Jul 2026",
     provenance: "User-provided local transcript; not redistributed",
+    currentVersionId: "source-dense-by-design-v-111111111111",
     outputs: { atoms: 9, lessons: 1, capabilities: 1 }
   },
   {

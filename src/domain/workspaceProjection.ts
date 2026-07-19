@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
-import { deriveSources } from "./sourceProjection";
+import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import {
   capabilityEvaluationSchema,
@@ -83,15 +83,26 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
   }
 
   const { theory: theoryMetadata } = workspaceConfiguredPayloadSchema.parse(configurationEvents[0].payload);
-  const sources = deriveSources(events);
+  const sourcePipeline = deriveSourcePipeline(events);
+  const { sources } = sourcePipeline;
   const knownSourceIds = new Set(sources.map((source) => source.id));
   for (const event of events) requireKnownSources(`Evidence event ${event.id}`, event.sourceIds, knownSourceIds);
   requireKnownSources("Workspace theory", theoryMetadata.sourceIds, knownSourceIds);
   requireEventProvenance(configurationEvents[0], "Workspace theory", theoryMetadata.sourceIds);
-  const theory = deriveLivingTheory(events, theoryMetadata);
+  const theory = deriveLivingTheory(events, { ...theoryMetadata, sourceIds: [...knownSourceIds] });
+  const knownFragmentIds = new Set(sourcePipeline.fragments.map((fragment) => fragment.id));
+  const theoryFragmentIds = [
+    ...theory.elements.flatMap((element) => element.fragmentIds),
+    ...theory.relationships.flatMap((relationship) => relationship.fragmentIds)
+  ];
+  const unknownTheoryFragmentId = theoryFragmentIds.find((fragmentId) => !knownFragmentIds.has(fragmentId));
+  if (unknownTheoryFragmentId) throw new Error(`Living Theory references unknown fragment ${unknownTheoryFragmentId}`);
 
   return {
     sources,
+    sourceVersions: sourcePipeline.versions,
+    sourceFragments: sourcePipeline.fragments,
+    synthesisProposals: sourcePipeline.proposals,
     theory,
     memories: deriveMemoryProjections(theory, events),
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),

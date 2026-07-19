@@ -10,6 +10,7 @@ export type EvidenceEvent = z.infer<typeof evidenceEventSchema>;
 export const theoryElementKindSchema = z.enum([
   "purpose",
   "concept",
+  "claim",
   "causal_model",
   "decision",
   "assumption",
@@ -28,6 +29,7 @@ export const theoryElementPayloadSchema = z.object({
   epistemicKind: evidenceKindSchema,
   status: theoryElementStatusSchema.default("active"),
   sourceIds: z.array(z.string()).default([]),
+  fragmentIds: z.array(z.string()).default([]),
   evidenceEventIds: z.array(z.string()).default([]),
   revisesElementId: z.string().optional()
 });
@@ -59,6 +61,7 @@ export const theoryRelationshipSchema = z.object({
   fromElementId: z.string().min(1),
   toElementId: z.string().min(1),
   sourceIds: z.array(z.string()).default([]),
+  fragmentIds: z.array(z.string()).default([]),
   evidenceEventIds: z.array(z.string()).default([])
 });
 
