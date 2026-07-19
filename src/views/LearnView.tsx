@@ -1,315 +1,18 @@
-import { AlertCircle, ArrowRight, BookOpen, Check, Flag, Minus, Plus, Quote, Send, X } from "lucide-react";
-import { useState } from "react";
-import {
-  EXPLAINER_LIMITS,
-  type ExplainerArtifact,
-  type ExplainerFeedback,
-  type ExplainerProjection
-} from "../domain/explainer";
+import { AlertCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { ExplainerProjection } from "../domain/explainer";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
 import type { LearningArtifact, SourceRecord } from "../domain/workspaceEntities";
-
-const artifactTypeLabels = {
-  lesson: "Lesson",
-  exercise: "Exercise",
-  review: "Review set",
-  reflection: "Reflection"
-} as const;
-
-const epistemicLabels = {
-  source_fact: "Source claim",
-  user_interpretation: "Human interpretation",
-  agent_synthesis: "Synthesized interpretation",
-  practical_observation: "Practical observation",
-  hypothesis: "Assumption to test",
-  validated_behavior: "Validated behavior"
-} as const;
+import { ExplainerPreview } from "../features/learning/ExplainerPreview";
+import { artifactTypeLabels, LearningArtifactPreview } from "../features/learning/LearningArtifactPreview";
+import type { RecordExplainerFeedback } from "../features/learning/types";
 
 interface LearnViewProps {
   artifacts: LearningArtifact[];
   explainers: ExplainerProjection[];
   fragments: NormalizedSourceFragment[];
   sources: SourceRecord[];
-  onFeedback: (artifact: ExplainerArtifact, feedback: ExplainerFeedback) => Promise<void>;
-}
-
-function GenericArtifactPreview({ artifact }: { artifact: LearningArtifact }) {
-  return (
-    <div className="artifact-preview">
-      <div className="preview-meta">
-        <span>{artifactTypeLabels[artifact.type]}</span>
-        <span>{artifact.evidence}</span>
-      </div>
-      <p className="eyebrow">Active learning unit</p>
-      <h2>{artifact.title}</h2>
-      <p className="preview-lede">
-        Generated from shared knowledge, then adapted using prior responses, confidence, weak spots, and working style.
-      </p>
-      <div className="lesson-sequence">
-        <div>
-          <span>01</span>
-          <strong>Retrieve</strong>
-          <p>Explain without reopening the source.</p>
-        </div>
-        <div>
-          <span>02</span>
-          <strong>Apply</strong>
-          <p>Diagnose a new operational interface.</p>
-        </div>
-        <div>
-          <span>03</span>
-          <strong>Reflect</strong>
-          <p>Record uncertainty and revised understanding.</p>
-        </div>
-      </div>
-      <button type="button" className="primary-button">
-        Continue session <ArrowRight size={15} />
-      </button>
-    </div>
-  );
-}
-
-interface ExplainerPreviewProps {
-  artifact: ExplainerProjection;
-  fragments: NormalizedSourceFragment[];
-  sources: SourceRecord[];
-  onFeedback: LearnViewProps["onFeedback"];
-}
-
-function ExplainerPreview({ artifact, fragments, sources, onFeedback }: ExplainerPreviewProps) {
-  const firstFragmentId = artifact.sections.flatMap((section) => section.fragmentIds)[0];
-  const [selectedFragmentId, setSelectedFragmentId] = useState(firstFragmentId);
-  const [correctionSectionId, setCorrectionSectionId] = useState<string>();
-  const [correction, setCorrection] = useState("");
-  const [saved, setSaved] = useState<string>();
-  const [feedbackPending, setFeedbackPending] = useState(false);
-  const [feedbackError, setFeedbackError] = useState<string>();
-  const selectedFragment = fragments.find((fragment) => fragment.id === selectedFragmentId);
-  const selectedSource = sources.find((source) => source.id === selectedFragment?.sourceId);
-  const latestDepth = [...artifact.feedback].reverse().find((feedback) => feedback.kind === "depth");
-  const confusionCount = artifact.feedback.filter((feedback) => feedback.kind === "confusion").length;
-  const correctionCount = artifact.feedback.filter((feedback) => feedback.kind === "correction").length;
-
-  async function record(feedback: ExplainerFeedback): Promise<boolean> {
-    if (feedbackPending) return false;
-    setFeedbackPending(true);
-    setFeedbackError(undefined);
-    setSaved(undefined);
-    try {
-      await onFeedback(artifact, feedback);
-      setSaved(feedback.kind);
-      window.setTimeout(() => setSaved(undefined), 1800);
-      return true;
-    } catch {
-      setFeedbackError("Feedback could not be recorded. Nothing was saved; please try again.");
-      return false;
-    } finally {
-      setFeedbackPending(false);
-    }
-  }
-
-  async function submitCorrection() {
-    if (
-      !correctionSectionId ||
-      correction.trim().length < 3 ||
-      correction.length > EXPLAINER_LIMITS.correctionCharacters
-    )
-      return;
-    const recorded = await record({ kind: "correction", sectionId: correctionSectionId, correction });
-    if (recorded) {
-      setCorrection("");
-      setCorrectionSectionId(undefined);
-    }
-  }
-
-  return (
-    <div className="explainer-preview" aria-busy={feedbackPending}>
-      <header className="explainer-titlebar">
-        <div>
-          <p className="eyebrow">Source-grounded explainer</p>
-          <h2>{artifact.title}</h2>
-          <p>{artifact.objective}</p>
-        </div>
-        <fieldset className="depth-control">
-          <legend>Depth</legend>
-          <button
-            type="button"
-            className={latestDepth?.kind === "depth" && latestDepth.depth === "less" ? "active" : ""}
-            aria-pressed={latestDepth?.kind === "depth" && latestDepth.depth === "less"}
-            disabled={feedbackPending}
-            title="Request less depth"
-            onClick={() => void record({ kind: "depth", depth: "less" })}
-          >
-            <Minus size={13} /> Less
-          </button>
-          <button
-            type="button"
-            className={latestDepth?.kind === "depth" && latestDepth.depth === "more" ? "active" : ""}
-            aria-pressed={latestDepth?.kind === "depth" && latestDepth.depth === "more"}
-            disabled={feedbackPending}
-            title="Request more depth"
-            onClick={() => void record({ kind: "depth", depth: "more" })}
-          >
-            <Plus size={13} /> More
-          </button>
-        </fieldset>
-      </header>
-
-      <div className="explainer-context">
-        <span>Active project</span>
-        <p>{artifact.projectContext}</p>
-      </div>
-
-      {feedbackError && (
-        <div className="feedback-error" role="alert">
-          <AlertCircle size={15} />
-          <span>{feedbackError}</span>
-          <button
-            type="button"
-            className="icon-button"
-            title="Dismiss error"
-            onClick={() => setFeedbackError(undefined)}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      <div className="explainer-reading-grid">
-        <div className="explainer-sections">
-          {artifact.sections.map((section, index) => (
-            <article key={section.id} className={`explainer-section epistemic-${section.epistemicKind}`}>
-              <div className="section-number">{String(index + 1).padStart(2, "0")}</div>
-              <div>
-                <div className="section-kicker">
-                  <span>{section.kind}</span>
-                  <strong>{epistemicLabels[section.epistemicKind]}</strong>
-                </div>
-                <h3>{section.title}</h3>
-                <p>{section.content}</p>
-                {section.fragmentIds.length > 0 && (
-                  <fieldset className="fragment-links">
-                    <legend>Source evidence</legend>
-                    {section.fragmentIds.map((fragmentId) => {
-                      const fragment = fragments.find((candidate) => candidate.id === fragmentId);
-                      const source = sources.find((candidate) => candidate.id === fragment?.sourceId);
-                      return (
-                        <button type="button" key={fragmentId} onClick={() => setSelectedFragmentId(fragmentId)}>
-                          <Quote size={12} /> {source?.title ?? "Source"} / {fragment?.location.label ?? "Fragment"}
-                        </button>
-                      );
-                    })}
-                  </fieldset>
-                )}
-                <div className="section-feedback-actions">
-                  <button
-                    type="button"
-                    disabled={feedbackPending}
-                    onClick={() => void record({ kind: "confusion", sectionId: section.id })}
-                  >
-                    <Flag size={12} /> Flag confusion
-                  </button>
-                  <button type="button" disabled={feedbackPending} onClick={() => setCorrectionSectionId(section.id)}>
-                    <BookOpen size={12} /> Correct interpretation
-                  </button>
-                </div>
-                {correctionSectionId === section.id && (
-                  <div className="correction-editor">
-                    <label htmlFor={`correction-${section.id}`}>Your correction becomes new evidence</label>
-                    <textarea
-                      id={`correction-${section.id}`}
-                      value={correction}
-                      onChange={(event) => setCorrection(event.target.value)}
-                      maxLength={EXPLAINER_LIMITS.correctionCharacters}
-                      aria-describedby={`correction-limit-${section.id}`}
-                      placeholder="State what should change and why. The source remains unchanged."
-                      rows={3}
-                    />
-                    <span className="correction-limit" id={`correction-limit-${section.id}`}>
-                      {correction.length.toLocaleString()} / {EXPLAINER_LIMITS.correctionCharacters.toLocaleString()}
-                    </span>
-                    <div>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        title="Cancel correction"
-                        onClick={() => setCorrectionSectionId(undefined)}
-                      >
-                        <X size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="primary-button"
-                        disabled={
-                          feedbackPending ||
-                          correction.trim().length < 3 ||
-                          correction.length > EXPLAINER_LIMITS.correctionCharacters
-                        }
-                        onClick={() => void submitCorrection()}
-                      >
-                        <Send size={13} /> {feedbackPending ? "Recording..." : "Record correction"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <aside className="explainer-inspector">
-          <div className="inspector-block">
-            <p className="eyebrow">Exact source context</p>
-            {selectedFragment ? (
-              <>
-                <strong>{selectedSource?.title}</strong>
-                <span>{selectedFragment.location.label}</span>
-                <blockquote>{selectedFragment.content}</blockquote>
-                <small>{selectedSource?.provenance}</small>
-              </>
-            ) : (
-              <p>Select a source marker to inspect its fragment.</p>
-            )}
-          </div>
-          <div className="inspector-block feedback-summary">
-            <p className="eyebrow">Learner evidence</p>
-            <dl>
-              <div>
-                <dt>Confusion flags</dt>
-                <dd>{confusionCount}</dd>
-              </div>
-              <div>
-                <dt>Corrections</dt>
-                <dd>{correctionCount}</dd>
-              </div>
-              <div>
-                <dt>Depth request</dt>
-                <dd>{latestDepth?.kind === "depth" ? latestDepth.depth : "None"}</dd>
-              </div>
-            </dl>
-            {saved && (
-              <p className="feedback-saved">
-                <Check size={12} /> Evidence appended
-              </p>
-            )}
-          </div>
-        </aside>
-      </div>
-
-      <footer className="explainer-seeds">
-        <div>
-          <span>Understanding checks</span>
-          <strong>{artifact.understandingCheckSeeds.length} prompts ready</strong>
-          <p>{artifact.understandingCheckSeeds[0]?.prompt}</p>
-        </div>
-        <div>
-          <span>Micro-world seed</span>
-          <strong>{artifact.microWorldSeed.title}</strong>
-          <p>{artifact.microWorldSeed.scenario}</p>
-        </div>
-      </footer>
-    </div>
-  );
+  onFeedback: RecordExplainerFeedback;
 }
 
 export function LearnView({ artifacts, explainers, fragments, sources, onFeedback }: LearnViewProps) {
@@ -319,6 +22,8 @@ export function LearnView({ artifacts, explainers, fragments, sources, onFeedbac
       ? `artifact:${artifacts[0].id}`
       : "";
   const [selectedItemId, setSelectedItemId] = useState(firstItemId);
+  const fragmentsById = useMemo(() => new Map(fragments.map((fragment) => [fragment.id, fragment])), [fragments]);
+  const sourcesById = useMemo(() => new Map(sources.map((source) => [source.id, source])), [sources]);
   const selectedExplainer = explainers.find((item) => `explainer:${item.id}` === selectedItemId);
   const selectedArtifact = artifacts.find((item) => `artifact:${item.id}` === selectedItemId);
   const journeyItems = [
@@ -395,12 +100,12 @@ export function LearnView({ artifacts, explainers, fragments, sources, onFeedbac
           <ExplainerPreview
             key={selectedExplainer.id}
             artifact={selectedExplainer}
-            fragments={fragments}
-            sources={sources}
+            fragmentsById={fragmentsById}
+            sourcesById={sourcesById}
             onFeedback={onFeedback}
           />
         ) : selectedArtifact ? (
-          <GenericArtifactPreview artifact={selectedArtifact} />
+          <LearningArtifactPreview artifact={selectedArtifact} />
         ) : (
           <div className="artifact-preview">
             <AlertCircle size={20} />

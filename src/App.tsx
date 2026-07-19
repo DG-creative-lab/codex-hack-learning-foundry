@@ -20,8 +20,15 @@ function App() {
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
   const [sourceInput, setSourceInput] = useState("");
   const workspace = useMemo(() => reduceWorkspace(events), [events]);
+  const explainersById = useMemo(
+    () => new Map(workspace.explainers.map((explainer) => [explainer.id, explainer])),
+    [workspace.explainers]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
-  const learningWorkflow = useMemo(() => createLearningWorkflow({ append }), [append]);
+  const learningWorkflow = useMemo(
+    () => createLearningWorkflow({ append, resolveExplainer: (artifactId) => explainersById.get(artifactId) }),
+    [append, explainersById]
+  );
   const { sources } = workspace;
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];

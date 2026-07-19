@@ -1,13 +1,9 @@
-import {
-  type ExplainerArtifact,
-  type ExplainerFeedback,
-  explainerArtifactSchema,
-  explainerFeedbackSchema
-} from "../domain/explainer";
+import { type ExplainerArtifact, type ExplainerFeedback, explainerFeedbackPayloadSchema } from "../domain/explainer";
 import type { EvidenceEvent } from "../domain/types";
 
 interface LearningWorkflowDependencies {
   append: (event: EvidenceEvent) => Promise<unknown>;
+  resolveExplainer: (artifactId: string) => ExplainerArtifact | undefined;
   now?: () => string;
   createId?: (prefix: string) => string;
 }
@@ -26,12 +22,16 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
   const now = dependencies.now ?? (() => new Date().toISOString());
   const createId = dependencies.createId ?? defaultId;
 
-  async function recordExplainerFeedback(artifactInput: ExplainerArtifact, feedbackInput: ExplainerFeedback) {
-    const { feedback: _projectedFeedback, ...canonicalArtifact } = artifactInput as ExplainerArtifact & {
-      feedback?: unknown;
-    };
-    const artifact = explainerArtifactSchema.parse(canonicalArtifact);
-    const feedback = explainerFeedbackSchema.parse(feedbackInput);
+  async function recordExplainerFeedback(artifactIdInput: string, feedbackInput: ExplainerFeedback) {
+    const { artifactId, feedback } = explainerFeedbackPayloadSchema.parse({
+      artifactId: artifactIdInput,
+      feedback: feedbackInput
+    });
+    const artifact = dependencies.resolveExplainer(artifactId);
+    if (!artifact) throw new Error(`Cannot record feedback for unknown explainer ${artifactId}`);
+    if ("sectionId" in feedback && !artifact.sections.some((section) => section.id === feedback.sectionId)) {
+      throw new Error(`Explainer feedback references unknown section ${feedback.sectionId}`);
+    }
     const event: EvidenceEvent = {
       id: createId("evt-learning-feedback"),
       type: "learning.explainer_feedback_recorded",
@@ -40,7 +40,7 @@ export function createLearningWorkflow(dependencies: LearningWorkflowDependencie
       actor: "human",
       summary: feedbackSummary(artifact, feedback),
       sourceIds: artifact.sourceIds,
-      payload: { artifactId: artifact.id, feedback }
+      payload: { artifactId, feedback }
     };
     await dependencies.append(event);
   }
