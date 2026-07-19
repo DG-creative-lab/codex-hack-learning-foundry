@@ -45,4 +45,5 @@ Prepared sample evidence is committed. Personal learning memory, imported privat
 - [ADR 0002](docs/architecture/0002-universal-source-pipeline.md): normalized local and online source processing.
 - [ADR 0003](docs/architecture/0003-living-theory.md): the shared, revisable theory model.
 - [ADR 0004](docs/architecture/0004-learning-artifacts.md): bounded explainers, checks, and micro-worlds.
+- [ADR 0005](docs/architecture/0005-distinct-memory-projections.md): separate human, agent, and shared-theory memory projections.
 - [Hackathon baseline](docs/hackathon/baseline.md): the repository state at the start of Build Week.

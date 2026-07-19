@@ -1,7 +1,11 @@
 import { Bot, History, Network, UserRound } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { MemoryProjections } from "../domain/memoryProjections";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "../domain/types";
+import { AgentMemoryProjectionView } from "../features/memory/AgentMemoryProjectionView";
+import { HumanMemoryProjectionView } from "../features/memory/HumanMemoryProjectionView";
+import "../features/memory/memory.css";
+import { SharedTheoryProjectionView } from "../features/memory/SharedTheoryProjectionView";
 
 const kindLabels: Record<EvidenceKind, string> = {
   source_fact: "Source fact",
@@ -12,6 +16,8 @@ const kindLabels: Record<EvidenceKind, string> = {
   validated_behavior: "Validated behavior"
 };
 
+type ProjectionId = "human" | "agent" | "shared";
+
 interface MemoryViewProps {
   events: EvidenceEvent[];
   theory: LivingTheory;
@@ -19,59 +25,77 @@ interface MemoryViewProps {
 }
 
 export function MemoryView({ events, theory, projections }: MemoryViewProps) {
+  const [selectedProjection, setSelectedProjection] = useState<ProjectionId>("human");
   const eventRows = useMemo(() => [...events].reverse(), [events]);
+  const tabs = [
+    {
+      id: "human" as const,
+      label: "Human understanding",
+      meta: `${projections.human.supportingEvidence.length + projections.human.mixedEvidence.length + projections.human.contradictoryEvidence.length} evidence signals`,
+      icon: UserRound
+    },
+    {
+      id: "agent" as const,
+      label: "Agent memory",
+      meta: `${projections.agent.capabilityVersions.length} capability versions`,
+      icon: Bot
+    },
+    {
+      id: "shared" as const,
+      label: "Shared theory",
+      meta: `${projections.shared.unresolvedTheoryElementIds.length} unresolved`,
+      icon: Network
+    }
+  ];
 
   return (
     <div className="page-scroll memory-view">
-      <section className="memory-model">
-        <div className="memory-column human-memory">
-          <UserRound size={21} />
-          <p className="eyebrow">Human state</p>
-          <h2>Understanding</h2>
-          <ul>
-            <li>{projections.human.theoryElementIds.length} shared theory references</li>
-            <li>{projections.human.contributedTheoryElementIds.length} human contributions</li>
-            <li>Recall and application evidence</li>
-            <li>Misconceptions and corrections</li>
-          </ul>
+      <section className="memory-introduction">
+        <div>
+          <p className="eyebrow">Distinct projections / one canonical ledger</p>
+          <h2>Evidence without a mastery score.</h2>
         </div>
-        <div className="shared-memory">
-          <Network size={24} />
-          <p className="eyebrow">Derived shared theory</p>
-          <h2>{theory.elements.length} theory elements</h2>
-          <p>
-            {theory.title} links purpose, concepts, boundaries, questions, and revisions to the canonical evidence
-            ledger.
-          </p>
-          <div className="atom-cloud">
-            {theory.elements.map((element) => (
-              <span key={element.id} title={element.id} className={`kind-border-${element.epistemicKind}`}>
-                {element.title}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="memory-column agent-memory">
-          <Bot size={21} />
-          <p className="eyebrow">Agent state</p>
-          <h2>Capability</h2>
-          <ul>
-            <li>{projections.agent.theoryElementIds.length} shared theory references</li>
-            <li>{projections.agent.contributedTheoryElementIds.length} agent contributions</li>
-            <li>Evaluations and failures</li>
-            <li>Capability versions</li>
-          </ul>
+        <div>
+          <p>{theory.title}</p>
+          <span>As of {new Date(projections.asOf).toLocaleString()}</span>
         </div>
       </section>
-      <section className="ledger-section">
+
+      <div className="memory-projection-tabs" role="tablist" aria-label="Memory projection">
+        {tabs.map((tab, index) => {
+          const Icon = tab.icon;
+          const selected = tab.id === selectedProjection;
+          return (
+            <button
+              type="button"
+              key={tab.id}
+              id={`memory-tab-${tab.id}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`memory-panel-${tab.id}`}
+              className={selected ? "selected" : ""}
+              onClick={() => setSelectedProjection(tab.id)}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <Icon size={18} />
+              <strong>{tab.label}</strong>
+              <small>{tab.meta}</small>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedProjection === "human" && <HumanMemoryProjectionView projection={projections.human} />}
+      {selectedProjection === "agent" && <AgentMemoryProjectionView projection={projections.agent} />}
+      {selectedProjection === "shared" && <SharedTheoryProjectionView projection={projections.shared} />}
+
+      <section className="ledger-section memory-ledger">
         <div className="section-heading compact">
           <div>
-            <p className="eyebrow">Append-only evidence ledger</p>
+            <p className="eyebrow">Canonical append-only evidence</p>
             <h2>{events.length} recorded events</h2>
           </div>
-          <button type="button" className="secondary-button">
-            <History size={14} /> Consolidation proposals
-          </button>
+          <History size={18} aria-hidden="true" />
         </div>
         <div className="ledger-head">
           <span>Time</span>

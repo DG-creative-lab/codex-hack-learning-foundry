@@ -408,7 +408,13 @@ describe("living theory projection", () => {
 
 describe("memory projections", () => {
   it("references the live theory from both human and agent states", () => {
-    const projections = deriveMemoryProjections(livingTheory, seedEvents);
+    const projections = deriveMemoryProjections({
+      theory: livingTheory,
+      events: seedEvents,
+      understandingChecks: [],
+      microWorlds: [],
+      capabilities: []
+    });
     const activeElementIds = livingTheory.elements
       .filter((element) => element.status !== "superseded")
       .map((element) => element.id);
@@ -444,7 +450,13 @@ describe("memory projections", () => {
     };
     const runtimeEvents = [...seedEvents, revision];
     const runtimeTheory = deriveLivingTheory(runtimeEvents, designDensityTheoryMetadata);
-    const projections = deriveMemoryProjections(runtimeTheory, runtimeEvents);
+    const projections = deriveMemoryProjections({
+      theory: runtimeTheory,
+      events: runtimeEvents,
+      understandingChecks: [],
+      microWorlds: [],
+      capabilities: []
+    });
 
     expect(projections.human.theoryElementIds).toContain("theory-purpose-review-value-runtime");
     expect(projections.agent.theoryElementIds).toContain("theory-purpose-review-value-runtime");

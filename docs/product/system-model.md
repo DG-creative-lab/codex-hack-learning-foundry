@@ -71,4 +71,4 @@ Synthesis, evaluation, approval, and activation are separate states. No capabili
 
 The design-density workspace is prepared sample data for a domain-independent product. The current micro-world uses one trusted renderer and transparent heuristic outcomes. Arbitrary generated JavaScript, autonomous web crawling, universal file parsing, cloud sync, and autonomous capability activation are outside the hackathon scope.
 
-The pending roadmap adds richer human, agent, and shared-theory projections; evidence-backed understanding gaps; a central Understanding workspace; capability activation gates; practical-evidence consolidation; and the complete offline demo journey.
+The current Memory surface derives distinct human, agent, and shared-theory projections with traceable evidence and deterministic freshness. The pending roadmap adds evidence-backed understanding gaps, a central Understanding workspace, capability activation gates, practical-evidence consolidation, and the complete offline demo journey.

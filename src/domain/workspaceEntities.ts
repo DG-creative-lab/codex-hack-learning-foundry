@@ -63,6 +63,12 @@ export const capabilityEvaluationSchema = z
   .strict()
   .refine(({ passed, total }) => passed <= total, { message: "Passed evaluations cannot exceed the total" });
 
+export const capabilityRegisteredPayloadSchema = z.object({ manifest: capabilityManifestSchema }).strict();
+export const capabilityEvaluationPayloadSchema = z
+  .object({ capabilityId: z.string().min(1), evaluation: capabilityEvaluationSchema })
+  .strict();
+export const capabilityExecutionPayloadSchema = z.object({ capabilityId: z.string().min(1) }).strict();
+
 export const foundryCapabilitySchema = z
   .object({
     manifest: capabilityManifestSchema,

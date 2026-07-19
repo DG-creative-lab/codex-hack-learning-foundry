@@ -7,8 +7,9 @@ import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import { deriveUnderstandingChecks } from "./understandingCheckProjection";
 import {
-  capabilityEvaluationSchema,
-  capabilityManifestSchema,
+  capabilityEvaluationPayloadSchema,
+  capabilityExecutionPayloadSchema,
+  capabilityRegisteredPayloadSchema,
   type FoundryCapability,
   foundryCapabilitySchema,
   type LearningArtifact,
@@ -17,11 +18,6 @@ import {
 
 const workspaceConfiguredPayloadSchema = z.object({ theory: livingTheoryMetadataSchema }).strict();
 const learningArtifactPayloadSchema = z.object({ artifact: learningArtifactSchema }).strict();
-const capabilityRegisteredPayloadSchema = z.object({ manifest: capabilityManifestSchema }).strict();
-const capabilityEvaluationPayloadSchema = z
-  .object({ capabilityId: z.string().min(1), evaluation: capabilityEvaluationSchema })
-  .strict();
-const capabilityExecutionPayloadSchema = z.object({ capabilityId: z.string().min(1) }).strict();
 
 function requireKnownSources(entity: string, sourceIds: string[], knownSourceIds: Set<string>) {
   const unknownSourceId = sourceIds.find((sourceId) => !knownSourceIds.has(sourceId));
@@ -115,6 +111,14 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
     theoryElementIds: new Set(theory.elements.map((element) => element.id))
   });
+  const capabilities = deriveCapabilities(events, knownSourceIds);
+  const memories = deriveMemoryProjections({
+    theory,
+    events,
+    understandingChecks: understanding.checks,
+    microWorlds,
+    capabilities
+  });
 
   return {
     sources,
@@ -122,14 +126,14 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     sourceFragments: sourcePipeline.fragments,
     synthesisProposals: sourcePipeline.proposals,
     theory,
-    memories: deriveMemoryProjections(theory, events),
+    memories,
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
     explainers,
     microWorlds,
     understandingChecks: understanding.checks,
     understandingEvidenceVectors: understanding.evidenceVectors,
     targetedReviewItems: understanding.reviewItems,
-    capabilities: deriveCapabilities(events, knownSourceIds)
+    capabilities
   };
 }
 
