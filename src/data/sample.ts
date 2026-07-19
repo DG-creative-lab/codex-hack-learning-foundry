@@ -1,7 +1,9 @@
 import { explainerArtifactSchema } from "../domain/explainer";
-import type { LivingTheoryMetadata } from "../domain/livingTheory";
+import { deriveLivingTheory, type LivingTheoryMetadata } from "../domain/livingTheory";
 import { createSynthesisProposal, normalizeExtractedDocument, proposalReviewEvent } from "../domain/sourcePipeline";
 import type { DensityPrinciple, EvaluationCase, EvidenceEvent } from "../domain/types";
+import { generateUnderstandingChecks } from "../domain/understandingCheckGeneration";
+import { understandingEvaluationSchema } from "../domain/understandingChecks";
 import { capabilities, learningArtifacts, workspaceSources } from "./workspace";
 
 export const source = {
@@ -307,7 +309,7 @@ function capabilitySeedEvents(): EvidenceEvent[] {
   });
 }
 
-export const seedEvents: EvidenceEvent[] = [
+const baseSeedEvents: EvidenceEvent[] = [
   ...workspaceSources.map(
     (workspaceSource, index): EvidenceEvent => ({
       id: `evt-source-${String(index + 1).padStart(3, "0")}`,
@@ -451,6 +453,144 @@ export const seedEvents: EvidenceEvent[] = [
   ...learningSeedEvents(),
   ...capabilitySeedEvents()
 ];
+
+const preparedTheoryForChecks = deriveLivingTheory(baseSeedEvents, designDensityTheoryMetadata);
+
+export const preparedUnderstandingChecks = generateUnderstandingChecks({
+  theory: preparedTheoryForChecks,
+  activeProject: {
+    name: "Learning Foundry",
+    goal: "Preserve useful context for repeated work while reducing avoidable time and attention.",
+    transferScenario:
+      "an expert operator must triage an unfamiliar queue without losing urgency, target size, or recovery context"
+  }
+});
+
+function understandingCheckSeedEvents(): EvidenceEvent[] {
+  const registrations: EvidenceEvent[] = preparedUnderstandingChecks.map((check, index) => ({
+    id: `evt-understanding-check-${String(index + 1).padStart(3, "0")}`,
+    type: "learning.understanding_check_registered",
+    kind: "agent_synthesis",
+    createdAt: `2026-07-14T11:10:0${index}.000Z`,
+    actor: "agent",
+    summary: `Generated a ${check.kind.replace("_", " ")} check from the Living Theory and active project.`,
+    sourceIds: check.sourceIds,
+    payload: { check }
+  }));
+  const recall = preparedUnderstandingChecks.find((check) => check.kind === "recall");
+  const prediction = preparedUnderstandingChecks.find((check) => check.kind === "prediction");
+  if (!recall || !prediction) throw new Error("Prepared understanding journey is incomplete");
+
+  const recallEvaluation = understandingEvaluationSchema.parse({
+    outcome: "supported",
+    evaluator: "prepared",
+    feedback:
+      "The response reconstructs the five lenses. This supports retrieval only; prediction and transfer remain unobserved.",
+    signals: [
+      {
+        dimension: "retrieval",
+        signal: "supports",
+        rationale: "The five density lenses are distinguished without reproducing the source wording.",
+        theoryElementIds: recall.theoryElementIds
+      },
+      {
+        dimension: "calibration",
+        signal: "mixed",
+        rationale: "Medium confidence is plausible, but one observation is not enough to establish calibration.",
+        theoryElementIds: recall.theoryElementIds
+      },
+      {
+        dimension: "source_use",
+        signal: "challenges",
+        rationale: "The response did not attach source support.",
+        theoryElementIds: recall.theoryElementIds
+      }
+    ],
+    reviewItems: []
+  });
+  const predictionEvaluation = understandingEvaluationSchema.parse({
+    outcome: "needs_review",
+    evaluator: "prepared",
+    feedback:
+      "The prediction optimizes visible capacity but does not trace the accessibility boundary to errors or recovery cost.",
+    signals: [
+      {
+        dimension: "prediction",
+        signal: "challenges",
+        rationale: "The response states an outcome without the mechanism or observable failure mode requested.",
+        theoryElementIds: prediction.theoryElementIds
+      },
+      {
+        dimension: "calibration",
+        signal: "challenges",
+        rationale: "High confidence is not supported by the response's visible reasoning.",
+        theoryElementIds: prediction.theoryElementIds
+      },
+      {
+        dimension: "source_use",
+        signal: "challenges",
+        rationale: "The response did not attach source support.",
+        theoryElementIds: prediction.theoryElementIds
+      }
+    ],
+    reviewItems: [
+      {
+        id: "review-prediction-accessibility-boundary",
+        title: "Trace the ignored boundary",
+        prompt:
+          "Revisit the target-size and legibility constraint. Predict how smaller controls change error rate, speed, or recovery for the named operator.",
+        theoryElementIds: prediction.theoryElementIds.filter(
+          (id) => id === "theory-boundary-accessibility" || id === "theory-purpose-review-value"
+        ),
+        sourceIds: ["source-wcag-target-size", "source-ui-density-2024"],
+        fragmentIds: []
+      }
+    ]
+  });
+
+  return [
+    ...registrations,
+    {
+      id: "evt-understanding-attempt-recall-prepared",
+      type: "learning.understanding_attempt_recorded",
+      kind: "practical_observation",
+      createdAt: "2026-07-14T11:11:00.000Z",
+      actor: "human",
+      summary: "Reconstructed the five density lenses from memory.",
+      sourceIds: recall.sourceIds,
+      payload: {
+        checkId: recall.id,
+        response: {
+          answer:
+            "Visual density is the initial sense of fullness. Information asks which marks carry content, meaning asks how arrangement explains relationships, time asks how quickly work moves, and value asks what useful outcome the person gains.",
+          confidence: "medium",
+          sourceSupport: { level: "none", sourceIds: [], fragmentIds: [] }
+        },
+        evaluation: recallEvaluation
+      }
+    },
+    {
+      id: "evt-understanding-attempt-prediction-prepared",
+      type: "learning.understanding_attempt_recorded",
+      kind: "practical_observation",
+      createdAt: "2026-07-14T11:12:00.000Z",
+      actor: "human",
+      summary: "Predicted the result of compressing an unfamiliar operational queue.",
+      sourceIds: prediction.sourceIds,
+      payload: {
+        checkId: prediction.id,
+        response: {
+          answer: "More rows would fit, so the operator would finish the queue faster.",
+          confidence: "high",
+          sourceSupport: { level: "none", sourceIds: [], fragmentIds: [] }
+        },
+        evaluation: predictionEvaluation
+      }
+    }
+  ];
+}
+
+export const seedEvents: EvidenceEvent[] = [...baseSeedEvents, ...understandingCheckSeedEvents()];
 
 export const evaluationCases: EvaluationCase[] = [
   {

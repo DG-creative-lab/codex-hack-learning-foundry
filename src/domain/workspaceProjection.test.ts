@@ -11,9 +11,24 @@ describe("workspace projection", () => {
     expect(workspace.sources).toEqual([...workspaceSources].reverse());
     expect(workspace.learningArtifacts).toEqual(learningArtifacts);
     expect(workspace.explainers[0]?.id).toBe("explainer-value-density");
+    expect(workspace.understandingChecks.map((check) => check.kind)).toEqual(
+      expect.arrayContaining(["prediction", "transfer"])
+    );
+    expect(workspace.targetedReviewItems[0]?.sourceIds.length).toBeGreaterThan(0);
     expect(workspace.capabilities).toEqual(capabilities);
     expect(workspace.theory.id).toBe("theory-design-density");
     expect(workspace.memories.human.theoryId).toBe(workspace.theory.id);
+  });
+
+  it("projects a multidimensional learning vector without treating recall as transfer", () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const valueDensity = workspace.understandingEvidenceVectors.find(
+      (vector) => vector.theoryElementId === "theory-concept-value-density"
+    );
+
+    expect(valueDensity?.dimensions.retrieval.supports).toBe(1);
+    expect(valueDensity?.dimensions.transfer.supports).toBe(0);
+    expect(valueDensity).not.toHaveProperty("mastery");
   });
 
   it("is deterministic and does not mutate its input", () => {

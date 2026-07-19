@@ -4,6 +4,7 @@ import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
 import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
+import { deriveUnderstandingChecks } from "./understandingCheckProjection";
 import {
   capabilityEvaluationSchema,
   capabilityManifestSchema,
@@ -103,6 +104,11 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
     theoryElementIds: new Set(theory.elements.map((element) => element.id))
   });
+  const understanding = deriveUnderstandingChecks(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(theory.elements.map((element) => element.id))
+  });
 
   return {
     sources,
@@ -113,6 +119,9 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     memories: deriveMemoryProjections(theory, events),
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
     explainers,
+    understandingChecks: understanding.checks,
+    understandingEvidenceVectors: understanding.evidenceVectors,
+    targetedReviewItems: understanding.reviewItems,
     capabilities: deriveCapabilities(events, knownSourceIds)
   };
 }

@@ -24,10 +24,19 @@ function App() {
     () => new Map(workspace.explainers.map((explainer) => [explainer.id, explainer])),
     [workspace.explainers]
   );
+  const understandingChecksById = useMemo(
+    () => new Map(workspace.understandingChecks.map((check) => [check.id, check])),
+    [workspace.understandingChecks]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
-    () => createLearningWorkflow({ append, resolveExplainer: (artifactId) => explainersById.get(artifactId) }),
-    [append, explainersById]
+    () =>
+      createLearningWorkflow({
+        append,
+        resolveExplainer: (artifactId) => explainersById.get(artifactId),
+        resolveUnderstandingCheck: (checkId) => understandingChecksById.get(checkId)
+      }),
+    [append, explainersById, understandingChecksById]
   );
   const { sources } = workspace;
 
@@ -102,9 +111,15 @@ function App() {
           <LearnView
             artifacts={workspace.learningArtifacts}
             explainers={workspace.explainers}
+            checks={workspace.understandingChecks}
+            evidenceVectors={workspace.understandingEvidenceVectors}
+            reviewItems={workspace.targetedReviewItems}
             fragments={workspace.sourceFragments}
             sources={workspace.sources}
             onFeedback={learningWorkflow.recordExplainerFeedback}
+            onResponse={learningWorkflow.recordUnderstandingResponse}
+            onDispute={learningWorkflow.disputeUnderstandingEvaluation}
+            onPreference={learningWorkflow.recordCheckPreference}
           />
         )}
         {view === "memory" && <MemoryView events={events} theory={workspace.theory} projections={workspace.memories} />}
