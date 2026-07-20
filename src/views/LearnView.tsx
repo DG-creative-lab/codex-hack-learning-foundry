@@ -1,5 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { ExplainerProjection } from "../domain/explainer";
 import { countMicroWorldEvidence, type MicroWorldProjection } from "../domain/microWorld";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
@@ -35,6 +36,8 @@ const checkTypeLabels = {
 
 interface LearnViewProps {
   requestedItemId?: string;
+  onReturnToTheory?: () => void;
+  contextTitle?: string;
   artifacts: LearningArtifact[];
   explainers: ExplainerProjection[];
   microWorlds: MicroWorldProjection[];
@@ -54,6 +57,8 @@ interface LearnViewProps {
 
 export function LearnView({
   requestedItemId,
+  onReturnToTheory,
+  contextTitle,
   artifacts,
   explainers,
   microWorlds,
@@ -139,6 +144,9 @@ export function LearnView({
 
   return (
     <div className="page-scroll learn-view">
+      {onReturnToTheory && (
+        <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
+      )}
       <section className="learning-header">
         <div>
           <p className="eyebrow">Human learning state</p>

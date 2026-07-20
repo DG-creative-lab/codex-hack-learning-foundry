@@ -1,19 +1,25 @@
-import { CircleDot, GraduationCap, Info, Library, Network, ShieldCheck, Wrench } from "lucide-react";
+import { BrainCircuit, CircleDot, GraduationCap, Info, Library, Network, ShieldCheck, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
-
-export type ViewId = "sources" | "learn" | "memory" | "foundry" | "about";
+import type { WorkspaceView } from "../application/workspaceNavigation";
 
 interface SidebarProps {
-  view: ViewId;
-  setView: (view: ViewId) => void;
+  view: WorkspaceView;
+  setView: (view: WorkspaceView) => void;
   eventCount: number;
   sourceCount: number;
+  theoryCount: number;
   atomCount: number;
 }
 
-export function Sidebar({ view, setView, eventCount, sourceCount, atomCount }: SidebarProps) {
-  const items: Array<[ViewId, string, ReactNode, string]> = [
+export function Sidebar({ view, setView, eventCount, sourceCount, theoryCount, atomCount }: SidebarProps) {
+  const items: Array<[WorkspaceView, string, ReactNode, string]> = [
     ["sources", "Sources", <Library key="sources" size={17} />, "01"],
+    [
+      "understanding",
+      "Understanding",
+      <BrainCircuit key="understanding" size={17} />,
+      theoryCount.toString().padStart(2, "0")
+    ],
     ["learn", "Learn", <GraduationCap key="learn" size={17} />, "02"],
     ["memory", "Memory", <Network key="memory" size={17} />, eventCount.toString().padStart(2, "0")],
     ["foundry", "Foundry", <Wrench key="foundry" size={17} />, "03"]

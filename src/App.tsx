@@ -1,12 +1,18 @@
 import { ChevronDown, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
+import {
+  destinationForView,
+  destinationFromUnderstandingGap,
+  type WorkspaceDestination,
+  type WorkspaceView
+} from "./application/workspaceNavigation";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
-import { Sidebar, type ViewId } from "./components/Sidebar";
-import type { UnderstandingGapDestination } from "./domain/understandingGaps";
+import { Sidebar } from "./components/Sidebar";
 import { reduceWorkspace } from "./domain/workspaceProjection";
+import { UnderstandingView } from "./features/understanding/UnderstandingView";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 import { AboutView } from "./views/AboutView";
 import { FoundryView } from "./views/FoundryView";
@@ -14,15 +20,24 @@ import { LearnView } from "./views/LearnView";
 import { MemoryView } from "./views/MemoryView";
 import { SourcesView } from "./views/SourcesView";
 
+const pageTitles: Record<WorkspaceView, [string, string]> = {
+  sources: ["Source library", "Capture, process, and trace knowledge"],
+  understanding: ["Understanding", "Maintain the shared theory and choose the next meaningful action"],
+  learn: ["Learning studio", "Study, practice, recall, and reflect"],
+  memory: ["Shared memory", "One ledger, three distinct projections"],
+  foundry: ["Capability foundry", "Build, evaluate, approve, and revise"],
+  about: ["System model", "Local-first shared human-agent learning"]
+};
+
 function App() {
-  const { events, append, error: ledgerError, rejectedCount } = useEvidenceLedger();
-  const [view, setView] = useState<ViewId>("sources");
+  const { events, append, ready, error: ledgerError, rejectedCount } = useEvidenceLedger();
+  const [view, setView] = useState<WorkspaceView>("understanding");
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
   const [sourceInput, setSourceInput] = useState("");
   const [requestedLearnItemId, setRequestedLearnItemId] = useState<string>();
-  const [requestedTheoryElementId, setRequestedTheoryElementId] = useState<string>();
+  const [selectedTheoryElementId, setSelectedTheoryElementId] = useState<string>();
   const [requestedCapabilityId, setRequestedCapabilityId] = useState<string>();
   const workspace = useMemo(() => reduceWorkspace(events), [events]);
   const explainersById = useMemo(
@@ -61,15 +76,18 @@ function App() {
     [append, understandingGapsById]
   );
   const { sources } = workspace;
+  const activeTheoryElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
+  const currentTheoryElementId =
+    activeTheoryElements.find((element) => element.id === selectedTheoryElementId)?.id ??
+    activeTheoryElements.find((element) => element.kind === "purpose")?.id ??
+    activeTheoryElements[0]?.id;
+  const pageTitleRef = useRef<HTMLHeadingElement>(null);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? sources[0];
-  const pageTitles: Record<ViewId, [string, string]> = {
-    sources: ["Source library", "Capture, process, and trace knowledge"],
-    learn: ["Learning studio", "Study, practice, recall, and reflect"],
-    memory: ["Shared memory", "One ledger, three distinct projections"],
-    foundry: ["Capability foundry", "Build, evaluate, approve, and revise"],
-    about: ["System model", "Local-first shared human-agent learning"]
-  };
+  useEffect(() => {
+    document.title = `${pageTitles[view][0]} | Learning Foundry`;
+    pageTitleRef.current?.focus();
+  }, [view]);
 
   async function addSource() {
     const id = await sourceWorkflow.register(sourceMode, sourceInput);
@@ -79,11 +97,18 @@ function App() {
     setShowAddSource(false);
   }
 
-  function navigateToIntervention(destination: UnderstandingGapDestination) {
-    if (destination.kind === "check") setRequestedLearnItemId(`check:${destination.id}`);
-    if (destination.kind === "micro-world") setRequestedLearnItemId(`micro-world:${destination.id}`);
-    if (destination.kind === "theory-element") setRequestedTheoryElementId(destination.id);
-    if (destination.kind === "capability") setRequestedCapabilityId(destination.id);
+  function navigate(destination: WorkspaceDestination) {
+    if (destination.view === "sources" && destination.sourceId) setSelectedSourceId(destination.sourceId);
+    if (destination.view === "understanding" && destination.theoryElementId) {
+      setSelectedTheoryElementId(destination.theoryElementId);
+    }
+    if (destination.view === "learn" && destination.itemId) setRequestedLearnItemId(destination.itemId);
+    if (destination.view === "memory" && destination.theoryElementId) {
+      setSelectedTheoryElementId(destination.theoryElementId);
+    }
+    if (destination.view === "foundry" && destination.capabilityId) {
+      setRequestedCapabilityId(destination.capabilityId);
+    }
     setView(destination.view);
   }
 
@@ -91,16 +116,19 @@ function App() {
     <div className="app-shell">
       <Sidebar
         view={view}
-        setView={setView}
+        setView={(nextView) => navigate(destinationForView(nextView))}
         eventCount={events.length}
         sourceCount={sources.length}
+        theoryCount={workspace.theory.elements.filter((element) => element.status !== "superseded").length}
         atomCount={sources.reduce((total, source) => total + source.outputs.atoms, 0)}
       />
       <main className="main-shell">
         <header className="topbar">
           <div>
             <p className="eyebrow">Design intelligence / active workspace</p>
-            <h1>{pageTitles[view][0]}</h1>
+            <h1 ref={pageTitleRef} tabIndex={-1}>
+              {pageTitles[view][0]}
+            </h1>
             <p>{pageTitles[view][1]}</p>
           </div>
           <div className="top-actions">
@@ -135,11 +163,25 @@ function App() {
             onReject={(proposalId) =>
               void sourceWorkflow.review(proposalId, "rejected", workspace).catch(() => undefined)
             }
+            contextTitle={workspace.theory.title}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
+          />
+        )}
+        {view === "understanding" && (
+          <UnderstandingView
+            workspace={workspace}
+            loading={!ready}
+            selectedElementId={currentTheoryElementId}
+            onSelectElement={setSelectedTheoryElementId}
+            onAddSource={() => setShowAddSource(true)}
+            onNavigate={navigate}
           />
         )}
         {view === "learn" && (
           <LearnView
             requestedItemId={requestedLearnItemId}
+            contextTitle={workspace.theory.title}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
             artifacts={workspace.learningArtifacts}
             explainers={workspace.explainers}
             microWorlds={workspace.microWorlds}
@@ -159,18 +201,25 @@ function App() {
         )}
         {view === "memory" && (
           <MemoryView
-            requestedTheoryElementId={requestedTheoryElementId}
+            requestedTheoryElementId={currentTheoryElementId}
             events={events}
             theory={workspace.theory}
             projections={workspace.memories}
             understandingGaps={workspace.understandingGaps}
             onReviewGap={memoryWorkflow.reviewUnderstandingGap}
             onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
-            onIntervene={navigateToIntervention}
+            onIntervene={(destination) => navigate(destinationFromUnderstandingGap(destination))}
+            contextTitle={workspace.theory.title}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
           />
         )}
         {view === "foundry" && (
-          <FoundryView capabilities={workspace.capabilities} requestedCapabilityId={requestedCapabilityId} />
+          <FoundryView
+            capabilities={workspace.capabilities}
+            requestedCapabilityId={requestedCapabilityId}
+            contextTitle={workspace.theory.title}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
+          />
         )}
         {view === "about" && <AboutView />}
       </main>

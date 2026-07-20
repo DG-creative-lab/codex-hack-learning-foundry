@@ -1,6 +1,7 @@
 import { Check, ExternalLink, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { capabilityStatusValues } from "../../shared/capability-contract.js";
+import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { FoundryCapability } from "../domain/workspaceEntities";
 
 const capabilityTypeLabels = {
@@ -13,9 +14,11 @@ const capabilityTypeLabels = {
 interface FoundryViewProps {
   capabilities: FoundryCapability[];
   requestedCapabilityId?: string;
+  contextTitle?: string;
+  onReturnToTheory?: () => void;
 }
 
-export function FoundryView({ capabilities, requestedCapabilityId }: FoundryViewProps) {
+export function FoundryView({ capabilities, requestedCapabilityId, contextTitle, onReturnToTheory }: FoundryViewProps) {
   const requestedCapability = capabilities.find((item) => item.manifest.id === requestedCapabilityId);
   const [selectedId, setSelectedId] = useState(requestedCapability?.manifest.id ?? capabilities[0]?.manifest.id);
   const capability = capabilities.find((item) => item.manifest.id === selectedId) ?? capabilities[0];
@@ -23,6 +26,9 @@ export function FoundryView({ capabilities, requestedCapabilityId }: FoundryView
   if (!capability) {
     return (
       <div className="page-scroll foundry-view">
+        {onReturnToTheory && (
+          <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
+        )}
         <p className="eyebrow">No capabilities have been recorded.</p>
       </div>
     );
@@ -33,6 +39,9 @@ export function FoundryView({ capabilities, requestedCapabilityId }: FoundryView
 
   return (
     <div className="page-scroll foundry-view">
+      {onReturnToTheory && (
+        <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
+      )}
       <section className="foundry-header">
         <div>
           <p className="eyebrow">Agent capability state</p>
