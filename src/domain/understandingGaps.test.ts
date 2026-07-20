@@ -214,12 +214,27 @@ describe("understanding-gap projection", () => {
             type: "skill",
             name: "revised-density-review",
             version: "2.0.0",
-            status: "revised",
+            status: "draft",
             createdAt: "2026-07-14T12:33:00.000Z",
             sourceIds: [sourceId],
+            theoryElementIds: ["theory-purpose-review-value"],
             assumptions: ["The queue vocabulary is stable."],
-            limitations: ["The revision has not been evaluated."],
-            skillPath: "skills/revised-density-review/SKILL.md"
+            operatingBoundaries: ["The revision has not been evaluated."],
+            evaluationCases: [
+              {
+                id: "eval-revised-audience",
+                title: "Audience adaptation",
+                expectation: "The revised skill adapts its recommendation to the named audience.",
+                sourceIds: [sourceId]
+              }
+            ],
+            activationPolicy: {
+              risk: "standard",
+              understanding: "prediction_or_transfer",
+              requirePassingEvaluation: true
+            },
+            skillPath: "skills/revised-density-review/SKILL.md",
+            supersedesCapabilityId: "value-density-reviewer"
           }
         }
       },

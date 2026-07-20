@@ -50,8 +50,8 @@ describe("capability status contract", () => {
     expect(capabilitySchema.properties.status.enum).toEqual(capabilityStatusValues);
   });
 
-  it("includes revision and retirement in the lifecycle", () => {
-    expect(capabilityStatusValues.slice(-2)).toEqual(["revised", "deprecated"]);
+  it("exposes explicit human-decision and supersession states", () => {
+    expect(capabilityStatusValues).toEqual(["draft", "evaluated", "approved", "active", "rejected", "superseded"]);
   });
 });
 

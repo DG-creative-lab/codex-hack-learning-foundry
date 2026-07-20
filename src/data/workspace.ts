@@ -1,5 +1,11 @@
 import type { EvidenceKind } from "../domain/types";
-import { foundryCapabilitySchema, learningArtifactSchema, sourceRecordSchema } from "../domain/workspaceEntities";
+import {
+  type CapabilityEvaluation,
+  capabilityEvaluationSchema,
+  capabilityManifestSchema,
+  learningArtifactSchema,
+  sourceRecordSchema
+} from "../domain/workspaceEntities";
 
 export interface KnowledgeAtom {
   id: string;
@@ -144,54 +150,162 @@ export const learningArtifacts = learningArtifactSchema.array().parse([
   }
 ]);
 
-export const capabilities = foundryCapabilitySchema.array().parse([
+const valueDensityEvaluationCases = [
   {
-    manifest: {
+    id: "audience",
+    title: "Audience is identified",
+    expectation: "The review names the intended audience and relevant expertise.",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+  },
+  {
+    id: "outcome",
+    title: "Outcome is explicit",
+    expectation: "The review evaluates density against a concrete user outcome.",
+    sourceIds: ["source-dense-by-design"]
+  },
+  {
+    id: "observations",
+    title: "Observations precede recommendations",
+    expectation: "The review records inspectable interface observations before proposing changes.",
+    sourceIds: ["source-ui-density-2024"]
+  },
+  {
+    id: "five-lenses",
+    title: "Five density lenses are applied",
+    expectation: "Visual, information, meaning, time, and value density are considered separately.",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+  },
+  {
+    id: "lens-evidence",
+    title: "Lens judgments retain evidence",
+    expectation: "Each density judgment points to a recorded observation.",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+  },
+  {
+    id: "recommendation-traceability",
+    title: "Recommendations are traceable",
+    expectation: "Each recommendation names the lens and observation that justify it.",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+  },
+  {
+    id: "constraints",
+    title: "Constraints survive",
+    expectation: "Recommendations preserve declared target-size and legibility constraints.",
+    sourceIds: ["source-wcag-target-size"]
+  },
+  {
+    id: "uncertainty",
+    title: "Uncertainty remains visible",
+    expectation: "The review distinguishes supported findings from assumptions that need validation.",
+    sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+  }
+];
+
+export interface PreparedCapability {
+  manifest: ReturnType<typeof capabilityManifestSchema.parse>;
+  evaluation: CapabilityEvaluation | null;
+  executions: number;
+}
+
+export const capabilities: PreparedCapability[] = [
+  {
+    manifest: capabilityManifestSchema.parse({
       id: "value-density-reviewer",
       name: "value-density-reviewer",
       type: "skill",
       version: "0.1.0",
-      status: "evaluated",
+      status: "draft",
       createdAt: "2026-07-14T10:00:00.000Z",
       sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+      theoryElementIds: [
+        "theory-purpose-review-value",
+        "theory-concept-visual-density",
+        "theory-concept-information-density",
+        "theory-concept-meaning-density",
+        "theory-concept-time-density",
+        "theory-concept-value-density",
+        "theory-boundary-accessibility"
+      ],
       assumptions: ["The reviewed interface has an identifiable user objective."],
-      limitations: ["The review does not replace usability testing."],
+      operatingBoundaries: [
+        "The review does not replace usability testing.",
+        "Recommendations must preserve declared accessibility constraints."
+      ],
+      evaluationCases: valueDensityEvaluationCases,
+      activationPolicy: {
+        risk: "standard",
+        understanding: "prediction_or_transfer",
+        requirePassingEvaluation: true
+      },
       evaluationFixture: "tests/fixtures/value-density/passing-review.json",
       skillPath: "skills/value-density-reviewer"
-    },
-    evaluation: { passed: 8, total: 8 },
-    executions: 1
+    }),
+    evaluation: capabilityEvaluationSchema.parse({
+      passed: 8,
+      total: 8,
+      cases: valueDensityEvaluationCases.map((evaluationCase) => ({
+        caseId: evaluationCase.id,
+        status: "passed",
+        evidence: `Prepared fixture satisfied: ${evaluationCase.expectation}`,
+        sourceIds: evaluationCase.sourceIds
+      }))
+    }),
+    executions: 0
   },
   {
-    manifest: {
+    manifest: capabilityManifestSchema.parse({
       id: "design-knowledge",
       name: "design-density-knowledge",
       type: "knowledge-module",
       version: "0.1.0",
-      status: "synthesized",
+      status: "draft",
       createdAt: "2026-07-14T10:05:00.000Z",
       sourceIds: ["source-ui-density-2024", "source-dense-by-design", "source-wcag-target-size"],
+      theoryElementIds: ["theory-purpose-review-value", "theory-boundary-accessibility"],
       assumptions: ["Source claims remain traceable to their evidence."],
-      limitations: ["The module covers interface density only."],
+      operatingBoundaries: ["The module covers interface density only."],
+      evaluationCases: [
+        {
+          id: "eval-source-traceability",
+          title: "Claims retain provenance",
+          expectation: "Every exported claim retains its source and theory references.",
+          sourceIds: ["source-ui-density-2024", "source-dense-by-design"]
+        }
+      ],
+      activationPolicy: { risk: "low", understanding: "none", requirePassingEvaluation: true },
       skillPath: "knowledge/design-density"
-    },
+    }),
     evaluation: null,
     executions: 0
   },
   {
-    manifest: {
+    manifest: capabilityManifestSchema.parse({
       id: "density-linter",
       name: "density-constraint-linter",
       type: "tool",
       version: "proposal",
-      status: "captured",
+      status: "draft",
       createdAt: "2026-07-14T10:10:00.000Z",
       sourceIds: ["source-wcag-target-size"],
+      theoryElementIds: ["theory-boundary-accessibility"],
       assumptions: ["Machine-readable constraints can supplement design review."],
-      limitations: ["The proposal has not been sandboxed or evaluated."],
+      operatingBoundaries: ["The proposal has not been evaluated and cannot replace human design review."],
+      evaluationCases: [
+        {
+          id: "eval-target-size",
+          title: "Target-size violation",
+          expectation: "The tool detects a declared target-size violation without inventing a usability claim.",
+          sourceIds: ["source-wcag-target-size"]
+        }
+      ],
+      activationPolicy: {
+        risk: "standard",
+        understanding: "prediction_or_transfer",
+        requirePassingEvaluation: true
+      },
       skillPath: "tools/density-constraint-linter"
-    },
+    }),
     evaluation: null,
     executions: 0
   }
-]);
+];

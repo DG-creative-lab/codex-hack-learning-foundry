@@ -272,7 +272,10 @@ export function detectUnderstandingGaps(input: UnderstandingGapDetectionInput): 
   );
 
   for (const capability of input.capabilities.filter(
-    (candidate) => candidate.manifest.status === "revised" && !candidate.evaluation
+    (candidate) =>
+      candidate.manifest.status === "draft" &&
+      Boolean(candidate.manifest.supersedesCapabilityId) &&
+      !candidate.evaluation
   )) {
     const version = input.memories.agent.capabilityVersions.find(
       (candidate) => candidate.capabilityId === capability.manifest.id

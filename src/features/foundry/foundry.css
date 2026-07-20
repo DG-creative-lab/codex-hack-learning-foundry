@@ -1,0 +1,539 @@
+.foundry-shell {
+  padding: 28px 32px 56px;
+}
+
+.foundry-approval-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.7fr);
+  align-items: end;
+  gap: 48px;
+  padding: 18px 0 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.foundry-approval-header h2 {
+  margin: 8px 0 0;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+.foundry-approval-header > p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.foundry-approval-workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.28fr) minmax(0, 1fr);
+  min-width: 0;
+}
+
+.foundry-register {
+  border-right: 1px solid var(--ink);
+}
+
+.foundry-register > header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  padding: 12px 16px 12px 0;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-register > button {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 88px;
+  padding: 12px 16px 12px 8px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+}
+
+.foundry-register > button:hover,
+.foundry-register > button.selected {
+  background: #fff;
+}
+
+.foundry-register > button.selected {
+  box-shadow: inset 4px 0 0 var(--signal);
+}
+
+.foundry-register > button > span:first-child,
+.foundry-register > button > span:last-child,
+.foundry-register small {
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-register > button > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.foundry-register strong {
+  overflow-wrap: anywhere;
+}
+
+.foundry-dossier {
+  min-width: 0;
+  background: #fff;
+}
+
+.foundry-dossier-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.foundry-dossier-title h2 {
+  margin: 6px 0;
+  font-size: 26px;
+  overflow-wrap: anywhere;
+}
+
+.foundry-dossier-title code {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
+.foundry-dossier-title > span {
+  align-self: flex-start;
+  padding: 5px 8px;
+  color: var(--signal-dark);
+  border: 1px solid var(--signal);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--ink);
+  list-style: none;
+}
+
+.foundry-lifecycle > li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 10px;
+  color: var(--muted);
+  border-right: 1px solid var(--line);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-lifecycle > li:last-child {
+  border-right: 0;
+}
+
+.foundry-lifecycle > li[data-reached="true"] {
+  color: var(--ink);
+}
+
+.foundry-lifecycle > li[data-current="true"] {
+  color: #fff;
+  background: var(--ink);
+}
+
+.foundry-lifecycle i {
+  display: grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-style: normal;
+  font-size: 9px;
+}
+
+.foundry-gate,
+.foundry-decision {
+  padding: 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.foundry-gate > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.foundry-gate h3,
+.foundry-decision h3 {
+  margin: 6px 0 0;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.foundry-gate > header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-gate > header > span.ready {
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
+.foundry-gate > header > span.blocked {
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+}
+
+.foundry-gate-register {
+  border-top: 1px solid var(--line);
+}
+
+.foundry-gate-register article {
+  display: grid;
+  grid-template-columns: 28px 20px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-gate-register article > span,
+.foundry-gate-register small {
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-gate-register article[data-met="true"] > svg {
+  color: var(--green);
+}
+
+.foundry-gate-register article[data-met="false"] > svg {
+  color: var(--yellow);
+}
+
+.foundry-gate-register p,
+.foundry-gap-list p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-compact);
+}
+
+.foundry-evidence {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+  border-bottom: 1px solid var(--ink);
+}
+
+.foundry-evidence-column,
+.foundry-evaluation-column {
+  padding: 28px;
+}
+
+.foundry-evidence-column {
+  border-right: 1px solid var(--ink);
+}
+
+.foundry-evidence header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  margin-top: 18px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-evidence header:first-child {
+  margin-top: 0;
+}
+
+.foundry-evidence header > span {
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-source {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-source span,
+.foundry-case-register small {
+  color: var(--muted);
+  font-size: var(--text-secondary);
+}
+
+.foundry-evidence ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: evidence-item;
+}
+
+.foundry-evidence li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  counter-increment: evidence-item;
+}
+
+.foundry-evidence li::before {
+  content: counter(evidence-item, decimal-leading-zero);
+  color: var(--signal-dark);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.foundry-case-register article {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-case-register article > span:first-child,
+.case-pending {
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-case-register article[data-status="passed"] > svg {
+  color: var(--green);
+}
+
+.foundry-case-register article[data-status="failed"] > svg {
+  color: var(--signal-dark);
+}
+
+.foundry-case-register p {
+  margin: 4px 0 6px;
+  color: var(--muted);
+  font-size: var(--text-compact);
+}
+
+.foundry-gap-list article {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-gap-list article > span {
+  color: var(--signal-dark);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-empty-row {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--muted);
+}
+
+.foundry-decision {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(260px, 1fr);
+  gap: 10px 28px;
+}
+
+.foundry-decision > .eyebrow,
+.foundry-decision > h3 {
+  grid-column: 1;
+}
+
+.foundry-decision > p:not(.eyebrow),
+.foundry-decision > strong,
+.foundry-decision > label,
+.foundry-decision > textarea,
+.foundry-decision > div,
+.foundry-decision > button,
+.foundry-decision > [role="alert"] {
+  grid-column: 2;
+}
+
+.foundry-decision > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+}
+
+.foundry-decision label {
+  margin-top: 4px;
+  font-size: var(--text-compact);
+  font-weight: 600;
+}
+
+.foundry-decision textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 10px;
+  resize: vertical;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.foundry-decision > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.foundry-decision > button {
+  justify-self: end;
+}
+
+.foundry-decision [role="alert"] {
+  color: var(--signal-dark);
+}
+
+.foundry-artifact-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  color: var(--muted);
+  font-size: var(--text-compact);
+}
+
+.foundry-shell button:focus-visible,
+.foundry-shell textarea:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .foundry-approval-header,
+  .foundry-approval-workspace,
+  .foundry-evidence {
+    grid-template-columns: 1fr;
+  }
+
+  .foundry-register,
+  .foundry-evidence-column {
+    border-right: 0;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .foundry-register > button {
+    min-height: 68px;
+  }
+}
+
+@media (max-width: 680px) {
+  .foundry-shell {
+    padding: 20px 18px 44px;
+  }
+
+  .foundry-approval-header {
+    gap: 14px;
+  }
+
+  .foundry-approval-header h2 {
+    font-size: 27px;
+  }
+
+  .foundry-lifecycle {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .foundry-lifecycle > li:nth-child(3) {
+    border-right: 0;
+  }
+
+  .foundry-lifecycle > li:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .foundry-gate,
+  .foundry-evidence-column,
+  .foundry-evaluation-column,
+  .foundry-decision {
+    padding: 22px 18px;
+  }
+
+  .foundry-gate > header,
+  .foundry-artifact-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .foundry-gate-register article {
+    grid-template-columns: 24px 18px minmax(0, 1fr);
+  }
+
+  .foundry-gate-register small {
+    grid-column: 3;
+  }
+
+  .foundry-decision {
+    grid-template-columns: 1fr;
+  }
+
+  .foundry-decision > * {
+    grid-column: 1 !important;
+  }
+
+  .foundry-decision > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

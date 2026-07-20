@@ -1,5 +1,6 @@
 import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createCapabilityWorkflow } from "./application/capabilityWorkflow";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
@@ -56,6 +57,10 @@ function App() {
     () => new Map(workspace.understandingGaps.gaps.map((gap) => [gap.id, gap])),
     [workspace.understandingGaps.gaps]
   );
+  const capabilitiesById = useMemo(
+    () => new Map(workspace.capabilities.map((capability) => [capability.manifest.id, capability])),
+    [workspace.capabilities]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
     () =>
@@ -74,6 +79,14 @@ function App() {
         resolveGap: (gapId) => understandingGapsById.get(gapId)
       }),
     [append, understandingGapsById]
+  );
+  const capabilityWorkflow = useMemo(
+    () =>
+      createCapabilityWorkflow({
+        append,
+        resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId)
+      }),
+    [append, capabilitiesById]
   );
   const { sources } = workspace;
   const activeTheoryElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
@@ -216,9 +229,14 @@ function App() {
         {view === "foundry" && (
           <FoundryView
             capabilities={workspace.capabilities}
+            sources={workspace.sources}
+            understandingGaps={workspace.understandingGaps}
             requestedCapabilityId={requestedCapabilityId}
             contextTitle={workspace.theory.title}
             onReturnToTheory={() => navigate({ view: "understanding" })}
+            onApprove={capabilityWorkflow.approve}
+            onReject={capabilityWorkflow.reject}
+            onActivate={capabilityWorkflow.activate}
           />
         )}
         {view === "about" && <AboutView />}

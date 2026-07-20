@@ -3,20 +3,45 @@
   "$id": "https://learning-foundry.local/schemas/capability.schema.json",
   "title": "Learning Foundry Capability",
   "type": "object",
-  "required": ["id", "type", "name", "version", "status", "createdAt", "sourceIds", "assumptions", "limitations", "skillPath"],
+  "required": ["id", "type", "name", "version", "status", "createdAt", "sourceIds", "theoryElementIds", "assumptions", "operatingBoundaries", "evaluationCases", "activationPolicy", "skillPath"],
   "properties": {
     "id": { "type": "string" },
     "type": { "enum": ["knowledge-module", "skill", "tool", "plugin"] },
     "name": { "type": "string" },
     "version": { "type": "string" },
-    "status": { "enum": ["captured", "synthesized", "drafted", "sandboxed", "evaluated", "approved", "active", "revised", "deprecated"] },
+    "status": { "enum": ["draft", "evaluated", "approved", "active", "rejected", "superseded"] },
     "createdAt": { "type": "string", "format": "date-time" },
     "sourceIds": { "type": "array", "items": { "type": "string" } },
+    "theoryElementIds": { "type": "array", "items": { "type": "string" } },
     "assumptions": { "type": "array", "items": { "type": "string" } },
-    "limitations": { "type": "array", "items": { "type": "string" } },
+    "operatingBoundaries": { "type": "array", "items": { "type": "string" } },
+    "evaluationCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "expectation", "sourceIds"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "expectation": { "type": "string" },
+          "sourceIds": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "activationPolicy": {
+      "type": "object",
+      "required": ["risk", "understanding", "requirePassingEvaluation"],
+      "properties": {
+        "risk": { "enum": ["low", "standard", "high"] },
+        "understanding": { "enum": ["none", "prediction_or_transfer", "prediction_and_transfer"] },
+        "requirePassingEvaluation": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
     "evaluationFixture": { "type": "string" },
-    "skillPath": { "type": "string" }
+    "skillPath": { "type": "string" },
+    "supersedesCapabilityId": { "type": "string" }
   },
   "additionalProperties": false
 }
-

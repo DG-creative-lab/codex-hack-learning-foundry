@@ -226,7 +226,19 @@ describe("memory projections", () => {
       actor: "system",
       summary: "One capability evaluation case failed.",
       sourceIds: capability.manifest.sourceIds,
-      payload: { capabilityId: capability.manifest.id, evaluation: { passed: 7, total: 8 } }
+      payload: {
+        capabilityId: capability.manifest.id,
+        evaluation: {
+          passed: capability.manifest.evaluationCases.length - 1,
+          total: capability.manifest.evaluationCases.length,
+          cases: capability.manifest.evaluationCases.map((evaluationCase, index) => ({
+            caseId: evaluationCase.id,
+            status: index === 0 ? "failed" : "passed",
+            evidence: index === 0 ? "The audience adaptation case failed." : "The declared expectation passed.",
+            sourceIds: evaluationCase.sourceIds
+          }))
+        }
+      }
     };
     const workspace = reduceWorkspace([...seedEvents, failure]);
 

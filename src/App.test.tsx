@@ -32,6 +32,12 @@ function requiredElement<T extends Element>(parent: ParentNode, selector: string
   return element;
 }
 
+function setTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 describe("App understanding-gap intervention routing", () => {
   it("opens the exact prepared prediction check from its Memory signal", async () => {
     const view = document.createElement("div");
@@ -96,5 +102,38 @@ describe("App understanding-gap intervention routing", () => {
     expect(document.activeElement?.textContent).toBe("Capability foundry");
     await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
     expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+  });
+
+  it("records separate human approval and activation transitions", async () => {
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => root?.render(<App />));
+    await act(async () => requiredElement<HTMLButtonElement>(view, 'button[aria-label="Foundry"]').click());
+
+    const decisionReason = requiredElement<HTMLTextAreaElement>(view, '[id^="decision-reason-"]');
+    await act(async () => setTextareaValue(decisionReason, "The declared evidence and boundaries are sufficient."));
+    const approve = [...view.querySelectorAll<HTMLButtonElement>(".foundry-decision button")].find((button) =>
+      button.textContent?.includes("Record approval")
+    );
+    if (!approve) throw new Error("Approval control missing");
+    expect(approve.disabled).toBe(false);
+    await act(async () => approve.click());
+
+    expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("approved");
+    expect(view.textContent).toContain("Approval recorded. Activation remains separate.");
+
+    const activationReason = requiredElement<HTMLTextAreaElement>(view, '[id^="activation-reason-"]');
+    await act(async () => setTextareaValue(activationReason, "Activate this approved version for the prepared task."));
+    const activate = [...view.querySelectorAll<HTMLButtonElement>(".foundry-decision button")].find((button) =>
+      button.textContent?.includes("Activate approved version")
+    );
+    if (!activate) throw new Error("Activation control missing");
+    expect(activate.disabled).toBe(false);
+    await act(async () => activate.click());
+
+    expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("active");
+    expect(view.textContent).toContain("Capability active");
   });
 });
