@@ -66,7 +66,33 @@ function practicalEvents() {
       inputSummary: "Review the active Learning Foundry queue.",
       outputSummary: "Recommended reducing spacing everywhere.",
       outcome: "partial",
-      theoryElementIds: capability.manifest.theoryElementIds
+      theoryElementIds: capability.manifest.theoryElementIds,
+      execution: {
+        requestedAdapter: "prepared",
+        completedAdapter: "prepared",
+        consent: "not_required",
+        fallbackUsed: false,
+        promptBoundary: {
+          instruction: "Apply the density reviewer to the supplied task.",
+          contextSections: [{ label: "Capability", content: capability.manifest.name }],
+          excludedContext: ["API credentials"]
+        },
+        inputProvenance: {
+          origin: "user_supplied",
+          sourceIds: capability.manifest.sourceIds,
+          theoryElementIds: capability.manifest.theoryElementIds
+        },
+        attempts: [
+          {
+            adapter: "prepared",
+            status: "succeeded",
+            startedAt: "2026-07-20T12:02:00.000Z",
+            completedAt: "2026-07-20T12:02:00.000Z",
+            durationMs: 0,
+            adapterVersion: "prepared-v1"
+          }
+        ]
+      }
     }
   };
   const correction: EvidenceEvent = {

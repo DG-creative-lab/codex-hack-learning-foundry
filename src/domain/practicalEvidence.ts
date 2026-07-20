@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  EXECUTION_LIMITS,
+  executionAdapterIdSchema,
+  executionPromptBoundarySchema
+} from "../../shared/execution-contract.js";
+import {
   type MicroWorldProjection,
   microWorldInteractionPayloadSchema,
   microWorldReflectionPayloadSchema
@@ -28,7 +33,97 @@ const boundedSummarySchema = z.string().trim().min(3).max(PRACTICAL_EVIDENCE_LIM
 export const practicalOutcomeSchema = z.enum(["successful", "partial", "failed"]);
 export const practicalFeedbackKindSchema = z.enum(["observation", "correction", "failure", "participation"]);
 
+export const executionAttemptSchema = z
+  .object({
+    adapter: executionAdapterIdSchema,
+    status: z.enum(["succeeded", "failed"]),
+    startedAt: z.string().datetime(),
+    completedAt: z.string().datetime(),
+    durationMs: z.number().int().nonnegative().max(300000),
+    adapterVersion: z.string().trim().min(1).max(120),
+    error: z
+      .object({
+        code: z.string().trim().min(1).max(80),
+        message: z.string().trim().min(1).max(EXECUTION_LIMITS.errorCharacters),
+        recoverable: z.boolean()
+      })
+      .strict()
+      .optional()
+  })
+  .strict()
+  .superRefine((attempt, context) => {
+    if ((attempt.status === "failed") !== Boolean(attempt.error)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only failed execution attempts may carry an error.",
+        path: ["error"]
+      });
+    }
+  });
+
+export const executionTraceSchema = z
+  .object({
+    requestedAdapter: executionAdapterIdSchema,
+    completedAdapter: executionAdapterIdSchema,
+    consent: z.enum(["not_required", "explicit"]),
+    fallbackUsed: z.boolean(),
+    promptBoundary: executionPromptBoundarySchema,
+    inputProvenance: z
+      .object({
+        origin: z.literal("user_supplied"),
+        sourceIds: uniqueIdsSchema,
+        theoryElementIds: uniqueIdsSchema
+      })
+      .strict(),
+    attempts: z.array(executionAttemptSchema).min(1).max(2)
+  })
+  .strict()
+  .superRefine((trace, context) => {
+    const first = trace.attempts[0];
+    const final = trace.attempts.at(-1);
+    if (!first || !final) return;
+    if (first.adapter !== trace.requestedAdapter) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "The first attempt must use the requested adapter." });
+    }
+    if (final.status !== "succeeded" || final.adapter !== trace.completedAdapter) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The completed adapter must identify the final success."
+      });
+    }
+    const isFallback =
+      trace.attempts.length === 2 &&
+      first.adapter === "live_codex" &&
+      first.status === "failed" &&
+      final.adapter === "prepared" &&
+      final.status === "succeeded";
+    if (trace.fallbackUsed !== isFallback) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Fallback metadata does not match the attempt history."
+      });
+    }
+    if (trace.requestedAdapter === "live_codex" && trace.consent !== "explicit") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Live Codex execution requires explicit consent." });
+    }
+    if (trace.requestedAdapter === "prepared" && trace.consent !== "not_required") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Prepared execution does not record live consent." });
+    }
+  });
+
 export const practicalApplicationPayloadSchema = z
+  .object({
+    capabilityId: boundedIdSchema,
+    capabilityVersion: z.string().min(1).max(80),
+    inputSummary: boundedSummarySchema,
+    outputSummary: boundedSummarySchema,
+    outcome: practicalOutcomeSchema,
+    theoryElementIds: uniqueIdsSchema,
+    execution: executionTraceSchema
+  })
+  .strict();
+
+const legacyPracticalApplicationPayloadSchema = z
   .object({
     capabilityId: boundedIdSchema,
     capabilityVersion: z.string().min(1).max(80),
@@ -38,6 +133,43 @@ export const practicalApplicationPayloadSchema = z
     theoryElementIds: uniqueIdsSchema
   })
   .strict();
+
+export function parsePracticalApplicationEvent(event: EvidenceEvent) {
+  const current = practicalApplicationPayloadSchema.safeParse(event.payload);
+  if (current.success) return current.data;
+  const legacy = legacyPracticalApplicationPayloadSchema.parse(event.payload);
+  return practicalApplicationPayloadSchema.parse({
+    ...legacy,
+    execution: {
+      requestedAdapter: "prepared",
+      completedAdapter: "prepared",
+      consent: "not_required",
+      fallbackUsed: false,
+      promptBoundary: {
+        instruction: "Project a legacy manually recorded capability application.",
+        contextSections: [
+          { label: "Capability", content: `${legacy.capabilityId} version ${legacy.capabilityVersion}` }
+        ],
+        excludedContext: ["No external execution context was recorded"]
+      },
+      inputProvenance: {
+        origin: "user_supplied",
+        sourceIds: event.sourceIds,
+        theoryElementIds: legacy.theoryElementIds
+      },
+      attempts: [
+        {
+          adapter: "prepared",
+          status: "succeeded",
+          startedAt: event.createdAt,
+          completedAt: event.createdAt,
+          durationMs: 0,
+          adapterVersion: "legacy-manual-v0"
+        }
+      ]
+    }
+  });
+}
 
 export const practicalFeedbackPayloadSchema = z
   .object({
@@ -92,7 +224,7 @@ function requireKnownIds(entity: string, ids: string[], knownIds: Set<string>, k
 
 function subjectContext(subject: EvidenceEvent, context: PracticalEvidenceContext) {
   if (subject.type === "practical.application_recorded") {
-    const application = practicalApplicationPayloadSchema.parse(subject.payload);
+    const application = parsePracticalApplicationEvent(subject);
     return { capabilityId: application.capabilityId, theoryElementIds: application.theoryElementIds };
   }
   const artifactId =
@@ -117,7 +249,7 @@ export function derivePracticalEvidence(
       if (event.actor !== "agent" || event.kind !== "practical_observation") {
         throw new Error(`Practical application ${event.id} must be recorded as an agent practical observation`);
       }
-      const payload = practicalApplicationPayloadSchema.parse(event.payload);
+      const payload = parsePracticalApplicationEvent(event);
       if (!context.capabilityIds.has(payload.capabilityId)) {
         throw new Error(`Practical application ${event.id} references unknown capability ${payload.capabilityId}`);
       }
@@ -128,6 +260,18 @@ export function derivePracticalEvidence(
         "theory element"
       );
       requireKnownIds(`Practical application ${event.id}`, event.sourceIds, context.sourceIds, "source");
+      if (
+        event.sourceIds.length !== payload.execution.inputProvenance.sourceIds.length ||
+        !event.sourceIds.every((sourceId) => payload.execution.inputProvenance.sourceIds.includes(sourceId))
+      ) {
+        throw new Error(`Practical application ${event.id} has inconsistent source provenance`);
+      }
+      if (
+        payload.theoryElementIds.length !== payload.execution.inputProvenance.theoryElementIds.length ||
+        !payload.theoryElementIds.every((id) => payload.execution.inputProvenance.theoryElementIds.includes(id))
+      ) {
+        throw new Error(`Practical application ${event.id} has inconsistent theory provenance`);
+      }
       applications.push({ ...payload, evidenceEventId: event.id, createdAt: event.createdAt });
     }
 

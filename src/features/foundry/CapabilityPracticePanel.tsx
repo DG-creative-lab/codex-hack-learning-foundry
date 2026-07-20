@@ -1,32 +1,27 @@
 import { MessageSquare, Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { ExecutionAdapterId, ExecutionAvailability } from "../../application/executionAdapters";
 import type { FoundryCapability } from "../../domain/capability";
 import {
   PRACTICAL_EVIDENCE_LIMITS,
   type PracticalApplication,
   type PracticalFeedback,
-  type PracticalFeedbackKind,
-  type PracticalOutcome
+  type PracticalFeedbackKind
 } from "../../domain/practicalEvidence";
 
 interface CapabilityPracticePanelProps {
   capability: FoundryCapability;
   applications: PracticalApplication[];
   feedback: PracticalFeedback[];
-  onApply: (
+  onExecute: (
     capabilityId: string,
     inputSummary: string,
-    outputSummary: string,
-    outcome: PracticalOutcome
+    adapterId: ExecutionAdapterId,
+    consent: boolean
   ) => Promise<string>;
+  onExecutionAvailability: (adapterId: ExecutionAdapterId) => Promise<ExecutionAvailability>;
   onFeedback: (subjectEventId: string, kind: PracticalFeedbackKind, content: string) => Promise<string>;
 }
-
-const outcomeLabels: Record<PracticalOutcome, string> = {
-  successful: "Successful",
-  partial: "Partial",
-  failed: "Failed"
-};
 
 const feedbackLabels: Record<PracticalFeedbackKind, string> = {
   observation: "Observation",
@@ -39,27 +34,55 @@ export function CapabilityPracticePanel({
   capability,
   applications,
   feedback,
-  onApply,
+  onExecute,
+  onExecutionAvailability,
   onFeedback
 }: CapabilityPracticePanelProps) {
   const [inputSummary, setInputSummary] = useState("");
-  const [outputSummary, setOutputSummary] = useState("");
-  const [outcome, setOutcome] = useState<PracticalOutcome>("successful");
+  const [adapterId, setAdapterId] = useState<ExecutionAdapterId>("prepared");
+  const [liveConsent, setLiveConsent] = useState(false);
+  const [liveAvailability, setLiveAvailability] = useState<ExecutionAvailability>();
+  const [checkingLive, setCheckingLive] = useState(false);
   const [feedbackKind, setFeedbackKind] = useState<PracticalFeedbackKind>("observation");
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [pending, setPending] = useState<"apply" | "feedback">();
+  const [pending, setPending] = useState<"execute" | "feedback">();
   const [error, setError] = useState<string>();
   const latestApplication = applications.at(-1);
   const latestFeedback = feedback.filter((item) => item.subjectEventId === latestApplication?.evidenceEventId).at(-1);
 
-  async function execute(kind: "apply" | "feedback", command: () => Promise<unknown>) {
+  useEffect(() => {
+    if (adapterId !== "live_codex") return;
+    let current = true;
+    setCheckingLive(true);
+    void onExecutionAvailability("live_codex")
+      .then((availability) => {
+        if (current) setLiveAvailability(availability);
+      })
+      .catch(() => {
+        if (current) {
+          setLiveAvailability({
+            available: false,
+            code: "codex_unavailable",
+            message: "Live Codex availability could not be checked. A prepared fallback remains available."
+          });
+        }
+      })
+      .finally(() => {
+        if (current) setCheckingLive(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [adapterId, onExecutionAvailability]);
+
+  async function execute(kind: "execute" | "feedback", command: () => Promise<unknown>) {
     setPending(kind);
     setError(undefined);
     try {
       await command();
-      if (kind === "apply") {
+      if (kind === "execute") {
         setInputSummary("");
-        setOutputSummary("");
+        setLiveConsent(false);
       } else {
         setFeedbackContent("");
       }
@@ -77,7 +100,7 @@ export function CapabilityPracticePanel({
       <header>
         <div>
           <p className="eyebrow">Practical application</p>
-          <h3 id={`practice-title-${capability.manifest.id}`}>Apply, observe, and correct</h3>
+          <h3 id={`practice-title-${capability.manifest.id}`}>Execute, observe, and correct</h3>
         </div>
         <span>{applications.length} recorded</span>
       </header>
@@ -89,32 +112,71 @@ export function CapabilityPracticePanel({
             id={`application-input-${capability.manifest.id}`}
             value={inputSummary}
             maxLength={PRACTICAL_EVIDENCE_LIMITS.summaryCharacters}
+            disabled={pending !== undefined}
             onChange={(event) => setInputSummary(event.target.value)}
           />
-          <label htmlFor={`application-output-${capability.manifest.id}`}>Observed result</label>
-          <textarea
-            id={`application-output-${capability.manifest.id}`}
-            value={outputSummary}
-            maxLength={PRACTICAL_EVIDENCE_LIMITS.summaryCharacters}
-            onChange={(event) => setOutputSummary(event.target.value)}
-          />
-          <fieldset className="foundry-segmented" aria-label="Application outcome">
-            {(Object.keys(outcomeLabels) as PracticalOutcome[]).map((value) => (
-              <button type="button" key={value} aria-pressed={outcome === value} onClick={() => setOutcome(value)}>
-                {outcomeLabels[value]}
-              </button>
-            ))}
+
+          <span className="foundry-field-label">Execution adapter</span>
+          <fieldset className="foundry-segmented foundry-adapter-selector" aria-label="Execution adapter">
+            <button
+              type="button"
+              aria-pressed={adapterId === "prepared"}
+              disabled={pending !== undefined}
+              onClick={() => {
+                setAdapterId("prepared");
+                setLiveConsent(false);
+              }}
+            >
+              Prepared
+            </button>
+            <button
+              type="button"
+              aria-pressed={adapterId === "live_codex"}
+              disabled={pending !== undefined}
+              onClick={() => setAdapterId("live_codex")}
+            >
+              Live Codex
+            </button>
           </fieldset>
+
+          {adapterId === "live_codex" && (
+            <div className="foundry-live-consent">
+              <p role="status">
+                {checkingLive
+                  ? "Checking local Codex availability..."
+                  : liveAvailability?.available
+                    ? `${liveAvailability.adapterVersion} is available for one bounded execution.`
+                    : (liveAvailability?.message ?? "Live execution is unavailable. Prepared fallback remains ready.")}
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={liveConsent}
+                  disabled={pending !== undefined}
+                  onChange={(event) => setLiveConsent(event.target.checked)}
+                />
+                Send this bounded task and declared capability context to Codex for this execution only.
+              </label>
+              <small>
+                Credentials and the canonical ledger are excluded. A live failure is recorded before fallback.
+              </small>
+            </div>
+          )}
+
           <button
             type="button"
             className="primary-button"
-            disabled={inputSummary.trim().length < 3 || outputSummary.trim().length < 3 || pending !== undefined}
+            disabled={
+              inputSummary.trim().length < 3 || pending !== undefined || (adapterId === "live_codex" && !liveConsent)
+            }
             onClick={() =>
-              void execute("apply", () => onApply(capability.manifest.id, inputSummary, outputSummary, outcome))
+              void execute("execute", () => onExecute(capability.manifest.id, inputSummary, adapterId, liveConsent))
             }
           >
-            <Play size={15} /> {pending === "apply" ? "Recording..." : "Record application result"}
+            <Play size={15} />{" "}
+            {pending === "execute" ? "Executing..." : `Run ${adapterId === "prepared" ? "prepared" : "live"}`}
           </button>
+          {error && <p role="alert">{error}</p>}
         </div>
       )}
 
@@ -123,7 +185,22 @@ export function CapabilityPracticePanel({
           <div className="foundry-application-result">
             <span>{latestApplication.outcome}</span>
             <strong>{latestApplication.outputSummary}</strong>
-            <small>{latestApplication.evidenceEventId}</small>
+            <small>
+              Requested {latestApplication.execution.requestedAdapter}; completed by{" "}
+              {latestApplication.execution.completedAdapter}
+              {latestApplication.execution.fallbackUsed ? " after fallback" : ""}.
+            </small>
+            <ol aria-label="Execution attempts">
+              {latestApplication.execution.attempts.map((attempt) => (
+                <li key={`${attempt.adapter}-${attempt.startedAt}`}>
+                  <span>{attempt.adapter}</span>
+                  <span>{attempt.status}</span>
+                  <span>{attempt.durationMs} ms</span>
+                  {attempt.error && <small>{attempt.error.message}</small>}
+                </li>
+              ))}
+            </ol>
+            <code>{latestApplication.evidenceEventId}</code>
           </div>
           <label htmlFor={`application-feedback-${capability.manifest.id}`}>Human practical feedback</label>
           <fieldset className="foundry-segmented" aria-label="Feedback evidence kind">
@@ -132,6 +209,7 @@ export function CapabilityPracticePanel({
                 type="button"
                 key={value}
                 aria-pressed={feedbackKind === value}
+                disabled={pending !== undefined}
                 onClick={() => setFeedbackKind(value)}
               >
                 {feedbackLabels[value]}
@@ -142,10 +220,10 @@ export function CapabilityPracticePanel({
             id={`application-feedback-${capability.manifest.id}`}
             value={feedbackContent}
             maxLength={PRACTICAL_EVIDENCE_LIMITS.summaryCharacters}
+            disabled={pending !== undefined}
             onChange={(event) => setFeedbackContent(event.target.value)}
           />
           {latestFeedback && <p className="foundry-saved-evidence">Latest feedback: {latestFeedback.kind}</p>}
-          {error && <p role="alert">{error}</p>}
           <button
             type="button"
             className="secondary-button"

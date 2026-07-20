@@ -9,7 +9,7 @@ import {
   type FoundryCapability,
   foundryCapabilitySchema
 } from "./capability";
-import { practicalApplicationPayloadSchema } from "./practicalEvidence";
+import { parsePracticalApplicationEvent } from "./practicalEvidence";
 import type { EvidenceEvent } from "./types";
 import type { UnderstandingCheckProjection } from "./understandingChecks";
 
@@ -98,7 +98,7 @@ export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityP
       if (event.actor !== "agent" || event.kind !== "practical_observation") {
         throw new Error(`Practical application ${event.id} must be recorded as an agent practical observation`);
       }
-      const application = practicalApplicationPayloadSchema.parse(event.payload);
+      const application = parsePracticalApplicationEvent(event);
       const capability = capabilities.get(application.capabilityId);
       if (!capability) {
         throw new Error(`Practical application ${event.id} references unknown capability ${application.capabilityId}`);

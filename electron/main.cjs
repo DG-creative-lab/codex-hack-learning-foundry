@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { mkdir } = require("node:fs/promises");
 const { join } = require("node:path");
 
 const memoryPath = () => join(app.getPath("userData"), "learning-foundry", "events.jsonl");
@@ -31,9 +32,13 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  const liveExecutionPath = join(app.getPath("userData"), "learning-foundry", "live-execution");
+  await mkdir(liveExecutionPath, { recursive: true });
   const { appendMemoryEntry, loadMemoryFile, resetMemoryFile } = await import("./memory.mjs");
+  const { createCodexExecutionService } = await import("./codex-execution.mjs");
   const { extractLocalSource, extractOnlineSource, serializeExtractionError } = await import("./source-extraction.mjs");
   const { sourceExtractRequestSchema } = await import("../shared/source-contract.js");
+  const codexExecution = createCodexExecutionService({ cwd: liveExecutionPath });
 
   ipcMain.handle("memory:load", async () => {
     return loadMemoryFile(memoryPath());
@@ -61,6 +66,9 @@ app.whenReady().then(async () => {
       return { ok: false, error: serializeExtractionError(error) };
     }
   });
+
+  ipcMain.handle("execution:live-availability", () => codexExecution.availability());
+  ipcMain.handle("execution:live-run", (_event, request) => codexExecution.execute(request));
 
   await createWindow();
   app.on("activate", () => {

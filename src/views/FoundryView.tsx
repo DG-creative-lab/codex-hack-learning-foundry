@@ -1,11 +1,12 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { capabilityStatusValues } from "../../shared/capability-contract.js";
+import type { ExecutionAdapterId, ExecutionAvailability } from "../application/executionAdapters";
 import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { FoundryCapability } from "../domain/capability";
 import type { ConsolidationProposalProjection } from "../domain/consolidation";
 import type { MicroWorldProjection } from "../domain/microWorld";
-import type { PracticalEvidenceProjection, PracticalFeedbackKind, PracticalOutcome } from "../domain/practicalEvidence";
+import type { PracticalEvidenceProjection, PracticalFeedbackKind } from "../domain/practicalEvidence";
 import type { UnderstandingGapProjection } from "../domain/understandingGaps";
 import type { SourceRecord } from "../domain/workspaceEntities";
 import { CapabilityDecisionPanel } from "../features/foundry/CapabilityDecisionPanel";
@@ -35,12 +36,13 @@ interface FoundryViewProps {
   onApprove: (capabilityId: string, reason: string) => Promise<void>;
   onReject: (capabilityId: string, reason: string, revisionRequest: string) => Promise<void>;
   onActivate: (capabilityId: string, reason: string) => Promise<void>;
-  onApply: (
+  onExecute: (
     capabilityId: string,
     inputSummary: string,
-    outputSummary: string,
-    outcome: PracticalOutcome
+    adapterId: ExecutionAdapterId,
+    consent: boolean
   ) => Promise<string>;
+  onExecutionAvailability: (adapterId: ExecutionAdapterId) => Promise<ExecutionAvailability>;
   onPracticalFeedback: (subjectEventId: string, kind: PracticalFeedbackKind, content: string) => Promise<string>;
   onProposeConsolidation: (triggerEventIds: string[]) => Promise<string>;
   onReviewConsolidation: (proposalId: string, decision: "approved" | "rejected", reason: string) => Promise<void>;
@@ -66,7 +68,8 @@ export function FoundryView({
   onApprove,
   onReject,
   onActivate,
-  onApply,
+  onExecute,
+  onExecutionAvailability,
   onPracticalFeedback,
   onProposeConsolidation,
   onReviewConsolidation
@@ -229,7 +232,8 @@ export function FoundryView({
             capability={capability}
             applications={applications}
             feedback={feedback}
-            onApply={onApply}
+            onExecute={onExecute}
+            onExecutionAvailability={onExecutionAvailability}
             onFeedback={onPracticalFeedback}
           />
           <ConsolidationPanel

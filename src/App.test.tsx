@@ -148,13 +148,9 @@ describe("App understanding-gap intervention routing", () => {
         requiredElement<HTMLTextAreaElement>(view, '[id^="application-input-"]'),
         "Review the active Learning Foundry queue."
       );
-      setTextareaValue(
-        requiredElement<HTMLTextAreaElement>(view, '[id^="application-output-"]'),
-        "Recommended reducing all spacing, including meaning-bearing groups."
-      );
     });
     const recordApplication = [...view.querySelectorAll<HTMLButtonElement>(".foundry-practice button")].find((button) =>
-      button.textContent?.includes("Record application result")
+      button.textContent?.includes("Run prepared")
     );
     if (!recordApplication) throw new Error("Application control missing");
     await act(async () => recordApplication.click());

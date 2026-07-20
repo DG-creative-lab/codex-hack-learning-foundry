@@ -5,7 +5,7 @@ import {
   microWorldInteractionPayloadSchema,
   microWorldReflectionPayloadSchema
 } from "./microWorld";
-import { practicalApplicationPayloadSchema, practicalFeedbackPayloadSchema } from "./practicalEvidence";
+import { parsePracticalApplicationEvent, practicalFeedbackPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent, LivingTheory, TheoryElement } from "./types";
 import { theoryElementPayloadSchema } from "./types";
 import {
@@ -145,7 +145,7 @@ function unique(values: string[]) {
 
 function triggerContext(event: EvidenceEvent, worldsById: Map<string, MicroWorldProjection>): TriggerContext {
   if (event.type === "practical.application_recorded") {
-    const application = practicalApplicationPayloadSchema.parse(event.payload);
+    const application = parsePracticalApplicationEvent(event);
     return {
       event,
       theoryElementIds: application.theoryElementIds,

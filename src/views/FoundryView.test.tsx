@@ -28,6 +28,41 @@ function requiredElement<T extends Element>(parent: ParentNode, selector: string
   return element;
 }
 
+function setTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function preparedExecution(capability: ReturnType<typeof reduceWorkspace>["capabilities"][number]) {
+  return {
+    requestedAdapter: "prepared" as const,
+    completedAdapter: "prepared" as const,
+    consent: "not_required" as const,
+    fallbackUsed: false,
+    promptBoundary: {
+      instruction: "Apply the prepared capability to the supplied task.",
+      contextSections: [{ label: "Capability", content: capability.manifest.name }],
+      excludedContext: ["API credentials"]
+    },
+    inputProvenance: {
+      origin: "user_supplied" as const,
+      sourceIds: capability.manifest.sourceIds,
+      theoryElementIds: capability.manifest.theoryElementIds
+    },
+    attempts: [
+      {
+        adapter: "prepared" as const,
+        status: "succeeded" as const,
+        startedAt: "2026-07-20T12:00:00.000Z",
+        completedAt: "2026-07-20T12:00:00.000Z",
+        durationMs: 0,
+        adapterVersion: "prepared-v1"
+      }
+    ]
+  };
+}
+
 describe("FoundryView", () => {
   it("exposes the approval evidence and keeps unevaluated drafts blocked", async () => {
     const workspace = reduceWorkspace(seedEvents);
@@ -47,7 +82,8 @@ describe("FoundryView", () => {
           onApprove={vi.fn()}
           onReject={vi.fn()}
           onActivate={vi.fn()}
-          onApply={vi.fn()}
+          onExecute={vi.fn()}
+          onExecutionAvailability={vi.fn(async () => ({ available: true as const, adapterVersion: "prepared-v1" }))}
           onPracticalFeedback={vi.fn()}
           onProposeConsolidation={vi.fn()}
           onReviewConsolidation={vi.fn()}
@@ -108,7 +144,8 @@ describe("FoundryView", () => {
           onApprove={vi.fn()}
           onReject={vi.fn()}
           onActivate={vi.fn()}
-          onApply={vi.fn()}
+          onExecute={vi.fn()}
+          onExecutionAvailability={vi.fn(async () => ({ available: true as const, adapterVersion: "prepared-v1" }))}
           onPracticalFeedback={vi.fn()}
           onProposeConsolidation={vi.fn()}
           onReviewConsolidation={vi.fn()}
@@ -139,7 +176,8 @@ describe("FoundryView", () => {
         inputSummary: "Review the prepared queue.",
         outputSummary: "The result needs another practical observation.",
         outcome: "partial",
-        theoryElementIds: capability.manifest.theoryElementIds
+        theoryElementIds: capability.manifest.theoryElementIds,
+        execution: preparedExecution(capability)
       }
     };
     const proposal = generateConsolidationProposal({
@@ -189,7 +227,8 @@ describe("FoundryView", () => {
           onApprove={vi.fn()}
           onReject={vi.fn()}
           onActivate={vi.fn()}
-          onApply={vi.fn()}
+          onExecute={vi.fn()}
+          onExecutionAvailability={vi.fn(async () => ({ available: true as const, adapterVersion: "prepared-v1" }))}
           onPracticalFeedback={vi.fn()}
           onProposeConsolidation={vi.fn()}
           onReviewConsolidation={vi.fn()}
@@ -200,5 +239,69 @@ describe("FoundryView", () => {
     expect(view.textContent).toContain("rejected");
     expect(view.textContent).toContain("The result needs another practical observation.");
     expect(view.textContent).toContain("Propose consolidation");
+  });
+
+  it("keeps prepared execution as default and requires consent before live execution", async () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const capability = {
+      ...workspace.capabilities[0],
+      manifest: { ...workspace.capabilities[0].manifest, status: "active" as const }
+    };
+    const onExecute = vi.fn(async () => "evt-execution-test");
+    const onExecutionAvailability = vi.fn(async () => ({
+      available: true as const,
+      adapterVersion: "Codex CLI test"
+    }));
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => {
+      root?.render(
+        <FoundryView
+          capabilities={[capability]}
+          sources={workspace.sources}
+          understandingGaps={workspace.understandingGaps}
+          practicalEvidence={{ applications: [], feedback: [] }}
+          microWorlds={workspace.microWorlds}
+          consolidationProposals={[]}
+          onApprove={vi.fn()}
+          onReject={vi.fn()}
+          onActivate={vi.fn()}
+          onExecute={onExecute}
+          onExecutionAvailability={onExecutionAvailability}
+          onPracticalFeedback={vi.fn()}
+          onProposeConsolidation={vi.fn()}
+          onReviewConsolidation={vi.fn()}
+        />
+      );
+    });
+
+    expect(
+      requiredElement<HTMLButtonElement>(view, '.foundry-adapter-selector button[aria-pressed="true"]').textContent
+    ).toBe("Prepared");
+    const liveButton = [...view.querySelectorAll<HTMLButtonElement>(".foundry-adapter-selector button")].find(
+      (button) => button.textContent === "Live Codex"
+    );
+    if (!liveButton) throw new Error("Live adapter control missing");
+    await act(async () => liveButton.click());
+    expect(onExecutionAvailability).toHaveBeenCalledWith("live_codex");
+    expect(view.textContent).toContain("Codex CLI test is available");
+
+    await act(async () =>
+      setTextareaValue(
+        requiredElement<HTMLTextAreaElement>(view, '[id^="application-input-"]'),
+        "Review the prepared queue."
+      )
+    );
+    const runLive = [...view.querySelectorAll<HTMLButtonElement>(".foundry-practice-form > button")].find((button) =>
+      button.textContent?.includes("Run live")
+    );
+    if (!runLive) throw new Error("Live execution control missing");
+    expect(runLive.disabled).toBe(true);
+    await act(async () => requiredElement<HTMLInputElement>(view, ".foundry-live-consent input").click());
+    expect(runLive.disabled).toBe(false);
+    await act(async () => runLive.click());
+    expect(onExecute).toHaveBeenCalledWith(capability.manifest.id, "Review the prepared queue.", "live_codex", true);
   });
 });

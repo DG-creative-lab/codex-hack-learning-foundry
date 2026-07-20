@@ -2,6 +2,8 @@ import { ChevronDown, Plus } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createCapabilityWorkflow } from "./application/capabilityWorkflow";
 import { createConsolidationWorkflow } from "./application/consolidationWorkflow";
+import { createLiveCodexExecutionAdapter, createPreparedExecutionAdapter } from "./application/executionAdapters";
+import { createExecutionWorkflow } from "./application/executionWorkflow";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
@@ -95,11 +97,20 @@ function App() {
       }),
     [append, capabilitiesById]
   );
+  const executionAdapters = useMemo(() => [createPreparedExecutionAdapter(), createLiveCodexExecutionAdapter()], []);
+  const executionWorkflow = useMemo(
+    () =>
+      createExecutionWorkflow({
+        append,
+        resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId),
+        adapters: executionAdapters
+      }),
+    [append, capabilitiesById, executionAdapters]
+  );
   const consolidationWorkflow = useMemo(
     () =>
       createConsolidationWorkflow({
         append,
-        resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId),
         resolveEvent: (eventId) => eventsById.get(eventId),
         resolveMicroWorld: (artifactId) => microWorldsById.get(artifactId),
         resolveProposal: (proposalId) => consolidationProposalsById.get(proposalId),
@@ -110,7 +121,6 @@ function App() {
       }),
     [
       append,
-      capabilitiesById,
       consolidationProposalsById,
       eventsById,
       microWorldsById,
@@ -279,7 +289,8 @@ function App() {
               onApprove={capabilityWorkflow.approve}
               onReject={capabilityWorkflow.reject}
               onActivate={capabilityWorkflow.activate}
-              onApply={consolidationWorkflow.applyCapability}
+              onExecute={executionWorkflow.executeCapability}
+              onExecutionAvailability={executionWorkflow.availability}
               onPracticalFeedback={consolidationWorkflow.recordFeedback}
               onProposeConsolidation={consolidationWorkflow.propose}
               onReviewConsolidation={consolidationWorkflow.review}
