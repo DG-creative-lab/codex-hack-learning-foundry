@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deriveCapabilities } from "./capabilityProjection";
 import { deriveExplainers } from "./explainer";
 import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
@@ -7,15 +8,7 @@ import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import { deriveUnderstandingChecks } from "./understandingCheckProjection";
 import { deriveUnderstandingGaps } from "./understandingGaps";
-import {
-  capabilityEvaluationPayloadSchema,
-  capabilityExecutionPayloadSchema,
-  capabilityRegisteredPayloadSchema,
-  type FoundryCapability,
-  foundryCapabilitySchema,
-  type LearningArtifact,
-  learningArtifactSchema
-} from "./workspaceEntities";
+import { type LearningArtifact, learningArtifactSchema } from "./workspaceEntities";
 
 const workspaceConfiguredPayloadSchema = z.object({ theory: livingTheoryMetadataSchema }).strict();
 const learningArtifactPayloadSchema = z.object({ artifact: learningArtifactSchema }).strict();
@@ -41,36 +34,6 @@ function deriveLearningArtifacts(events: EvidenceEvent[], knownSourceIds: Set<st
     artifacts.set(artifact.id, artifact);
   }
   return [...artifacts.values()];
-}
-
-function deriveCapabilities(events: EvidenceEvent[], knownSourceIds: Set<string>): FoundryCapability[] {
-  const capabilities = new Map<string, FoundryCapability>();
-
-  for (const event of events) {
-    if (event.type === "capability.registered") {
-      const { manifest } = capabilityRegisteredPayloadSchema.parse(event.payload);
-      if (capabilities.has(manifest.id)) throw new Error(`Capability ID ${manifest.id} is duplicated`);
-      requireKnownSources(`Capability ${manifest.id}`, manifest.sourceIds, knownSourceIds);
-      requireEventProvenance(event, `Capability ${manifest.id}`, manifest.sourceIds);
-      capabilities.set(manifest.id, { manifest, evaluation: null, executions: 0 });
-    }
-
-    if (event.type === "capability.evaluation_recorded") {
-      const { capabilityId, evaluation } = capabilityEvaluationPayloadSchema.parse(event.payload);
-      const capability = capabilities.get(capabilityId);
-      if (!capability) throw new Error(`Cannot evaluate unknown capability ${capabilityId}`);
-      capabilities.set(capabilityId, { ...capability, evaluation });
-    }
-
-    if (event.type === "capability.executed") {
-      const { capabilityId } = capabilityExecutionPayloadSchema.parse(event.payload);
-      const capability = capabilities.get(capabilityId);
-      if (!capability) throw new Error(`Cannot execute unknown capability ${capabilityId}`);
-      capabilities.set(capabilityId, { ...capability, executions: capability.executions + 1 });
-    }
-  }
-
-  return foundryCapabilitySchema.array().parse([...capabilities.values()]);
 }
 
 export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
@@ -112,7 +75,11 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
     theoryElementIds: new Set(theory.elements.map((element) => element.id))
   });
-  const capabilities = deriveCapabilities(events, knownSourceIds);
+  const capabilities = deriveCapabilities(events, {
+    sourceIds: knownSourceIds,
+    theoryElementIds: new Set(theory.elements.map((element) => element.id)),
+    understandingChecks: understanding.checks
+  });
   const memories = deriveMemoryProjections({
     theory,
     events,

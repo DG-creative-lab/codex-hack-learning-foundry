@@ -73,8 +73,10 @@ The agent side turns the same Living Theory into inspectable, versioned capabili
 
 Synthesis, evaluation, approval, and activation are separate states. No capability activates solely because an agent generated it or because an evaluation succeeded.
 
+The activation gate derives bounded requirements from the capability manifest and ledger: known source coverage, declared operating boundaries, complete evaluation cases, relevant prediction or transfer evidence where policy requires it, and an explicit human approval. Low-risk capabilities may require lighter understanding evidence, but no policy can remove human approval. Rejection records a reason and an actionable revision request; a replacement is registered as a new version before the prior version is explicitly superseded.
+
 ## Current implementation boundary
 
 The design-density workspace is prepared sample data for a domain-independent product. The current micro-world uses one trusted renderer and transparent heuristic outcomes. Arbitrary generated JavaScript, autonomous web crawling, universal file parsing, cloud sync, and autonomous capability activation are outside the hackathon scope.
 
-The current Memory surface derives distinct human, agent, and shared-theory projections with traceable evidence, deterministic freshness, and evidence-backed understanding-gap signals. The pending roadmap adds a central Understanding workspace, capability activation gates, practical-evidence consolidation, and the complete offline demo journey.
+The current product includes the central Understanding workspace, distinct human, agent, and shared-theory projections, evidence-backed understanding-gap signals, and deliberate capability activation gates. The pending roadmap adds practical-evidence consolidation and the complete offline demo journey.

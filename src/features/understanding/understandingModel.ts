@@ -94,7 +94,7 @@ export function deriveUnderstandingNextAction(workspace: WorkspaceProjection): U
   }
 
   const capability = workspace.capabilities.find(
-    (candidate) => !["approved", "active"].includes(candidate.manifest.status)
+    (candidate) => !["active", "rejected", "superseded"].includes(candidate.manifest.status)
   );
   if (capability) {
     return {

@@ -16,7 +16,13 @@ describe("workspace projection", () => {
       expect.arrayContaining(["prediction", "transfer"])
     );
     expect(workspace.targetedReviewItems[0]?.sourceIds.length).toBeGreaterThan(0);
-    expect(workspace.capabilities).toEqual(capabilities);
+    expect(workspace.capabilities).toHaveLength(capabilities.length);
+    expect(workspace.capabilities[0]).toMatchObject({
+      manifest: { id: capabilities[0].manifest.id, status: "evaluated" },
+      evaluation: { result: capabilities[0].evaluation },
+      evaluationHistory: [{ result: capabilities[0].evaluation }],
+      gate: { approvalReady: true, activationReady: false }
+    });
     expect(workspace.theory.id).toBe("theory-design-density");
     expect(workspace.memories.human.theoryId).toBe(workspace.theory.id);
   });
@@ -88,9 +94,7 @@ describe("workspace projection", () => {
       payload: { capabilityId: "missing-capability", evaluation: { passed: 1, total: 1 } }
     };
 
-    expect(() => reduceWorkspace([...seedEvents, unknownEvaluation])).toThrow(
-      "Cannot evaluate unknown capability missing-capability"
-    );
+    expect(() => reduceWorkspace([...seedEvents, unknownEvaluation])).toThrow("references unknown capability");
 
     const missingProvenance: EvidenceEvent = {
       id: "evt-learning-missing-provenance",

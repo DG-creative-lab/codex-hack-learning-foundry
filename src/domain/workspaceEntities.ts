@@ -5,6 +5,25 @@ import {
   capabilityTypeSchema
 } from "../../shared/capability-contract.js";
 
+export {
+  CAPABILITY_LIMITS,
+  type CapabilityActivation,
+  type CapabilityDecision,
+  type CapabilityEvaluation,
+  type CapabilityGate,
+  capabilityActivationPayloadSchema,
+  capabilityDecisionPayloadSchema,
+  capabilityEvaluationPayloadSchema,
+  capabilityEvaluationSchema,
+  capabilityExecutionPayloadSchema,
+  capabilityGateSchema,
+  capabilityRegisteredPayloadSchema,
+  capabilitySupersededPayloadSchema,
+  deriveCapabilityGate,
+  type FoundryCapability,
+  foundryCapabilitySchema
+} from "./capability";
+
 export { capabilityManifestSchema, capabilityStatusSchema, capabilityTypeSchema };
 
 export const sourceStatusSchema = z.enum(["ready", "review", "failed", "processing", "queued"]);
@@ -55,31 +74,7 @@ export const learningArtifactSchema = z
   })
   .strict();
 
-export const capabilityEvaluationSchema = z
-  .object({
-    passed: z.number().int().nonnegative(),
-    total: z.number().int().positive()
-  })
-  .strict()
-  .refine(({ passed, total }) => passed <= total, { message: "Passed evaluations cannot exceed the total" });
-
-export const capabilityRegisteredPayloadSchema = z.object({ manifest: capabilityManifestSchema }).strict();
-export const capabilityEvaluationPayloadSchema = z
-  .object({ capabilityId: z.string().min(1), evaluation: capabilityEvaluationSchema })
-  .strict();
-export const capabilityExecutionPayloadSchema = z.object({ capabilityId: z.string().min(1) }).strict();
-
-export const foundryCapabilitySchema = z
-  .object({
-    manifest: capabilityManifestSchema,
-    evaluation: capabilityEvaluationSchema.nullable(),
-    executions: z.number().int().nonnegative()
-  })
-  .strict();
-
 export type SourceStatus = z.infer<typeof sourceStatusSchema>;
 export type SourceOrigin = z.infer<typeof sourceOriginSchema>;
 export type SourceRecord = z.infer<typeof sourceRecordSchema>;
 export type LearningArtifact = z.infer<typeof learningArtifactSchema>;
-export type CapabilityEvaluation = z.infer<typeof capabilityEvaluationSchema>;
-export type FoundryCapability = z.infer<typeof foundryCapabilitySchema>;
