@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { consolidationProposedPayloadSchema, consolidationReviewPayloadSchema } from "./consolidation";
 import { synthesisReviewPayloadSchema } from "./sourcePipeline";
 import {
   type EvidenceEvent,
@@ -57,6 +58,8 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
   const eventIds = new Set<string>();
   const elements = new Map<string, TheoryElement>();
   const relationships = new Map<string, TheoryRelationship>();
+  const consolidationProposals = new Map<string, z.infer<typeof consolidationProposedPayloadSchema>["proposal"]>();
+  const reviewedConsolidationIds = new Set<string>();
   const theoryEventIds: string[] = [];
 
   function recordElement(element: TheoryElement, event: EvidenceEvent, revision: boolean) {
@@ -113,6 +116,36 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
         }
         for (const rawRelationship of review.relationships) {
           recordRelationship(relationshipFromPayload(rawRelationship, event), event);
+        }
+      }
+    }
+
+    if (event.type === "consolidation.proposed") {
+      if (event.actor !== "agent" || event.kind !== "agent_synthesis") {
+        throw new Error(`Consolidation proposal ${event.id} must be recorded as agent synthesis.`);
+      }
+      const { proposal } = consolidationProposedPayloadSchema.parse(event.payload);
+      if (consolidationProposals.has(proposal.id)) {
+        throw new Error(`Consolidation proposal ID ${proposal.id} is duplicated.`);
+      }
+      consolidationProposals.set(proposal.id, proposal);
+    }
+
+    if (event.type === "consolidation.reviewed") {
+      if (event.actor !== "human" || event.kind !== "user_interpretation") {
+        throw new Error(`Consolidation review ${event.id} must be recorded as a human interpretation.`);
+      }
+      const review = consolidationReviewPayloadSchema.parse(event.payload);
+      const proposal = consolidationProposals.get(review.proposalId);
+      if (!proposal)
+        throw new Error(`Consolidation review ${event.id} references unknown proposal ${review.proposalId}.`);
+      if (reviewedConsolidationIds.has(review.proposalId)) {
+        throw new Error(`Consolidation proposal ${review.proposalId} was already reviewed.`);
+      }
+      reviewedConsolidationIds.add(review.proposalId);
+      if (review.decision === "approved") {
+        for (const rawElement of proposal.theoryRevisions) {
+          recordElement(elementFromPayload(rawElement, event, true), event, true);
         }
       }
     }

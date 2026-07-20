@@ -38,9 +38,16 @@ describe("FoundryView", () => {
           capabilities={workspace.capabilities}
           sources={workspace.sources}
           understandingGaps={workspace.understandingGaps}
+          practicalEvidence={workspace.practicalEvidence}
+          microWorlds={workspace.microWorlds}
+          consolidationProposals={workspace.consolidationProposals}
           onApprove={vi.fn()}
           onReject={vi.fn()}
           onActivate={vi.fn()}
+          onApply={vi.fn()}
+          onPracticalFeedback={vi.fn()}
+          onProposeConsolidation={vi.fn()}
+          onReviewConsolidation={vi.fn()}
         />
       );
     });
@@ -92,9 +99,16 @@ describe("FoundryView", () => {
           capabilities={[capability, ...workspace.capabilities.slice(1)]}
           sources={workspace.sources}
           understandingGaps={{ gaps: [dismissedGap], openCount: 0, confirmedCount: 0, dismissedCount: 1 }}
+          practicalEvidence={workspace.practicalEvidence}
+          microWorlds={workspace.microWorlds}
+          consolidationProposals={workspace.consolidationProposals}
           onApprove={vi.fn()}
           onReject={vi.fn()}
           onActivate={vi.fn()}
+          onApply={vi.fn()}
+          onPracticalFeedback={vi.fn()}
+          onProposeConsolidation={vi.fn()}
+          onReviewConsolidation={vi.fn()}
         />
       );
     });

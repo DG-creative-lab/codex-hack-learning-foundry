@@ -6,6 +6,7 @@ import type {
   AgentTheoryMemoryItem,
   MemoryEvidenceReference
 } from "./memoryProjectionTypes";
+import { practicalApplicationPayloadSchema, practicalFeedbackPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent, LivingTheory, TheoryElement } from "./types";
 import type { UnderstandingSignal } from "./understandingChecks";
 import {
@@ -89,6 +90,34 @@ export function deriveAgentMemory(
       const reference = evidenceReference(event, "challenges", "A capability failure or rejection was recorded.");
       contradictoryEvidence.push(reference);
       failures.push({ capabilityId: capabilityIdFromEvent(event), evidence: reference });
+    }
+    if (event.type === "practical.application_recorded") {
+      const application = practicalApplicationPayloadSchema.parse(event.payload);
+      const signal: UnderstandingSignal = application.outcome === "successful" ? "supports" : "challenges";
+      const reference = evidenceReference(
+        event,
+        signal,
+        application.outcome === "successful"
+          ? "A recorded application completed successfully."
+          : `A recorded application had a ${application.outcome} outcome.`
+      );
+      if (application.outcome === "successful") supportingEvidence.push(reference);
+      else {
+        contradictoryEvidence.push(reference);
+        failures.push({ capabilityId: application.capabilityId, evidence: reference });
+      }
+    }
+    if (["practical.correction_recorded", "practical.failure_recorded"].includes(event.type)) {
+      const feedback = practicalFeedbackPayloadSchema.parse(event.payload);
+      const reference = evidenceReference(
+        event,
+        "challenges",
+        feedback.kind === "correction"
+          ? "Human practical feedback corrected the capability's recorded behavior."
+          : "Human practical feedback recorded a capability failure."
+      );
+      contradictoryEvidence.push(reference);
+      failures.push({ capabilityId: feedback.capabilityId, evidence: reference });
     }
   }
 

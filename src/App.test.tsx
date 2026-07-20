@@ -135,5 +135,68 @@ describe("App understanding-gap intervention routing", () => {
 
     expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("active");
     expect(view.textContent).toContain("Capability active");
+
+    await act(async () => {
+      setTextareaValue(
+        requiredElement<HTMLTextAreaElement>(view, '[id^="application-input-"]'),
+        "Review the active Learning Foundry queue."
+      );
+      setTextareaValue(
+        requiredElement<HTMLTextAreaElement>(view, '[id^="application-output-"]'),
+        "Recommended reducing all spacing, including meaning-bearing groups."
+      );
+    });
+    const recordApplication = [...view.querySelectorAll<HTMLButtonElement>(".foundry-practice button")].find((button) =>
+      button.textContent?.includes("Record application result")
+    );
+    if (!recordApplication) throw new Error("Application control missing");
+    await act(async () => recordApplication.click());
+    expect(view.textContent).toContain("1 recorded");
+
+    const correctionKind = [
+      ...view.querySelectorAll<HTMLButtonElement>(".foundry-feedback-form .foundry-segmented button")
+    ].find((button) => button.textContent === "Correction");
+    if (!correctionKind) throw new Error("Correction evidence control missing");
+    await act(async () => correctionKind.click());
+    await act(async () =>
+      setTextareaValue(
+        requiredElement<HTMLTextAreaElement>(view, '[id^="application-feedback-"]'),
+        "Preserve spacing that communicates grouping; reduce only space that carries no meaning."
+      )
+    );
+    const appendFeedback = [...view.querySelectorAll<HTMLButtonElement>(".foundry-feedback-form button")].find(
+      (button) => button.textContent?.includes("Append practical feedback")
+    );
+    if (!appendFeedback) throw new Error("Practical feedback control missing");
+    await act(async () => appendFeedback.click());
+    expect(view.textContent).toContain("Latest feedback: correction");
+
+    const propose = [...view.querySelectorAll<HTMLButtonElement>(".consolidation-candidates button")].find((button) =>
+      button.textContent?.includes("Propose consolidation")
+    );
+    if (!propose) throw new Error("Consolidation proposal control missing");
+    await act(async () => propose.click());
+    expect(view.textContent).toContain("1 pending");
+    expect(view.textContent).toContain("Capability revisions");
+
+    await act(async () =>
+      setTextareaValue(
+        requiredElement<HTMLTextAreaElement>(view, '[id^="consolidation-reason-"]'),
+        "The correction is traceable to the recorded application and requires a draft revision."
+      )
+    );
+    const approveRevision = [...view.querySelectorAll<HTMLButtonElement>(".consolidation-review button")].find(
+      (button) => button.textContent?.includes("Approve revisions")
+    );
+    if (!approveRevision) throw new Error("Consolidation approval control missing");
+    await act(async () => approveRevision.click());
+
+    expect(view.textContent).toContain("0 pending");
+    expect(view.textContent).toContain("0.1.0-revision");
+    const revision = [...view.querySelectorAll<HTMLButtonElement>(".foundry-register > button")].find((button) =>
+      button.textContent?.includes("0.1.0-revision")
+    );
+    expect(revision?.textContent).toContain("draft");
+    expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("active");
   });
 });

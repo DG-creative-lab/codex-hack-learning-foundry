@@ -3,11 +3,16 @@ import { useEffect, useState } from "react";
 import { capabilityStatusValues } from "../../shared/capability-contract.js";
 import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { FoundryCapability } from "../domain/capability";
+import type { ConsolidationProposalProjection } from "../domain/consolidation";
+import type { MicroWorldProjection } from "../domain/microWorld";
+import type { PracticalEvidenceProjection, PracticalFeedbackKind, PracticalOutcome } from "../domain/practicalEvidence";
 import type { UnderstandingGapProjection } from "../domain/understandingGaps";
 import type { SourceRecord } from "../domain/workspaceEntities";
 import { CapabilityDecisionPanel } from "../features/foundry/CapabilityDecisionPanel";
 import { CapabilityEvidencePanel } from "../features/foundry/CapabilityEvidencePanel";
 import { CapabilityGatePanel } from "../features/foundry/CapabilityGatePanel";
+import { CapabilityPracticePanel } from "../features/foundry/CapabilityPracticePanel";
+import { type ConsolidationCandidate, ConsolidationPanel } from "../features/foundry/ConsolidationPanel";
 import "../features/foundry/foundry.css";
 
 const capabilityTypeLabels = {
@@ -21,12 +26,24 @@ interface FoundryViewProps {
   capabilities: FoundryCapability[];
   sources: SourceRecord[];
   understandingGaps: UnderstandingGapProjection;
+  practicalEvidence: PracticalEvidenceProjection;
+  microWorlds: MicroWorldProjection[];
+  consolidationProposals: ConsolidationProposalProjection[];
   requestedCapabilityId?: string;
   contextTitle?: string;
   onReturnToTheory?: () => void;
   onApprove: (capabilityId: string, reason: string) => Promise<void>;
   onReject: (capabilityId: string, reason: string, revisionRequest: string) => Promise<void>;
   onActivate: (capabilityId: string, reason: string) => Promise<void>;
+  onApply: (
+    capabilityId: string,
+    inputSummary: string,
+    outputSummary: string,
+    outcome: PracticalOutcome
+  ) => Promise<string>;
+  onPracticalFeedback: (subjectEventId: string, kind: PracticalFeedbackKind, content: string) => Promise<string>;
+  onProposeConsolidation: (triggerEventIds: string[]) => Promise<string>;
+  onReviewConsolidation: (proposalId: string, decision: "approved" | "rejected", reason: string) => Promise<void>;
 }
 
 function lifecycleReached(status: FoundryCapability["manifest"]["status"], step: string) {
@@ -40,12 +57,19 @@ export function FoundryView({
   capabilities,
   sources,
   understandingGaps,
+  practicalEvidence,
+  microWorlds,
+  consolidationProposals,
   requestedCapabilityId,
   contextTitle,
   onReturnToTheory,
   onApprove,
   onReject,
-  onActivate
+  onActivate,
+  onApply,
+  onPracticalFeedback,
+  onProposeConsolidation,
+  onReviewConsolidation
 }: FoundryViewProps) {
   const requestedCapability = capabilities.find((item) => item.manifest.id === requestedCapabilityId);
   const [selectedId, setSelectedId] = useState(requestedCapability?.manifest.id ?? capabilities[0]?.manifest.id);
@@ -74,6 +98,58 @@ export function FoundryView({
         (gap.recommendedIntervention.destination.kind === "capability" &&
           gap.recommendedIntervention.destination.id === manifest.id))
   );
+  const applications = practicalEvidence.applications.filter((application) => application.capabilityId === manifest.id);
+  const applicationIds = new Set(applications.map((application) => application.evidenceEventId));
+  const feedback = practicalEvidence.feedback.filter(
+    (item) => item.capabilityId === manifest.id || applicationIds.has(item.subjectEventId)
+  );
+  const applicationsWithFeedback = new Set(feedback.map((item) => item.subjectEventId));
+  const allCandidates: ConsolidationCandidate[] = [
+    ...applications
+      .filter((application) => !applicationsWithFeedback.has(application.evidenceEventId))
+      .map((application) => ({
+        eventId: application.evidenceEventId,
+        label: application.outputSummary,
+        kind: `application / ${application.outcome}`,
+        createdAt: application.createdAt
+      })),
+    ...feedback.map((item) => ({
+      eventId: item.evidenceEventId,
+      label: item.content,
+      kind: item.kind,
+      createdAt: item.createdAt
+    })),
+    ...microWorlds.flatMap((world) => {
+      if (!world.theoryElementIds.some((id) => theoryElementIds.has(id))) return [];
+      return [
+        ...world.interactions.map((interaction) => ({
+          eventId: interaction.evidenceEventId,
+          label: `Recorded observation in ${world.title}`,
+          kind: "micro-world observation",
+          createdAt: interaction.createdAt
+        })),
+        ...world.reflections.map((reflection) => ({
+          eventId: reflection.evidenceEventId,
+          label: reflection.response,
+          kind: "micro-world reflection",
+          createdAt: reflection.createdAt
+        }))
+      ];
+    })
+  ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const relevantCandidateIds = new Set(allCandidates.map((candidate) => candidate.eventId));
+  const relevantProposals = consolidationProposals.filter(
+    (proposal) =>
+      proposal.triggerEventIds.some((id) => relevantCandidateIds.has(id)) ||
+      proposal.theoryRevisions.some(
+        (revision) => theoryElementIds.has(revision.id) || theoryElementIds.has(revision.revisesElementId)
+      ) ||
+      proposal.capabilityRevisions.some(
+        (revision) => revision.id === manifest.id || revision.supersedesCapabilityId === manifest.id
+      )
+  );
+  const usedTriggerIds = new Set(consolidationProposals.flatMap((proposal) => proposal.triggerEventIds));
+  const candidates = allCandidates.filter((candidate) => !usedTriggerIds.has(candidate.eventId));
 
   return (
     <div className="page-scroll foundry-view foundry-shell">
@@ -145,6 +221,21 @@ export function FoundryView({
             onApprove={onApprove}
             onReject={onReject}
             onActivate={onActivate}
+          />
+          <CapabilityPracticePanel
+            key={`practice:${manifest.id}`}
+            capability={capability}
+            applications={applications}
+            feedback={feedback}
+            onApply={onApply}
+            onFeedback={onPracticalFeedback}
+          />
+          <ConsolidationPanel
+            key={`consolidation:${manifest.id}`}
+            candidates={candidates}
+            proposals={relevantProposals}
+            onPropose={onProposeConsolidation}
+            onReview={onReviewConsolidation}
           />
 
           <footer className="foundry-artifact-footer">

@@ -61,6 +61,24 @@ export function deriveUnderstandingNextAction(workspace: WorkspaceProjection): U
     };
   }
 
+  const practicalEventIds = new Set([
+    ...workspace.practicalEvidence.applications.map((item) => item.evidenceEventId),
+    ...workspace.practicalEvidence.feedback.map((item) => item.evidenceEventId),
+    ...workspace.microWorlds.flatMap((world) => [
+      ...world.interactions.map((item) => item.evidenceEventId),
+      ...world.reflections.map((item) => item.evidenceEventId)
+    ])
+  ]);
+  const consolidationReview = workspace.targetedReviewItems.find((item) => practicalEventIds.has(item.attemptEventId));
+  if (consolidationReview) {
+    return {
+      destination: { view: "learn", itemId: `check:${consolidationReview.checkId}` },
+      label: "Open targeted review",
+      title: consolidationReview.title,
+      why: "Recorded practical evidence created focused follow-up learning before further capability revision."
+    };
+  }
+
   const openGap = workspace.understandingGaps.gaps.find((gap) => gap.status === "open");
   if (openGap) {
     return actionFromGap(

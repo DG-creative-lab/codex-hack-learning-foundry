@@ -1,6 +1,7 @@
 import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createCapabilityWorkflow } from "./application/capabilityWorkflow";
+import { createConsolidationWorkflow } from "./application/consolidationWorkflow";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
@@ -61,6 +62,11 @@ function App() {
     () => new Map(workspace.capabilities.map((capability) => [capability.manifest.id, capability])),
     [workspace.capabilities]
   );
+  const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
+  const consolidationProposalsById = useMemo(
+    () => new Map(workspace.consolidationProposals.map((proposal) => [proposal.id, proposal])),
+    [workspace.consolidationProposals]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
     () =>
@@ -87,6 +93,31 @@ function App() {
         resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId)
       }),
     [append, capabilitiesById]
+  );
+  const consolidationWorkflow = useMemo(
+    () =>
+      createConsolidationWorkflow({
+        append,
+        resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId),
+        resolveEvent: (eventId) => eventsById.get(eventId),
+        resolveMicroWorld: (artifactId) => microWorldsById.get(artifactId),
+        resolveProposal: (proposalId) => consolidationProposalsById.get(proposalId),
+        theory: workspace.theory,
+        capabilities: workspace.capabilities,
+        checks: workspace.understandingChecks,
+        microWorlds: workspace.microWorlds
+      }),
+    [
+      append,
+      capabilitiesById,
+      consolidationProposalsById,
+      eventsById,
+      microWorldsById,
+      workspace.capabilities,
+      workspace.microWorlds,
+      workspace.theory,
+      workspace.understandingChecks
+    ]
   );
   const { sources } = workspace;
   const activeTheoryElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
@@ -231,12 +262,19 @@ function App() {
             capabilities={workspace.capabilities}
             sources={workspace.sources}
             understandingGaps={workspace.understandingGaps}
+            practicalEvidence={workspace.practicalEvidence}
+            microWorlds={workspace.microWorlds}
+            consolidationProposals={workspace.consolidationProposals}
             requestedCapabilityId={requestedCapabilityId}
             contextTitle={workspace.theory.title}
             onReturnToTheory={() => navigate({ view: "understanding" })}
             onApprove={capabilityWorkflow.approve}
             onReject={capabilityWorkflow.reject}
             onActivate={capabilityWorkflow.activate}
+            onApply={consolidationWorkflow.applyCapability}
+            onPracticalFeedback={consolidationWorkflow.recordFeedback}
+            onProposeConsolidation={consolidationWorkflow.propose}
+            onReviewConsolidation={consolidationWorkflow.review}
           />
         )}
         {view === "about" && <AboutView />}

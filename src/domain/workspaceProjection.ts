@@ -1,9 +1,12 @@
 import { z } from "zod";
 import { deriveCapabilities } from "./capabilityProjection";
+import { projectedConsolidationReviewItems } from "./consolidation";
+import { deriveConsolidationProposals } from "./consolidationProjection";
 import { deriveExplainers } from "./explainer";
 import { deriveLivingTheory, livingTheoryMetadataSchema } from "./livingTheory";
 import { deriveMemoryProjections } from "./memoryProjections";
 import { deriveMicroWorlds } from "./microWorld";
+import { derivePracticalEvidence } from "./practicalEvidence";
 import { deriveSourcePipeline } from "./sourceProjection";
 import { type EvidenceEvent, evidenceEventSchema } from "./types";
 import { deriveUnderstandingChecks } from "./understandingCheckProjection";
@@ -80,6 +83,19 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     theoryElementIds: new Set(theory.elements.map((element) => element.id)),
     understandingChecks: understanding.checks
   });
+  const practicalEvidence = derivePracticalEvidence(events, {
+    sourceIds: knownSourceIds,
+    theoryElementIds: new Set(theory.elements.map((element) => element.id)),
+    capabilityIds: new Set(capabilities.map((capability) => capability.manifest.id)),
+    microWorlds: new Map(microWorlds.map((world) => [world.id, world]))
+  });
+  const consolidationProposals = deriveConsolidationProposals(events, {
+    sourceIds: knownSourceIds,
+    fragmentIds: knownFragmentIds,
+    theoryElementIds: new Set(theory.elements.map((element) => element.id)),
+    capabilityIds: new Set(capabilities.map((capability) => capability.manifest.id)),
+    understandingCheckIds: new Set(understanding.checks.map((check) => check.id))
+  });
   const memories = deriveMemoryProjections({
     theory,
     events,
@@ -107,9 +123,11 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
     learningArtifacts: deriveLearningArtifacts(events, knownSourceIds),
     explainers,
     microWorlds,
+    practicalEvidence,
+    consolidationProposals,
     understandingChecks: understanding.checks,
     understandingEvidenceVectors: understanding.evidenceVectors,
-    targetedReviewItems: understanding.reviewItems,
+    targetedReviewItems: [...understanding.reviewItems, ...projectedConsolidationReviewItems(consolidationProposals)],
     capabilities
   };
 }
