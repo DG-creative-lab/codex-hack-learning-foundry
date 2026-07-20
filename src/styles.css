@@ -455,6 +455,10 @@ button {
 .topbar h1 {
   font-size: 24px;
 }
+.topbar h1:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
+}
 .topbar > div:first-child > p:last-child {
   margin: 7px 0 0;
   color: var(--muted);

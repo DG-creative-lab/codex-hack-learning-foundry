@@ -1,5 +1,6 @@
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { ExplainerProjection } from "../domain/explainer";
 import { countMicroWorldEvidence, type MicroWorldProjection } from "../domain/microWorld";
 import type { NormalizedSourceFragment } from "../domain/sourcePipeline";
@@ -144,12 +145,7 @@ export function LearnView({
   return (
     <div className="page-scroll learn-view">
       {onReturnToTheory && (
-        <section className="understanding-action-context">
-          <button type="button" onClick={onReturnToTheory}>
-            <ArrowLeft size={15} aria-hidden="true" /> Living Theory
-          </button>
-          <span>{contextTitle}</span>
-        </section>
+        <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
       )}
       <section className="learning-header">
         <div>

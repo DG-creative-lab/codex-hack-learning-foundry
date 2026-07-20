@@ -33,9 +33,30 @@ describe("Understanding workspace model", () => {
     expect(deriveUnderstandingNextAction(failed)).toMatchObject({
       kind: "source",
       id: failedSource.id,
-      label: "Retry extraction"
+      label: "Open source recovery"
     });
     expect(deriveUnderstandingWorkspaceState(failed, false)).toBe("extraction-failure");
+  });
+
+  it("surfaces a failed first source before the empty-theory state", () => {
+    const prepared = workspace();
+    const failedSource = {
+      ...prepared.sources[0],
+      status: "failed" as const,
+      error: { code: "network", message: "The first source could not be fetched.", retryable: true }
+    };
+    const failedFirstSource = {
+      ...prepared,
+      sources: [failedSource],
+      theory: { ...prepared.theory, elements: [], relationships: [], evidenceEventIds: [] }
+    };
+
+    expect(deriveUnderstandingWorkspaceState(failedFirstSource, false)).toBe("extraction-failure");
+    expect(deriveUnderstandingNextAction(failedFirstSource)).toMatchObject({
+      kind: "source",
+      id: failedSource.id,
+      label: "Open source recovery"
+    });
   });
 
   it("distinguishes loading, empty, contradiction, stale, and completed states", () => {

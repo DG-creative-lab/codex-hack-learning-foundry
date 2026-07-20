@@ -1,5 +1,4 @@
 import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, LoaderCircle } from "lucide-react";
-import { useState } from "react";
 import type { WorkspaceProjection } from "../../domain/workspaceProjection";
 import { TheoryInspector } from "./TheoryInspector";
 import { TheoryRegister } from "./TheoryRegister";
@@ -10,6 +9,8 @@ import "./understanding.css";
 interface UnderstandingViewProps {
   workspace: WorkspaceProjection;
   loading: boolean;
+  selectedElementId?: string;
+  onSelectElement: (elementId: string) => void;
   onAddSource: () => void;
   onOpenSource: (sourceId: string) => void;
   onOpenLearning: (itemId: string) => void;
@@ -30,6 +31,8 @@ const stateCopy = {
 export function UnderstandingView({
   workspace,
   loading,
+  selectedElementId,
+  onSelectElement,
   onAddSource,
   onOpenSource,
   onOpenLearning,
@@ -38,7 +41,6 @@ export function UnderstandingView({
 }: UnderstandingViewProps) {
   const activeElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
   const initialElement = activeElements.find((element) => element.kind === "purpose") ?? activeElements[0];
-  const [selectedElementId, setSelectedElementId] = useState(initialElement?.id);
   const selectedElement = activeElements.find((element) => element.id === selectedElementId) ?? initialElement;
   const state = deriveUnderstandingWorkspaceState(workspace, loading);
   const nextAction = deriveUnderstandingNextAction(workspace);
@@ -85,6 +87,20 @@ export function UnderstandingView({
     );
   }
 
+  if (state === "extraction-failure" && activeElements.length === 0) {
+    return (
+      <div className="page-scroll understanding-view understanding-state-view" data-workspace-state={state}>
+        <AlertTriangle size={24} aria-hidden="true" />
+        <p className="eyebrow">Living Theory / source recovery</p>
+        <h2>Source extraction failed</h2>
+        <p>{nextAction.why}</p>
+        <button type="button" className="primary-button" onClick={openNextAction}>
+          {nextAction.label} <ArrowRight size={15} aria-hidden="true" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page-scroll understanding-view" data-workspace-state={state}>
       <section className="understanding-objective">
@@ -121,7 +137,7 @@ export function UnderstandingView({
           elements={activeElements}
           sharedTheory={workspace.memories.shared}
           selectedElementId={selectedElement?.id}
-          onSelect={setSelectedElementId}
+          onSelect={onSelectElement}
         />
         {selectedElement && (
           <TheoryInspector
@@ -131,7 +147,7 @@ export function UnderstandingView({
             relationships={relatedRelationships}
             sources={workspace.sources}
             fragments={workspace.sourceFragments}
-            onSelectTheory={setSelectedElementId}
+            onSelectTheory={onSelectElement}
             onOpenSource={onOpenSource}
             onOpenMemory={onOpenMemory}
           />
@@ -141,7 +157,7 @@ export function UnderstandingView({
           questions={questions}
           evidenceCount={workspace.theory.evidenceEventIds.length}
           onOpenNextAction={openNextAction}
-          onSelectQuestion={setSelectedElementId}
+          onSelectQuestion={onSelectElement}
         />
       </section>
     </div>

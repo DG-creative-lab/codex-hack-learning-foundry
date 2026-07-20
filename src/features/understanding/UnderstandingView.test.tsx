@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seedEvents } from "../../data/sample";
@@ -29,12 +29,9 @@ async function renderView(
   workspace: WorkspaceProjection,
   overrides: Partial<Parameters<typeof UnderstandingView>[0]> = {}
 ) {
-  const view = document.createElement("div");
-  container = view;
-  document.body.append(view);
-  root = createRoot(view);
-  await act(async () => {
-    root?.render(
+  function Harness() {
+    const [selectedElementId, setSelectedElementId] = useState(overrides.selectedElementId);
+    return (
       <UnderstandingView
         workspace={workspace}
         loading={false}
@@ -44,8 +41,20 @@ async function renderView(
         onOpenMemory={() => undefined}
         onOpenFoundry={() => undefined}
         {...overrides}
+        selectedElementId={selectedElementId}
+        onSelectElement={(elementId) => {
+          setSelectedElementId(elementId);
+          overrides.onSelectElement?.(elementId);
+        }}
       />
     );
+  }
+  const view = document.createElement("div");
+  container = view;
+  document.body.append(view);
+  root = createRoot(view);
+  await act(async () => {
+    root?.render(<Harness />);
   });
   return view;
 }
@@ -93,6 +102,8 @@ describe("UnderstandingView", () => {
         <UnderstandingView
           workspace={empty}
           loading={false}
+          selectedElementId={undefined}
+          onSelectElement={() => undefined}
           onAddSource={onAddSource}
           onOpenSource={() => undefined}
           onOpenLearning={() => undefined}
@@ -104,5 +115,26 @@ describe("UnderstandingView", () => {
     expect(view.textContent).toContain("No shared theory yet");
     await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-state-view button").click());
     expect(onAddSource).toHaveBeenCalledOnce();
+  });
+
+  it("opens source recovery when extraction fails before theory exists", async () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const failedSource = {
+      ...workspace.sources[0],
+      status: "failed" as const,
+      error: { code: "network", message: "The first source could not be fetched.", retryable: true }
+    };
+    const failedWorkspace = {
+      ...workspace,
+      sources: [failedSource],
+      theory: { ...workspace.theory, elements: [], relationships: [], evidenceEventIds: [] }
+    };
+    const onOpenSource = vi.fn();
+    const view = await renderView(failedWorkspace, { onOpenSource });
+
+    expect(view.textContent).toContain("Source extraction failed");
+    expect(view.textContent).toContain("Open source recovery");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-state-view button").click());
+    expect(onOpenSource).toHaveBeenCalledWith(failedSource.id);
   });
 });

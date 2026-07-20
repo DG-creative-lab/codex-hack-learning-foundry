@@ -61,4 +61,40 @@ describe("App understanding-gap intervention routing", () => {
     expect(view.textContent).toContain("Understanding");
     expect(view.textContent).toContain("Next meaningful action");
   });
+
+  it("preserves theory context and restores heading focus across operational views", async () => {
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => root?.render(<App />));
+
+    const theoryOptions = [...view.querySelectorAll<HTMLButtonElement>('.theory-register [role="option"]')];
+    await act(async () => theoryOptions[1].click());
+    expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".theory-source-links button").click());
+    expect(document.activeElement).toBe(requiredElement(view, ".topbar h1"));
+    expect(document.activeElement?.textContent).toBe("Source library");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
+    expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".theory-evidence-trail button").click());
+    expect(document.activeElement).toBe(requiredElement(view, ".topbar h1"));
+    expect(document.activeElement?.textContent).toBe("Shared memory");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
+    expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".next-action > button").click());
+    expect(document.activeElement).toBe(requiredElement(view, ".topbar h1"));
+    expect(document.activeElement?.textContent).toBe("Learning studio");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
+    expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, 'button[aria-label="Foundry"]').click());
+    expect(document.activeElement).toBe(requiredElement(view, ".topbar h1"));
+    expect(document.activeElement?.textContent).toBe("Capability foundry");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-action-context button").click());
+    expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
+  });
 });

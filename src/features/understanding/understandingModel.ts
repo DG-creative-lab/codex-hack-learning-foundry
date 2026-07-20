@@ -65,7 +65,7 @@ export function deriveUnderstandingNextAction(workspace: WorkspaceProjection): U
     return {
       kind: "source",
       id: failedSource.id,
-      label: failedSource.error?.retryable ? "Retry extraction" : "Inspect source",
+      label: failedSource.error?.retryable ? "Open source recovery" : "Inspect source",
       title: `Recover ${failedSource.title}`,
       why: failedSource.error?.message ?? "The source could not enter the shared theory."
     };
@@ -154,8 +154,8 @@ export function deriveUnderstandingWorkspaceState(
   loading: boolean
 ): UnderstandingWorkspaceState {
   if (loading) return "loading";
-  if (workspace.theory.elements.filter((element) => element.status !== "superseded").length === 0) return "empty";
   if (workspace.sources.some((source) => source.status === "failed")) return "extraction-failure";
+  if (workspace.theory.elements.filter((element) => element.status !== "superseded").length === 0) return "empty";
   if (workspace.memories.shared.contradictionTheoryElementIds.length > 0) return "contradiction";
   if (workspace.memories.shared.staleTheoryElementIds.length > 0) return "stale";
   if (deriveUnderstandingNextAction(workspace).kind === "complete") return "completed";

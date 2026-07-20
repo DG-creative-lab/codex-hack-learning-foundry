@@ -12,6 +12,7 @@ import {
   Sparkles,
   UserRound
 } from "lucide-react";
+import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { NormalizedSourceFragment, SourceSynthesisProposal } from "../domain/sourcePipeline";
 import type { SourceOrigin, SourceRecord } from "../domain/sourceProjection";
 
@@ -24,6 +25,8 @@ interface SourcesViewProps {
   onProcess: () => void;
   onApprove: (proposalId: string) => void;
   onReject: (proposalId: string) => void;
+  contextTitle?: string;
+  onReturnToTheory?: () => void;
 }
 
 export function SourcesView({
@@ -34,7 +37,9 @@ export function SourcesView({
   setSelectedSourceId,
   onProcess,
   onApprove,
-  onReject
+  onReject,
+  contextTitle,
+  onReturnToTheory
 }: SourcesViewProps) {
   const selectedFragments = fragments.filter((fragment) => fragment.versionId === selectedSource.currentVersionId);
   const proposal = proposals.find(
@@ -43,6 +48,9 @@ export function SourcesView({
 
   return (
     <div className="page-scroll sources-view">
+      {onReturnToTheory && (
+        <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
+      )}
       <section className="pipeline-section">
         <div className="section-heading">
           <div>

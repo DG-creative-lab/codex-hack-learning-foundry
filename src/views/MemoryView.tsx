@@ -1,5 +1,6 @@
 import { Bot, History, Network, UserRound } from "lucide-react";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { MemoryProjections } from "../domain/memoryProjections";
 import type { EvidenceEvent, EvidenceKind, LivingTheory } from "../domain/types";
 import type { UnderstandingGapDestination, UnderstandingGapProjection } from "../domain/understandingGaps";
@@ -29,6 +30,8 @@ interface MemoryViewProps {
   onReviewGap: (gapId: string, decision: "confirmed" | "dismissed") => Promise<void>;
   onAnnotateGap: (gapId: string, note: string) => Promise<void>;
   onIntervene: (destination: UnderstandingGapDestination) => void;
+  contextTitle?: string;
+  onReturnToTheory?: () => void;
 }
 
 export function MemoryView({
@@ -39,7 +42,9 @@ export function MemoryView({
   requestedTheoryElementId,
   onReviewGap,
   onAnnotateGap,
-  onIntervene
+  onIntervene,
+  contextTitle,
+  onReturnToTheory
 }: MemoryViewProps) {
   const [selectedProjection, setSelectedProjection] = useState<ProjectionId>(
     requestedTheoryElementId ? "shared" : "human"
@@ -85,6 +90,9 @@ export function MemoryView({
 
   return (
     <div className="page-scroll memory-view">
+      {onReturnToTheory && (
+        <UnderstandingContextBar contextTitle={contextTitle ?? theory.title} onReturnToTheory={onReturnToTheory} />
+      )}
       <section className="memory-introduction">
         <div>
           <p className="eyebrow">Distinct projections / one canonical ledger</p>
