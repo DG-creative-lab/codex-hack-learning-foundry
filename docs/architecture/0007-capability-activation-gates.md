@@ -13,7 +13,7 @@ A generated capability can pass technical checks while its rationale, operating 
 Capability state is a deterministic projection of append-only events with six explicit states: `draft`, `evaluated`, `approved`, `active`, `rejected`, and `superseded`.
 
 - Registration records a draft manifest with source coverage, theory links, assumptions, boundaries, declared evaluation cases, and a bounded activation policy.
-- Evaluation records a result for every declared case. It cannot approve or activate the capability.
+- Evaluation records a result for every declared case. Re-evaluation appends a run to the inspectable history; the latest run informs the gate without erasing earlier failures. Evaluation cannot approve or activate the capability.
 - Approval or rejection is a human-authored decision that cites the exact gate evidence inspected at that point in the ledger.
 - Activation is a second explicit human event referencing the approval event.
 - Rejection records an actionable revision request. A revision is a new capability version and does not mutate the rejected version.

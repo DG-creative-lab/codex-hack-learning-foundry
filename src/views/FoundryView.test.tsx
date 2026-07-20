@@ -60,4 +60,48 @@ describe("FoundryView", () => {
     expect(view.textContent).toContain("synthesis alone cannot enable approval or activation");
     expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("draft");
   });
+
+  it("shows prior evaluation failures and excludes dismissed gaps from current warnings", async () => {
+    const workspace = reduceWorkspace(seedEvents);
+    const prepared = workspace.capabilities[0];
+    if (!prepared.evaluation) throw new Error("Prepared evaluation missing");
+    const failedRecord = {
+      ...prepared.evaluation,
+      evidenceEventId: "evt-capability-evaluation-prior-failure",
+      createdAt: "2026-07-14T09:59:00.000Z",
+      result: {
+        ...prepared.evaluation.result,
+        passed: prepared.evaluation.result.total - 1,
+        cases: prepared.evaluation.result.cases.map((result, index) =>
+          index === 0 ? { ...result, status: "failed" as const, evidence: "The audience was not identified." } : result
+        )
+      }
+    };
+    const capability = {
+      ...prepared,
+      evaluationHistory: [failedRecord, ...prepared.evaluationHistory]
+    };
+    const dismissedGap = { ...workspace.understandingGaps.gaps[0], status: "dismissed" as const };
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => {
+      root?.render(
+        <FoundryView
+          capabilities={[capability, ...workspace.capabilities.slice(1)]}
+          sources={workspace.sources}
+          understandingGaps={{ gaps: [dismissedGap], openCount: 0, confirmedCount: 0, dismissedCount: 1 }}
+          onApprove={vi.fn()}
+          onReject={vi.fn()}
+          onActivate={vi.fn()}
+        />
+      );
+    });
+
+    expect(view.textContent).toContain("Prior evaluation runs");
+    expect(view.textContent).toContain("The audience was not identified.");
+    expect(view.textContent).not.toContain(dismissedGap.title);
+    expect(view.textContent).toContain("No currently detected gap targets this capability.");
+  });
 });

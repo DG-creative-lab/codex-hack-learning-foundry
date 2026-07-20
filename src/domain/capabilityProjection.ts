@@ -29,7 +29,14 @@ function requireEventSources(event: EvidenceEvent, capability: FoundryCapability
 }
 
 function sameIds(left: string[], right: string[]) {
-  return left.length === right.length && left.every((id) => right.includes(id));
+  const leftIds = new Set(left);
+  const rightIds = new Set(right);
+  return (
+    leftIds.size === left.length &&
+    rightIds.size === right.length &&
+    leftIds.size === rightIds.size &&
+    [...leftIds].every((id) => rightIds.has(id))
+  );
 }
 
 function gateEvidenceEventIds(capability: FoundryCapability) {
@@ -72,6 +79,7 @@ export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityP
         manifest,
         registrationEventId: event.id,
         evaluation: null,
+        evaluationHistory: [],
         decision: null,
         activation: null,
         executions: 0
@@ -111,10 +119,12 @@ export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityP
           throw new Error(`Capability evaluation case ${result.caseId} has undeclared source evidence`);
         }
       }
+      const evaluationRecord = { result: evaluation, evidenceEventId: event.id, createdAt: event.createdAt };
       const evaluated = withStatus(
         {
           ...capability,
-          evaluation: { result: evaluation, evidenceEventId: event.id, createdAt: event.createdAt }
+          evaluation: evaluationRecord,
+          evaluationHistory: [...capability.evaluationHistory, evaluationRecord]
         },
         "evaluated"
       );

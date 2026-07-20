@@ -20,6 +20,7 @@ describe("workspace projection", () => {
     expect(workspace.capabilities[0]).toMatchObject({
       manifest: { id: capabilities[0].manifest.id, status: "evaluated" },
       evaluation: { result: capabilities[0].evaluation },
+      evaluationHistory: [{ result: capabilities[0].evaluation }],
       gate: { approvalReady: true, activationReady: false }
     });
     expect(workspace.theory.id).toBe("theory-design-density");

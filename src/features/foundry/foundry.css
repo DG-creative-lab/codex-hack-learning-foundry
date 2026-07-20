@@ -364,6 +364,45 @@
   font-size: var(--text-compact);
 }
 
+.foundry-evaluation-history article {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-evaluation-history article > div,
+.foundry-evaluation-history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.foundry-evaluation-history time,
+.foundry-evaluation-history li span {
+  color: var(--muted);
+  font-size: var(--text-secondary);
+}
+
+.foundry-evaluation-history ul {
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.foundry-evaluation-history li {
+  grid-template-columns: none;
+  padding: 9px 0;
+}
+
+.foundry-evaluation-history li::before {
+  content: none;
+}
+
+.foundry-evaluation-history p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-compact);
+}
+
 .foundry-gap-list article {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto;

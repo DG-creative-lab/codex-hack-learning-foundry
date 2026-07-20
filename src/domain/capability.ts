@@ -15,11 +15,18 @@ export const CAPABILITY_LIMITS = {
   evidenceCharacters: 2400,
   sourceIds: 64,
   evidenceEventIds: 96,
-  evaluationCases: 32
+  evaluationCases: 32,
+  evaluationRuns: 96
 } as const;
 
 const boundedIdSchema = z.string().min(1).max(CAPABILITY_LIMITS.idCharacters);
 const boundedIdArray = (maximum: number) => z.array(boundedIdSchema).max(maximum);
+const uniqueBoundedIdArray = (maximum: number) =>
+  boundedIdArray(maximum).superRefine((ids, context) => {
+    if (new Set(ids).size !== ids.length) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Evidence event IDs must be unique." });
+    }
+  });
 
 export const capabilityEvaluationResultSchema = z
   .object({
@@ -73,7 +80,7 @@ export const capabilityExecutionPayloadSchema = z
 const capabilityDecisionBaseSchema = z.object({
   capabilityId: boundedIdSchema,
   reason: z.string().trim().min(3).max(CAPABILITY_LIMITS.reasonCharacters),
-  gateEvidenceEventIds: boundedIdArray(CAPABILITY_LIMITS.evidenceEventIds)
+  gateEvidenceEventIds: uniqueBoundedIdArray(CAPABILITY_LIMITS.evidenceEventIds)
 });
 
 export const capabilityDecisionPayloadSchema = z.discriminatedUnion("decision", [
@@ -108,7 +115,7 @@ export const capabilityGateRequirementSchema = z
     label: z.string().min(1).max(240),
     met: z.boolean(),
     rationale: z.string().min(1).max(1200),
-    evidenceEventIds: boundedIdArray(CAPABILITY_LIMITS.evidenceEventIds)
+    evidenceEventIds: uniqueBoundedIdArray(CAPABILITY_LIMITS.evidenceEventIds)
   })
   .strict();
 
@@ -148,12 +155,31 @@ export const foundryCapabilitySchema = z
     manifest: capabilityManifestSchema,
     registrationEventId: boundedIdSchema,
     evaluation: capabilityEvaluationRecordSchema.nullable(),
+    evaluationHistory: z.array(capabilityEvaluationRecordSchema).max(CAPABILITY_LIMITS.evaluationRuns),
     decision: capabilityDecisionRecordSchema.nullable(),
     activation: capabilityActivationRecordSchema.nullable(),
     gate: capabilityGateSchema,
     executions: z.number().int().nonnegative()
   })
-  .strict();
+  .strict()
+  .superRefine((capability, context) => {
+    const latestEvaluation = capability.evaluationHistory.at(-1) ?? null;
+    if (capability.evaluation?.evidenceEventId !== latestEvaluation?.evidenceEventId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Latest evaluation must match the final evaluation history record.",
+        path: ["evaluation"]
+      });
+    }
+    const evaluationEventIds = capability.evaluationHistory.map((record) => record.evidenceEventId);
+    if (new Set(evaluationEventIds).size !== evaluationEventIds.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Evaluation history event IDs must be unique.",
+        path: ["evaluationHistory"]
+      });
+    }
+  });
 
 export type CapabilityEvaluation = z.infer<typeof capabilityEvaluationSchema>;
 export type CapabilityDecision = z.infer<typeof capabilityDecisionPayloadSchema>;
@@ -162,7 +188,10 @@ export type CapabilityGate = z.infer<typeof capabilityGateSchema>;
 export type FoundryCapability = z.infer<typeof foundryCapabilitySchema>;
 
 interface GateInput {
-  capability: Pick<FoundryCapability, "manifest" | "registrationEventId" | "evaluation" | "decision">;
+  capability: Pick<
+    FoundryCapability,
+    "manifest" | "registrationEventId" | "evaluation" | "evaluationHistory" | "decision"
+  >;
   understandingChecks: UnderstandingCheckProjection[];
   eventOrder?: Map<string, number>;
   beforeEventIndex?: number;
@@ -232,7 +261,7 @@ export function deriveCapabilityGate({
       rationale: capability.evaluation
         ? `${capability.evaluation.result.passed} of ${capability.evaluation.result.total} declared cases passed.`
         : "No evaluation result has been recorded.",
-      evidenceEventIds: capability.evaluation ? [capability.evaluation.evidenceEventId] : []
+      evidenceEventIds: capability.evaluationHistory.map((record) => record.evidenceEventId)
     },
     {
       id: "understanding",

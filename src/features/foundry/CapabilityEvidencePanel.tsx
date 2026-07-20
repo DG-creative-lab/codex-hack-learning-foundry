@@ -12,6 +12,7 @@ interface CapabilityEvidencePanelProps {
 export function CapabilityEvidencePanel({ capability, sources, gaps }: CapabilityEvidencePanelProps) {
   const { manifest } = capability;
   const resultsById = new Map(capability.evaluation?.result.cases.map((result) => [result.caseId, result]));
+  const priorEvaluations = capability.evaluationHistory.slice(0, -1).reverse();
 
   return (
     <section className="foundry-evidence" aria-label="Capability evidence dossier">
@@ -80,6 +81,43 @@ export function CapabilityEvidencePanel({ capability, sources, gaps }: Capabilit
             );
           })}
         </div>
+        {priorEvaluations.length > 0 && (
+          <>
+            <header>
+              <p className="eyebrow">Prior evaluation runs</p>
+              <span>{priorEvaluations.length}</span>
+            </header>
+            <div className="foundry-evaluation-history">
+              {priorEvaluations.map((record) => {
+                const failures = record.result.cases.filter((result) => result.status === "failed");
+                return (
+                  <article key={record.evidenceEventId}>
+                    <div>
+                      <strong>
+                        {record.result.passed}/{record.result.total} passed
+                      </strong>
+                      <time dateTime={record.createdAt}>{new Date(record.createdAt).toLocaleString()}</time>
+                    </div>
+                    {failures.length > 0 ? (
+                      <ul>
+                        {failures.map((failure) => (
+                          <li key={failure.caseId}>
+                            <strong>
+                              {manifest.evaluationCases.find((item) => item.id === failure.caseId)?.title}
+                            </strong>
+                            <span>{failure.evidence}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No failed cases were recorded in this run.</p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        )}
         <header>
           <p className="eyebrow">Relevant understanding gaps</p>
           <span>{gaps.length}</span>

@@ -69,9 +69,10 @@ export function FoundryView({
   const theoryElementIds = new Set(manifest.theoryElementIds);
   const relevantGaps = understandingGaps.gaps.filter(
     (gap) =>
-      gap.affectedTheoryElementIds.some((id) => theoryElementIds.has(id)) ||
-      (gap.recommendedIntervention.destination.kind === "capability" &&
-        gap.recommendedIntervention.destination.id === manifest.id)
+      gap.status !== "dismissed" &&
+      (gap.affectedTheoryElementIds.some((id) => theoryElementIds.has(id)) ||
+        (gap.recommendedIntervention.destination.kind === "capability" &&
+          gap.recommendedIntervention.destination.id === manifest.id))
   );
 
   return (

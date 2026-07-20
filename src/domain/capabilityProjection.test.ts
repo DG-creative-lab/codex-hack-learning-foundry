@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seedEvents } from "../data/sample";
+import { capabilityDecisionPayloadSchema, capabilityEvaluationPayloadSchema } from "./capability";
 import type { EvidenceEvent } from "./types";
 import { reduceWorkspace } from "./workspaceProjection";
 
@@ -34,6 +35,30 @@ function decisionEvent(decision: "approved" | "rejected", revisionRequest?: stri
       ...(decision === "rejected" ? { revisionRequest: revisionRequest ?? "Revise and resubmit." } : {})
     }
   };
+}
+
+function withFailedEvaluationBeforePreparedRun() {
+  const passingIndex = seedEvents.findIndex(
+    (event) =>
+      event.type === "capability.evaluation_recorded" && event.payload.capabilityId === "value-density-reviewer"
+  );
+  const passingEvent = seedEvents[passingIndex];
+  if (!passingEvent) throw new Error("Prepared evaluation event missing");
+  const { capabilityId, evaluation } = capabilityEvaluationPayloadSchema.parse(passingEvent.payload);
+  const failedCases = evaluation.cases.map((result, index) =>
+    index === 0 ? { ...result, status: "failed" as const, evidence: "The audience was not identified." } : result
+  );
+  const failedEvent: EvidenceEvent = {
+    ...passingEvent,
+    id: "evt-capability-evaluation-failed-earlier",
+    createdAt: "2026-07-14T09:59:00.000Z",
+    summary: "Recorded an earlier failed capability evaluation.",
+    payload: {
+      capabilityId,
+      evaluation: { passed: evaluation.total - 1, total: evaluation.total, cases: failedCases }
+    }
+  };
+  return [...seedEvents.slice(0, passingIndex), failedEvent, ...seedEvents.slice(passingIndex)];
 }
 
 describe("capability projection", () => {
@@ -77,6 +102,45 @@ describe("capability projection", () => {
       decision: "rejected",
       revisionRequest: "Add a novice-user evaluation and clarify the accessibility boundary."
     });
+  });
+
+  it("rejects duplicated gate evidence IDs that omit required evidence", () => {
+    const approval = decisionEvent("approved");
+    const payload = capabilityDecisionPayloadSchema.parse(approval.payload);
+    expect(payload.gateEvidenceEventIds.length).toBeGreaterThan(2);
+    const duplicatedEvidenceApproval: EvidenceEvent = {
+      ...approval,
+      id: "evt-capability-approval-duplicated-evidence",
+      payload: {
+        ...payload,
+        gateEvidenceEventIds: [
+          payload.gateEvidenceEventIds[0],
+          payload.gateEvidenceEventIds[0],
+          ...payload.gateEvidenceEventIds.slice(2)
+        ]
+      }
+    };
+
+    expect(() => reduceWorkspace([...seedEvents, duplicatedEvidenceApproval])).toThrow(
+      "Evidence event IDs must be unique"
+    );
+  });
+
+  it("retains prior failed evaluations while the latest run informs the gate", () => {
+    const workspace = reduceWorkspace(withFailedEvaluationBeforePreparedRun());
+    const capability = workspace.capabilities.find((candidate) => candidate.manifest.id === "value-density-reviewer");
+    if (!capability) throw new Error("Prepared capability missing");
+
+    expect(capability.evaluationHistory).toHaveLength(2);
+    expect(capability.evaluationHistory[0].result.cases[0]).toMatchObject({
+      status: "failed",
+      evidence: "The audience was not identified."
+    });
+    expect(capability.evaluation?.evidenceEventId).toBe(capability.evaluationHistory[1].evidenceEventId);
+    expect(
+      capability.gate.requirements.find((requirement) => requirement.id === "evaluation")?.evidenceEventIds
+    ).toEqual(capability.evaluationHistory.map((record) => record.evidenceEventId));
+    expect(capability.gate.approvalReady).toBe(true);
   });
 
   it("supports a lighter low-risk understanding policy without bypassing approval", () => {
