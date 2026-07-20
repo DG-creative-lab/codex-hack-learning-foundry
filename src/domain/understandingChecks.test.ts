@@ -155,7 +155,7 @@ describe("understanding checks", () => {
 
     expect(beforeDispute.reviewItems[0]).toMatchObject({
       checkId: prediction.id,
-      attemptEventId: attemptEvent.id
+      evidenceEventIds: [attemptEvent.id]
     });
     expect(beforeDispute.reviewItems[0]?.sourceIds.length).toBeGreaterThan(0);
     expect(beforeDispute.evidenceVectors[0]?.dimensions.prediction.challenges).toBe(1);

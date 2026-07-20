@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ConsolidationProposalProjection } from "./consolidation";
 import { synthesisReviewPayloadSchema } from "./sourcePipeline";
 import {
   type EvidenceEvent,
@@ -52,7 +53,11 @@ function relationshipFromPayload(raw: unknown, event: EvidenceEvent): TheoryRela
   };
 }
 
-export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingTheoryMetadata): LivingTheory {
+export function deriveLivingTheory(
+  rawEvents: EvidenceEvent[],
+  metadata: LivingTheoryMetadata,
+  consolidationProposals: ConsolidationProposalProjection[] = []
+): LivingTheory {
   const events = evidenceEventSchema.array().parse(rawEvents);
   const eventIds = new Set<string>();
   const elements = new Map<string, TheoryElement>();
@@ -115,6 +120,23 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
           recordRelationship(relationshipFromPayload(rawRelationship, event), event);
         }
       }
+    }
+  }
+
+  for (const proposal of consolidationProposals) {
+    if (proposal.status !== "approved" || !proposal.review) continue;
+    const reviewEvent: EvidenceEvent = {
+      id: proposal.review.evidenceEventId,
+      type: "consolidation.reviewed",
+      kind: "user_interpretation",
+      createdAt: proposal.review.createdAt,
+      actor: "human",
+      summary: proposal.review.reason,
+      sourceIds: proposal.review.sourceIds,
+      payload: proposal.review
+    };
+    for (const revision of proposal.theoryRevisions) {
+      recordElement(elementFromPayload(revision, reviewEvent, true), reviewEvent, true);
     }
   }
 

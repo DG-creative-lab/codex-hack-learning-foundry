@@ -9,6 +9,7 @@ import {
   type FoundryCapability,
   foundryCapabilitySchema
 } from "./capability";
+import { practicalApplicationPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent } from "./types";
 import type { UnderstandingCheckProjection } from "./understandingChecks";
 
@@ -90,6 +91,29 @@ export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityP
       };
       requireEventSources(event, capability);
       capabilities.set(manifest.id, capability);
+      continue;
+    }
+
+    if (event.type === "practical.application_recorded") {
+      if (event.actor !== "agent" || event.kind !== "practical_observation") {
+        throw new Error(`Practical application ${event.id} must be recorded as an agent practical observation`);
+      }
+      const application = practicalApplicationPayloadSchema.parse(event.payload);
+      const capability = capabilities.get(application.capabilityId);
+      if (!capability) {
+        throw new Error(`Practical application ${event.id} references unknown capability ${application.capabilityId}`);
+      }
+      if (capability.manifest.status !== "active") {
+        throw new Error(`Capability ${application.capabilityId} cannot be applied from ${capability.manifest.status}`);
+      }
+      if (application.capabilityVersion !== capability.manifest.version) {
+        throw new Error(`Practical application ${event.id} does not match the active capability version`);
+      }
+      if (!sameIds(application.theoryElementIds, capability.manifest.theoryElementIds)) {
+        throw new Error(`Practical application ${event.id} does not match the capability theory context`);
+      }
+      requireEventSources(event, capability);
+      capabilities.set(application.capabilityId, { ...capability, executions: capability.executions + 1 });
       continue;
     }
 

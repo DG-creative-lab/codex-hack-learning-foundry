@@ -1,6 +1,7 @@
 import { ChevronDown, Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createCapabilityWorkflow } from "./application/capabilityWorkflow";
+import { createConsolidationWorkflow } from "./application/consolidationWorkflow";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
@@ -15,11 +16,12 @@ import { Sidebar } from "./components/Sidebar";
 import { reduceWorkspace } from "./domain/workspaceProjection";
 import { UnderstandingView } from "./features/understanding/UnderstandingView";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
-import { AboutView } from "./views/AboutView";
-import { FoundryView } from "./views/FoundryView";
-import { LearnView } from "./views/LearnView";
-import { MemoryView } from "./views/MemoryView";
-import { SourcesView } from "./views/SourcesView";
+
+const AboutView = lazy(() => import("./views/AboutView").then((module) => ({ default: module.AboutView })));
+const FoundryView = lazy(() => import("./views/FoundryView").then((module) => ({ default: module.FoundryView })));
+const LearnView = lazy(() => import("./views/LearnView").then((module) => ({ default: module.LearnView })));
+const MemoryView = lazy(() => import("./views/MemoryView").then((module) => ({ default: module.MemoryView })));
+const SourcesView = lazy(() => import("./views/SourcesView").then((module) => ({ default: module.SourcesView })));
 
 const pageTitles: Record<WorkspaceView, [string, string]> = {
   sources: ["Source library", "Capture, process, and trace knowledge"],
@@ -61,6 +63,11 @@ function App() {
     () => new Map(workspace.capabilities.map((capability) => [capability.manifest.id, capability])),
     [workspace.capabilities]
   );
+  const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
+  const consolidationProposalsById = useMemo(
+    () => new Map(workspace.consolidationProposals.map((proposal) => [proposal.id, proposal])),
+    [workspace.consolidationProposals]
+  );
   const sourceWorkflow = useMemo(() => createSourceWorkflow({ append }), [append]);
   const learningWorkflow = useMemo(
     () =>
@@ -87,6 +94,31 @@ function App() {
         resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId)
       }),
     [append, capabilitiesById]
+  );
+  const consolidationWorkflow = useMemo(
+    () =>
+      createConsolidationWorkflow({
+        append,
+        resolveCapability: (capabilityId) => capabilitiesById.get(capabilityId),
+        resolveEvent: (eventId) => eventsById.get(eventId),
+        resolveMicroWorld: (artifactId) => microWorldsById.get(artifactId),
+        resolveProposal: (proposalId) => consolidationProposalsById.get(proposalId),
+        theory: workspace.theory,
+        capabilities: workspace.capabilities,
+        checks: workspace.understandingChecks,
+        microWorlds: workspace.microWorlds
+      }),
+    [
+      append,
+      capabilitiesById,
+      consolidationProposalsById,
+      eventsById,
+      microWorldsById,
+      workspace.capabilities,
+      workspace.microWorlds,
+      workspace.theory,
+      workspace.understandingChecks
+    ]
   );
   const { sources } = workspace;
   const activeTheoryElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
@@ -162,84 +194,99 @@ function App() {
           </p>
         )}
 
-        {view === "sources" && (
-          <SourcesView
-            sources={sources}
-            selectedSource={selectedSource}
-            fragments={workspace.sourceFragments}
-            proposals={workspace.synthesisProposals}
-            setSelectedSourceId={setSelectedSourceId}
-            onProcess={() => void sourceWorkflow.process(selectedSource, workspace).catch(() => undefined)}
-            onApprove={(proposalId) =>
-              void sourceWorkflow.review(proposalId, "approved", workspace).catch(() => undefined)
-            }
-            onReject={(proposalId) =>
-              void sourceWorkflow.review(proposalId, "rejected", workspace).catch(() => undefined)
-            }
-            contextTitle={workspace.theory.title}
-            onReturnToTheory={() => navigate({ view: "understanding" })}
-          />
-        )}
-        {view === "understanding" && (
-          <UnderstandingView
-            workspace={workspace}
-            loading={!ready}
-            selectedElementId={currentTheoryElementId}
-            onSelectElement={setSelectedTheoryElementId}
-            onAddSource={() => setShowAddSource(true)}
-            onNavigate={navigate}
-          />
-        )}
-        {view === "learn" && (
-          <LearnView
-            requestedItemId={requestedLearnItemId}
-            contextTitle={workspace.theory.title}
-            onReturnToTheory={() => navigate({ view: "understanding" })}
-            artifacts={workspace.learningArtifacts}
-            explainers={workspace.explainers}
-            microWorlds={workspace.microWorlds}
-            checks={workspace.understandingChecks}
-            evidenceVectors={workspace.understandingEvidenceVectors}
-            reviewItems={workspace.targetedReviewItems}
-            fragments={workspace.sourceFragments}
-            sources={workspace.sources}
-            onFeedback={learningWorkflow.recordExplainerFeedback}
-            onResponse={learningWorkflow.recordUnderstandingResponse}
-            onDispute={learningWorkflow.disputeUnderstandingEvaluation}
-            onPreference={learningWorkflow.recordCheckPreference}
-            onMicroWorldPrediction={learningWorkflow.recordMicroWorldPrediction}
-            onMicroWorldInteraction={learningWorkflow.recordMicroWorldInteraction}
-            onMicroWorldReflection={learningWorkflow.recordMicroWorldReflection}
-          />
-        )}
-        {view === "memory" && (
-          <MemoryView
-            requestedTheoryElementId={currentTheoryElementId}
-            events={events}
-            theory={workspace.theory}
-            projections={workspace.memories}
-            understandingGaps={workspace.understandingGaps}
-            onReviewGap={memoryWorkflow.reviewUnderstandingGap}
-            onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
-            onIntervene={(destination) => navigate(destinationFromUnderstandingGap(destination))}
-            contextTitle={workspace.theory.title}
-            onReturnToTheory={() => navigate({ view: "understanding" })}
-          />
-        )}
-        {view === "foundry" && (
-          <FoundryView
-            capabilities={workspace.capabilities}
-            sources={workspace.sources}
-            understandingGaps={workspace.understandingGaps}
-            requestedCapabilityId={requestedCapabilityId}
-            contextTitle={workspace.theory.title}
-            onReturnToTheory={() => navigate({ view: "understanding" })}
-            onApprove={capabilityWorkflow.approve}
-            onReject={capabilityWorkflow.reject}
-            onActivate={capabilityWorkflow.activate}
-          />
-        )}
-        {view === "about" && <AboutView />}
+        <Suspense
+          fallback={
+            <div className="view-loading" role="status">
+              Loading workspace...
+            </div>
+          }
+        >
+          {view === "sources" && (
+            <SourcesView
+              sources={sources}
+              selectedSource={selectedSource}
+              fragments={workspace.sourceFragments}
+              proposals={workspace.synthesisProposals}
+              setSelectedSourceId={setSelectedSourceId}
+              onProcess={() => void sourceWorkflow.process(selectedSource, workspace).catch(() => undefined)}
+              onApprove={(proposalId) =>
+                void sourceWorkflow.review(proposalId, "approved", workspace).catch(() => undefined)
+              }
+              onReject={(proposalId) =>
+                void sourceWorkflow.review(proposalId, "rejected", workspace).catch(() => undefined)
+              }
+              contextTitle={workspace.theory.title}
+              onReturnToTheory={() => navigate({ view: "understanding" })}
+            />
+          )}
+          {view === "understanding" && (
+            <UnderstandingView
+              workspace={workspace}
+              loading={!ready}
+              selectedElementId={currentTheoryElementId}
+              onSelectElement={setSelectedTheoryElementId}
+              onAddSource={() => setShowAddSource(true)}
+              onNavigate={navigate}
+            />
+          )}
+          {view === "learn" && (
+            <LearnView
+              requestedItemId={requestedLearnItemId}
+              contextTitle={workspace.theory.title}
+              onReturnToTheory={() => navigate({ view: "understanding" })}
+              artifacts={workspace.learningArtifacts}
+              explainers={workspace.explainers}
+              microWorlds={workspace.microWorlds}
+              checks={workspace.understandingChecks}
+              evidenceVectors={workspace.understandingEvidenceVectors}
+              reviewItems={workspace.targetedReviewItems}
+              fragments={workspace.sourceFragments}
+              sources={workspace.sources}
+              onFeedback={learningWorkflow.recordExplainerFeedback}
+              onResponse={learningWorkflow.recordUnderstandingResponse}
+              onDispute={learningWorkflow.disputeUnderstandingEvaluation}
+              onPreference={learningWorkflow.recordCheckPreference}
+              onMicroWorldPrediction={learningWorkflow.recordMicroWorldPrediction}
+              onMicroWorldInteraction={learningWorkflow.recordMicroWorldInteraction}
+              onMicroWorldReflection={learningWorkflow.recordMicroWorldReflection}
+            />
+          )}
+          {view === "memory" && (
+            <MemoryView
+              requestedTheoryElementId={currentTheoryElementId}
+              events={events}
+              theory={workspace.theory}
+              projections={workspace.memories}
+              understandingGaps={workspace.understandingGaps}
+              onReviewGap={memoryWorkflow.reviewUnderstandingGap}
+              onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
+              onIntervene={(destination) => navigate(destinationFromUnderstandingGap(destination))}
+              contextTitle={workspace.theory.title}
+              onReturnToTheory={() => navigate({ view: "understanding" })}
+            />
+          )}
+          {view === "foundry" && (
+            <FoundryView
+              capabilities={workspace.capabilities}
+              sources={workspace.sources}
+              understandingGaps={workspace.understandingGaps}
+              practicalEvidence={workspace.practicalEvidence}
+              microWorlds={workspace.microWorlds}
+              consolidationProposals={workspace.consolidationProposals}
+              requestedCapabilityId={requestedCapabilityId}
+              contextTitle={workspace.theory.title}
+              onReturnToTheory={() => navigate({ view: "understanding" })}
+              onApprove={capabilityWorkflow.approve}
+              onReject={capabilityWorkflow.reject}
+              onActivate={capabilityWorkflow.activate}
+              onApply={consolidationWorkflow.applyCapability}
+              onPracticalFeedback={consolidationWorkflow.recordFeedback}
+              onProposeConsolidation={consolidationWorkflow.propose}
+              onReviewConsolidation={consolidationWorkflow.review}
+            />
+          )}
+          {view === "about" && <AboutView />}
+        </Suspense>
       </main>
 
       {showAddSource && (

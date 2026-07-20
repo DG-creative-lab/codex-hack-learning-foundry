@@ -8,6 +8,7 @@ import {
   type MemoryEvidenceReference
 } from "./memoryProjectionTypes";
 import type { MicroWorldProjection } from "./microWorld";
+import { practicalFeedbackPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent, LivingTheory } from "./types";
 import type { UnderstandingCheckProjection, UnderstandingDimension } from "./understandingChecks";
 
@@ -180,6 +181,22 @@ export function deriveHumanMemory(
         )
       );
     }
+  }
+
+  for (const event of eventsById.values()) {
+    if (!event.type.startsWith("practical.") || event.type === "practical.application_recorded") continue;
+    const feedback = practicalFeedbackPayloadSchema.parse(event.payload);
+    const isChallenge = feedback.kind === "correction" || feedback.kind === "failure";
+    addDimensionEvidence(
+      elements,
+      feedback.theoryElementIds,
+      isChallenge ? "uncertainty" : "participation",
+      evidenceReference(
+        event,
+        isChallenge ? "mixed" : "supports",
+        `The learner recorded practical ${feedback.kind} evidence linked to ${feedback.subjectEventId}.`
+      )
+    );
   }
 
   const projectedElements = finalizeElements([...elements.values()], asOf);

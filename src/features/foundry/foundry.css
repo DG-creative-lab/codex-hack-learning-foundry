@@ -484,6 +484,242 @@
   color: var(--signal-dark);
 }
 
+.foundry-practice,
+.foundry-consolidation {
+  padding: 28px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.foundry-practice > header,
+.foundry-consolidation > header,
+.consolidation-proposal > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.foundry-practice h3,
+.foundry-consolidation h3 {
+  margin: 4px 0 0;
+  font-size: var(--text-section-title);
+}
+
+.foundry-practice > header > span,
+.foundry-consolidation > header > span,
+.consolidation-proposal header small,
+.consolidation-proposal header code {
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.foundry-practice-form,
+.foundry-feedback-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) minmax(260px, 1fr);
+  gap: 10px 24px;
+  padding-top: 22px;
+}
+
+.foundry-practice-form label,
+.foundry-feedback-form label,
+.consolidation-review label {
+  font-size: var(--text-compact);
+  font-weight: 600;
+}
+
+.foundry-practice-form textarea,
+.foundry-feedback-form textarea,
+.consolidation-review textarea {
+  min-height: 76px;
+  padding: 10px;
+  resize: vertical;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.foundry-practice-form textarea,
+.foundry-feedback-form textarea,
+.foundry-practice-form .foundry-segmented,
+.foundry-feedback-form .foundry-segmented,
+.foundry-practice-form > button,
+.foundry-feedback-form > button,
+.foundry-feedback-form > [role="alert"],
+.foundry-saved-evidence,
+.foundry-application-result {
+  grid-column: 2;
+}
+
+.foundry-segmented {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+}
+
+.foundry-practice-form .foundry-segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.foundry-segmented button {
+  min-height: 38px;
+  padding: 8px;
+  color: var(--muted);
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+}
+
+.foundry-segmented button:last-child {
+  border-right: 0;
+}
+
+.foundry-segmented button[aria-pressed="true"] {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.foundry-practice-form > button,
+.foundry-feedback-form > button {
+  justify-self: end;
+}
+
+.foundry-application-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.foundry-application-result span,
+.foundry-application-result small,
+.foundry-saved-evidence {
+  color: var(--muted);
+  font-size: var(--text-secondary);
+}
+
+.foundry-application-result span {
+  text-transform: uppercase;
+}
+
+.foundry-application-result small {
+  grid-column: 2;
+  overflow-wrap: anywhere;
+}
+
+.foundry-saved-evidence {
+  margin: 0;
+}
+
+.foundry-feedback-form [role="alert"],
+.consolidation-review [role="alert"] {
+  margin: 0;
+  color: var(--signal-dark);
+}
+
+.consolidation-candidates {
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.consolidation-candidates article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.consolidation-candidates article > div,
+.consolidation-proposal header > div,
+.consolidation-proposal > p {
+  display: grid;
+  gap: 5px;
+}
+
+.consolidation-candidates small,
+.consolidation-candidates code {
+  color: var(--muted);
+  font-size: var(--text-secondary);
+}
+
+.consolidation-candidates code,
+.consolidation-proposal code {
+  overflow-wrap: anywhere;
+}
+
+.consolidation-proposal {
+  padding: 24px 0 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.consolidation-proposal > dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 20px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.consolidation-proposal > dl > div {
+  padding: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.consolidation-proposal > dl > div:last-child {
+  border-right: 0;
+}
+
+.consolidation-proposal dt {
+  color: var(--muted);
+  font-size: var(--text-secondary);
+}
+
+.consolidation-proposal dd {
+  margin: 3px 0 0;
+  font-weight: 700;
+}
+
+.consolidation-proposal > p {
+  margin: 14px 0;
+}
+
+.consolidation-proposal > p span,
+.consolidation-decision {
+  color: var(--muted);
+}
+
+.consolidation-review {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) minmax(260px, 1fr);
+  gap: 10px 24px;
+  padding: 20px 0 24px;
+  border-top: 1px solid var(--line);
+}
+
+.consolidation-review > textarea,
+.consolidation-review > div,
+.consolidation-review > [role="alert"] {
+  grid-column: 2;
+}
+
+.consolidation-review > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .foundry-artifact-footer {
   display: flex;
   justify-content: space-between;
@@ -545,7 +781,9 @@
   .foundry-gate,
   .foundry-evidence-column,
   .foundry-evaluation-column,
-  .foundry-decision {
+  .foundry-decision,
+  .foundry-practice,
+  .foundry-consolidation {
     padding: 22px 18px;
   }
 
@@ -567,8 +805,57 @@
     grid-template-columns: 1fr;
   }
 
-  .foundry-decision > * {
+  .foundry-decision > *,
+  .foundry-practice-form > *,
+  .foundry-feedback-form > *,
+  .consolidation-review > * {
     grid-column: 1 !important;
+  }
+
+  .foundry-practice-form,
+  .foundry-feedback-form,
+  .consolidation-review,
+  .consolidation-candidates article {
+    grid-template-columns: 1fr;
+  }
+
+  .foundry-practice-form > button,
+  .foundry-feedback-form > button {
+    justify-self: stretch;
+  }
+
+  .foundry-segmented {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .foundry-segmented button:nth-child(2) {
+    border-right: 0;
+  }
+
+  .foundry-segmented button:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .foundry-practice-form .foundry-segmented {
+    grid-template-columns: 1fr;
+  }
+
+  .foundry-practice-form .foundry-segmented button {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .foundry-practice-form .foundry-segmented button:last-child {
+    border-bottom: 0;
+  }
+
+  .consolidation-candidates article > button {
+    justify-self: stretch;
+  }
+
+  .consolidation-review > div {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .foundry-decision > div {

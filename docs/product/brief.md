@@ -36,7 +36,7 @@ Self-directed professionals, researchers, students, and builders who need to tur
 6. Generate a draft Codex skill from the same Living Theory.
 7. Inspect provenance, assumptions, boundaries, evaluation cases, and relevant understanding evidence.
 8. Approve the evaluated skill and apply it to a new task.
-9. Record feedback and create both a human review item and traceable theory and capability revision proposals.
+9. Record feedback and create both a human review item, a traceable theory revision proposal, and a structured capability revision request.
 
 The prepared design-density workspace supplies the deterministic sample data for this flow.
 
