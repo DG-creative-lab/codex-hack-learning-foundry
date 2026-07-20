@@ -14,8 +14,7 @@ describe("Understanding workspace model", () => {
     const action = deriveUnderstandingNextAction(prepared);
 
     expect(action).toMatchObject({
-      kind: "learning",
-      id: `check:${predictionGap?.recommendedIntervention.destination.id}`,
+      destination: { view: "learn", itemId: `check:${predictionGap?.recommendedIntervention.destination.id}` },
       title: predictionGap?.title
     });
     expect(deriveUnderstandingWorkspaceState(prepared, false)).toBe("active");
@@ -31,8 +30,7 @@ describe("Understanding workspace model", () => {
     const failed = { ...prepared, sources: [failedSource, ...prepared.sources.slice(1)] };
 
     expect(deriveUnderstandingNextAction(failed)).toMatchObject({
-      kind: "source",
-      id: failedSource.id,
+      destination: { view: "sources", sourceId: failedSource.id },
       label: "Open source recovery"
     });
     expect(deriveUnderstandingWorkspaceState(failed, false)).toBe("extraction-failure");
@@ -53,8 +51,7 @@ describe("Understanding workspace model", () => {
 
     expect(deriveUnderstandingWorkspaceState(failedFirstSource, false)).toBe("extraction-failure");
     expect(deriveUnderstandingNextAction(failedFirstSource)).toMatchObject({
-      kind: "source",
-      id: failedSource.id,
+      destination: { view: "sources", sourceId: failedSource.id },
       label: "Open source recovery"
     });
   });
@@ -100,6 +97,6 @@ describe("Understanding workspace model", () => {
     expect(deriveUnderstandingWorkspaceState(contradiction, false)).toBe("contradiction");
     expect(deriveUnderstandingWorkspaceState(stale, false)).toBe("stale");
     expect(deriveUnderstandingWorkspaceState(completed, false)).toBe("completed");
-    expect(deriveUnderstandingNextAction(completed).kind).toBe("complete");
+    expect(deriveUnderstandingNextAction(completed)).not.toHaveProperty("destination");
   });
 });

@@ -1,11 +1,10 @@
 import { BrainCircuit, CircleDot, GraduationCap, Info, Library, Network, ShieldCheck, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
-
-export type ViewId = "sources" | "understanding" | "learn" | "memory" | "foundry" | "about";
+import type { WorkspaceView } from "../application/workspaceNavigation";
 
 interface SidebarProps {
-  view: ViewId;
-  setView: (view: ViewId) => void;
+  view: WorkspaceView;
+  setView: (view: WorkspaceView) => void;
   eventCount: number;
   sourceCount: number;
   theoryCount: number;
@@ -13,7 +12,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ view, setView, eventCount, sourceCount, theoryCount, atomCount }: SidebarProps) {
-  const items: Array<[ViewId, string, ReactNode, string]> = [
+  const items: Array<[WorkspaceView, string, ReactNode, string]> = [
     ["sources", "Sources", <Library key="sources" size={17} />, "01"],
     [
       "understanding",

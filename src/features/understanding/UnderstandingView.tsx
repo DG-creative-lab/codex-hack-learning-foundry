@@ -1,4 +1,5 @@
 import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, LoaderCircle } from "lucide-react";
+import type { WorkspaceDestination } from "../../application/workspaceNavigation";
 import type { WorkspaceProjection } from "../../domain/workspaceProjection";
 import { TheoryInspector } from "./TheoryInspector";
 import { TheoryRegister } from "./TheoryRegister";
@@ -12,10 +13,7 @@ interface UnderstandingViewProps {
   selectedElementId?: string;
   onSelectElement: (elementId: string) => void;
   onAddSource: () => void;
-  onOpenSource: (sourceId: string) => void;
-  onOpenLearning: (itemId: string) => void;
-  onOpenMemory: (theoryElementId: string) => void;
-  onOpenFoundry: (capabilityId: string) => void;
+  onNavigate: (destination: WorkspaceDestination) => void;
 }
 
 const stateCopy = {
@@ -34,10 +32,7 @@ export function UnderstandingView({
   selectedElementId,
   onSelectElement,
   onAddSource,
-  onOpenSource,
-  onOpenLearning,
-  onOpenMemory,
-  onOpenFoundry
+  onNavigate
 }: UnderstandingViewProps) {
   const activeElements = workspace.theory.elements.filter((element) => element.status !== "superseded");
   const initialElement = activeElements.find((element) => element.kind === "purpose") ?? activeElements[0];
@@ -55,11 +50,8 @@ export function UnderstandingView({
   const stateLabel = stateCopy[state];
 
   function openNextAction() {
-    if (nextAction.kind === "source") onOpenSource(nextAction.id);
-    if (nextAction.kind === "learning") onOpenLearning(nextAction.id);
-    if (nextAction.kind === "memory") onOpenMemory(nextAction.id);
-    if (nextAction.kind === "foundry") onOpenFoundry(nextAction.id);
-    if (nextAction.kind === "complete" && selectedElement) onOpenMemory(selectedElement.id);
+    if ("destination" in nextAction) onNavigate(nextAction.destination);
+    else if (selectedElement) onNavigate({ view: "memory", theoryElementId: selectedElement.id });
   }
 
   if (state === "loading") {
@@ -148,8 +140,8 @@ export function UnderstandingView({
             sources={workspace.sources}
             fragments={workspace.sourceFragments}
             onSelectTheory={onSelectElement}
-            onOpenSource={onOpenSource}
-            onOpenMemory={onOpenMemory}
+            onOpenSource={(sourceId) => onNavigate({ view: "sources", sourceId })}
+            onOpenMemory={(theoryElementId) => onNavigate({ view: "memory", theoryElementId })}
           />
         )}
         <UnderstandingActionRail

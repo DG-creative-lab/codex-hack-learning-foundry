@@ -36,10 +36,7 @@ async function renderView(
         workspace={workspace}
         loading={false}
         onAddSource={() => undefined}
-        onOpenSource={() => undefined}
-        onOpenLearning={() => undefined}
-        onOpenMemory={() => undefined}
-        onOpenFoundry={() => undefined}
+        onNavigate={() => undefined}
         {...overrides}
         selectedElementId={selectedElementId}
         onSelectElement={(elementId) => {
@@ -62,9 +59,8 @@ async function renderView(
 describe("UnderstandingView", () => {
   it("moves through theory by keyboard and opens exact provenance and memory destinations", async () => {
     const workspace = reduceWorkspace(seedEvents);
-    const onOpenSource = vi.fn();
-    const onOpenMemory = vi.fn();
-    const view = await renderView(workspace, { onOpenSource, onOpenMemory });
+    const onNavigate = vi.fn();
+    const view = await renderView(workspace, { onNavigate });
     const options = [...view.querySelectorAll<HTMLButtonElement>('.theory-register [role="option"]')];
 
     expect(view.textContent).toContain("Next meaningful action");
@@ -76,17 +72,20 @@ describe("UnderstandingView", () => {
     expect(requiredElement(view, ".theory-inspector h3").textContent).toBe("Visual density");
 
     await act(async () => requiredElement<HTMLButtonElement>(view, ".theory-source-links button").click());
-    expect(onOpenSource).toHaveBeenCalledWith("source-ui-density-2024");
+    expect(onNavigate).toHaveBeenCalledWith({ view: "sources", sourceId: "source-ui-density-2024" });
     await act(async () => requiredElement<HTMLButtonElement>(view, ".theory-evidence-trail button").click());
-    expect(onOpenMemory).toHaveBeenCalledWith("theory-concept-visual-density");
+    expect(onNavigate).toHaveBeenCalledWith({
+      view: "memory",
+      theoryElementId: "theory-concept-visual-density"
+    });
   });
 
   it("routes the prepared next action to the exact learning item", async () => {
-    const onOpenLearning = vi.fn();
-    const view = await renderView(reduceWorkspace(seedEvents), { onOpenLearning });
+    const onNavigate = vi.fn();
+    const view = await renderView(reduceWorkspace(seedEvents), { onNavigate });
 
     await act(async () => requiredElement<HTMLButtonElement>(view, ".next-action > button").click());
-    expect(onOpenLearning).toHaveBeenCalledWith(expect.stringMatching(/^check:/));
+    expect(onNavigate).toHaveBeenCalledWith({ view: "learn", itemId: expect.stringMatching(/^check:/) });
   });
 
   it("renders loading and empty states with a recoverable source action", async () => {
@@ -105,10 +104,7 @@ describe("UnderstandingView", () => {
           selectedElementId={undefined}
           onSelectElement={() => undefined}
           onAddSource={onAddSource}
-          onOpenSource={() => undefined}
-          onOpenLearning={() => undefined}
-          onOpenMemory={() => undefined}
-          onOpenFoundry={() => undefined}
+          onNavigate={() => undefined}
         />
       );
     });
@@ -129,12 +125,12 @@ describe("UnderstandingView", () => {
       sources: [failedSource],
       theory: { ...workspace.theory, elements: [], relationships: [], evidenceEventIds: [] }
     };
-    const onOpenSource = vi.fn();
-    const view = await renderView(failedWorkspace, { onOpenSource });
+    const onNavigate = vi.fn();
+    const view = await renderView(failedWorkspace, { onNavigate });
 
     expect(view.textContent).toContain("Source extraction failed");
     expect(view.textContent).toContain("Open source recovery");
     await act(async () => requiredElement<HTMLButtonElement>(view, ".understanding-state-view button").click());
-    expect(onOpenSource).toHaveBeenCalledWith(failedSource.id);
+    expect(onNavigate).toHaveBeenCalledWith({ view: "sources", sourceId: failedSource.id });
   });
 });

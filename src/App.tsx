@@ -3,9 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createLearningWorkflow } from "./application/learningWorkflow";
 import { createMemoryWorkflow } from "./application/memoryWorkflow";
 import { createSourceWorkflow } from "./application/sourceWorkflow";
+import {
+  destinationForView,
+  destinationFromUnderstandingGap,
+  type WorkspaceDestination,
+  type WorkspaceView
+} from "./application/workspaceNavigation";
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
-import { Sidebar, type ViewId } from "./components/Sidebar";
-import type { UnderstandingGapDestination } from "./domain/understandingGaps";
+import { Sidebar } from "./components/Sidebar";
 import { reduceWorkspace } from "./domain/workspaceProjection";
 import { UnderstandingView } from "./features/understanding/UnderstandingView";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
@@ -15,7 +20,7 @@ import { LearnView } from "./views/LearnView";
 import { MemoryView } from "./views/MemoryView";
 import { SourcesView } from "./views/SourcesView";
 
-const pageTitles: Record<ViewId, [string, string]> = {
+const pageTitles: Record<WorkspaceView, [string, string]> = {
   sources: ["Source library", "Capture, process, and trace knowledge"],
   understanding: ["Understanding", "Maintain the shared theory and choose the next meaningful action"],
   learn: ["Learning studio", "Study, practice, recall, and reflect"],
@@ -26,7 +31,7 @@ const pageTitles: Record<ViewId, [string, string]> = {
 
 function App() {
   const { events, append, ready, error: ledgerError, rejectedCount } = useEvidenceLedger();
-  const [view, setView] = useState<ViewId>("understanding");
+  const [view, setView] = useState<WorkspaceView>("understanding");
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [showAddSource, setShowAddSource] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("url");
@@ -92,39 +97,26 @@ function App() {
     setShowAddSource(false);
   }
 
-  function navigateToIntervention(destination: UnderstandingGapDestination) {
-    if (destination.kind === "check") setRequestedLearnItemId(`check:${destination.id}`);
-    if (destination.kind === "micro-world") setRequestedLearnItemId(`micro-world:${destination.id}`);
-    if (destination.kind === "theory-element") setSelectedTheoryElementId(destination.id);
-    if (destination.kind === "capability") setRequestedCapabilityId(destination.id);
+  function navigate(destination: WorkspaceDestination) {
+    if (destination.view === "sources" && destination.sourceId) setSelectedSourceId(destination.sourceId);
+    if (destination.view === "understanding" && destination.theoryElementId) {
+      setSelectedTheoryElementId(destination.theoryElementId);
+    }
+    if (destination.view === "learn" && destination.itemId) setRequestedLearnItemId(destination.itemId);
+    if (destination.view === "memory" && destination.theoryElementId) {
+      setSelectedTheoryElementId(destination.theoryElementId);
+    }
+    if (destination.view === "foundry" && destination.capabilityId) {
+      setRequestedCapabilityId(destination.capabilityId);
+    }
     setView(destination.view);
-  }
-
-  function openSource(sourceId: string) {
-    setSelectedSourceId(sourceId);
-    setView("sources");
-  }
-
-  function openMemory(theoryElementId: string) {
-    setSelectedTheoryElementId(theoryElementId);
-    setView("memory");
-  }
-
-  function openLearning(itemId: string) {
-    setRequestedLearnItemId(itemId);
-    setView("learn");
-  }
-
-  function openFoundry(capabilityId: string) {
-    setRequestedCapabilityId(capabilityId);
-    setView("foundry");
   }
 
   return (
     <div className="app-shell">
       <Sidebar
         view={view}
-        setView={setView}
+        setView={(nextView) => navigate(destinationForView(nextView))}
         eventCount={events.length}
         sourceCount={sources.length}
         theoryCount={workspace.theory.elements.filter((element) => element.status !== "superseded").length}
@@ -172,7 +164,7 @@ function App() {
               void sourceWorkflow.review(proposalId, "rejected", workspace).catch(() => undefined)
             }
             contextTitle={workspace.theory.title}
-            onReturnToTheory={() => setView("understanding")}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
           />
         )}
         {view === "understanding" && (
@@ -182,17 +174,14 @@ function App() {
             selectedElementId={currentTheoryElementId}
             onSelectElement={setSelectedTheoryElementId}
             onAddSource={() => setShowAddSource(true)}
-            onOpenSource={openSource}
-            onOpenLearning={openLearning}
-            onOpenMemory={openMemory}
-            onOpenFoundry={openFoundry}
+            onNavigate={navigate}
           />
         )}
         {view === "learn" && (
           <LearnView
             requestedItemId={requestedLearnItemId}
             contextTitle={workspace.theory.title}
-            onReturnToTheory={() => setView("understanding")}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
             artifacts={workspace.learningArtifacts}
             explainers={workspace.explainers}
             microWorlds={workspace.microWorlds}
@@ -219,9 +208,9 @@ function App() {
             understandingGaps={workspace.understandingGaps}
             onReviewGap={memoryWorkflow.reviewUnderstandingGap}
             onAnnotateGap={memoryWorkflow.annotateUnderstandingGap}
-            onIntervene={navigateToIntervention}
+            onIntervene={(destination) => navigate(destinationFromUnderstandingGap(destination))}
             contextTitle={workspace.theory.title}
-            onReturnToTheory={() => setView("understanding")}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
           />
         )}
         {view === "foundry" && (
@@ -229,7 +218,7 @@ function App() {
             capabilities={workspace.capabilities}
             requestedCapabilityId={requestedCapabilityId}
             contextTitle={workspace.theory.title}
-            onReturnToTheory={() => setView("understanding")}
+            onReturnToTheory={() => navigate({ view: "understanding" })}
           />
         )}
         {view === "about" && <AboutView />}
