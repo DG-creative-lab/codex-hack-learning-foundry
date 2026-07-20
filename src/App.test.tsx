@@ -10,7 +10,14 @@ import App from "./App";
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 
-beforeEach(() => {
+beforeEach(async () => {
+  await Promise.all([
+    import("./views/AboutView"),
+    import("./views/FoundryView"),
+    import("./views/LearnView"),
+    import("./views/MemoryView"),
+    import("./views/SourcesView")
+  ]);
   window.foundryMemory = {
     load: async () => ({ events: [], rejectedCount: 0 }),
     append: async () => true,
@@ -177,7 +184,7 @@ describe("App understanding-gap intervention routing", () => {
     if (!propose) throw new Error("Consolidation proposal control missing");
     await act(async () => propose.click());
     expect(view.textContent).toContain("1 pending");
-    expect(view.textContent).toContain("Capability revisions");
+    expect(view.textContent).toContain("Capability requests");
 
     await act(async () =>
       setTextareaValue(
@@ -192,11 +199,8 @@ describe("App understanding-gap intervention routing", () => {
     await act(async () => approveRevision.click());
 
     expect(view.textContent).toContain("0 pending");
-    expect(view.textContent).toContain("0.1.0-revision");
-    const revision = [...view.querySelectorAll<HTMLButtonElement>(".foundry-register > button")].find((button) =>
-      button.textContent?.includes("0.1.0-revision")
-    );
-    expect(revision?.textContent).toContain("draft");
+    expect(view.textContent).toContain("Revision request for value-density-reviewer / 0.1.0");
+    expect(view.querySelectorAll(".foundry-register > button")).toHaveLength(3);
     expect(requiredElement(view, '.foundry-lifecycle [data-current="true"]').textContent).toContain("active");
   });
 });

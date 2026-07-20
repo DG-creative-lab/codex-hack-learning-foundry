@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { capabilityManifestSchema, type FoundryCapability } from "./capability";
+import type { FoundryCapability } from "./capability";
 import {
   type MicroWorldProjection,
   microWorldInteractionPayloadSchema,
@@ -20,7 +20,7 @@ export const CONSOLIDATION_LIMITS = {
   triggerEvents: 16,
   reviewItems: 8,
   theoryRevisions: 8,
-  capabilityRevisions: 4,
+  capabilityRevisionRequests: 4,
   proposals: 128
 } as const;
 
@@ -41,6 +41,18 @@ export const consolidationReviewItemSchema = targetedReviewItemSchema.extend({ c
 export const consolidationTheoryRevisionSchema = theoryElementPayloadSchema
   .extend({ revisesElementId: boundedIdSchema })
   .strict();
+export const capabilityRevisionRequestSchema = z
+  .object({
+    id: boundedIdSchema,
+    capabilityId: boundedIdSchema,
+    capabilityVersion: z.string().min(1).max(80),
+    reasonKind: z.enum(["correction", "failure"]),
+    requestedChanges: boundedRationaleSchema,
+    sourceIds: uniqueIdArray(64),
+    theoryElementIds: uniqueIdArray(64),
+    evidenceEventIds: uniqueIdArray(CONSOLIDATION_LIMITS.triggerEvents)
+  })
+  .strict();
 
 export const consolidationProposalSchema = z
   .object({
@@ -50,7 +62,9 @@ export const consolidationProposalSchema = z
     triggerEventIds: uniqueIdArray(CONSOLIDATION_LIMITS.triggerEvents),
     reviewItems: z.array(consolidationReviewItemSchema).max(CONSOLIDATION_LIMITS.reviewItems),
     theoryRevisions: z.array(consolidationTheoryRevisionSchema).max(CONSOLIDATION_LIMITS.theoryRevisions),
-    capabilityRevisions: z.array(capabilityManifestSchema).max(CONSOLIDATION_LIMITS.capabilityRevisions)
+    capabilityRevisionRequests: z
+      .array(capabilityRevisionRequestSchema)
+      .max(CONSOLIDATION_LIMITS.capabilityRevisionRequests)
   })
   .strict()
   .superRefine((proposal, context) => {
@@ -63,19 +77,10 @@ export const consolidationProposalSchema = z
         });
       }
     }
-    for (const [index, revision] of proposal.capabilityRevisions.entries()) {
-      if (revision.status !== "draft" || !revision.supersedesCapabilityId) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "A capability revision must be a draft with a predecessor.",
-          path: ["capabilityRevisions", index]
-        });
-      }
-    }
     const ids = [
       ...proposal.reviewItems.map((item) => item.id),
       ...proposal.theoryRevisions.map((revision) => revision.id),
-      ...proposal.capabilityRevisions.map((revision) => revision.id)
+      ...proposal.capabilityRevisionRequests.map((request) => request.id)
     ];
     if (new Set(ids).size !== ids.length) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Consolidation output IDs must be unique." });
@@ -96,7 +101,7 @@ export type ConsolidationReview = z.infer<typeof consolidationReviewPayloadSchem
 export interface ConsolidationProposalProjection extends ConsolidationProposal {
   evidenceEventId: string;
   status: "pending" | "approved" | "rejected";
-  review?: ConsolidationReview & { evidenceEventId: string; createdAt: string };
+  review?: ConsolidationReview & { evidenceEventId: string; createdAt: string; sourceIds: string[] };
 }
 
 interface GenerateConsolidationInput {
@@ -195,19 +200,18 @@ function reviewItem(
   checks: UnderstandingCheckProjection[]
 ): z.infer<typeof consolidationReviewItemSchema>[] {
   const theoryElementIds = unique(contexts.flatMap((context) => context.theoryElementIds));
-  const eligibleChecks = checks.filter((candidate) =>
-    ["prediction", "transfer", "explanation"].includes(candidate.kind)
-  );
-  const check =
-    eligibleChecks.find((candidate) => candidate.theoryElementIds.some((id) => theoryElementIds.includes(id))) ??
-    eligibleChecks.find((candidate) => candidate.kind === "transfer") ??
-    eligibleChecks[0];
-  if (!check) return [];
+  const eligibleChecks = checks.filter((candidate) => candidate.status === "ready");
   const correction = contexts.find((context) => context.correction)?.correction;
   const failure = contexts.find((context) => context.failure)?.failure;
-  return [
-    {
-      id: bounded(`review-${suffix(proposalId)}`, 200),
+  return eligibleChecks
+    .map((check) => ({
+      check,
+      theoryElementIds: theoryElementIds.filter((id) => check.theoryElementIds.includes(id))
+    }))
+    .filter((candidate) => candidate.theoryElementIds.length > 0)
+    .slice(0, CONSOLIDATION_LIMITS.reviewItems)
+    .map(({ check, theoryElementIds }, index) => ({
+      id: bounded(`review-${suffix(proposalId)}-${index + 1}`, 200),
       checkId: check.id,
       title: failure
         ? "Review a practical failure"
@@ -221,8 +225,7 @@ function reviewItem(
       theoryElementIds,
       sourceIds: unique(contexts.flatMap((context) => context.sourceIds)),
       fragmentIds: unique(contexts.flatMap((context) => context.fragmentIds))
-    }
-  ];
+    }));
 }
 
 function theoryRevisions(
@@ -249,27 +252,25 @@ function theoryRevisions(
   ];
 }
 
-function capabilityRevisions(
+function capabilityRevisionRequests(
   proposalId: string,
-  createdAt: string,
   contexts: TriggerContext[],
   capabilitiesById: Map<string, FoundryCapability>
-): z.infer<typeof capabilityManifestSchema>[] {
+): z.infer<typeof capabilityRevisionRequestSchema>[] {
   const context = contexts.find((candidate) => candidate.capabilityId && (candidate.correction || candidate.failure));
   const capability = context?.capabilityId ? capabilitiesById.get(context.capabilityId) : undefined;
   const feedback = context?.correction ?? context?.failure;
-  if (!capability || !feedback) return [];
-  const revisionNote = bounded(`Practical revision evidence: ${feedback}`, 1200);
+  if (!context || !capability || !feedback) return [];
   return [
     {
-      ...capability.manifest,
-      id: bounded(`${capability.manifest.id}-rev-${suffix(proposalId)}`, 240),
-      version: bounded(`${capability.manifest.version}-revision-${suffix(proposalId)}`, 80),
-      status: "draft",
-      createdAt,
-      assumptions: [...capability.manifest.assumptions.slice(0, 31), revisionNote],
-      operatingBoundaries: [...capability.manifest.operatingBoundaries.slice(0, 31), revisionNote],
-      supersedesCapabilityId: capability.manifest.id
+      id: bounded(`capability-request-${suffix(proposalId)}`, 240),
+      capabilityId: capability.manifest.id,
+      capabilityVersion: capability.manifest.version,
+      reasonKind: context.correction ? "correction" : "failure",
+      requestedChanges: feedback,
+      sourceIds: context.sourceIds,
+      theoryElementIds: context.theoryElementIds,
+      evidenceEventIds: [context.event.id]
     }
   ];
 }
@@ -289,14 +290,16 @@ export function generateConsolidationProposal(input: GenerateConsolidationInput)
       contexts,
       new Map(input.theory.elements.map((element) => [element.id, element]))
     ),
-    capabilityRevisions: capabilityRevisions(
+    capabilityRevisionRequests: capabilityRevisionRequests(
       input.proposalId,
-      input.createdAt,
       contexts,
       new Map(input.capabilities.map((capability) => [capability.manifest.id, capability]))
     )
   };
-  if (proposal.reviewItems.length + proposal.theoryRevisions.length + proposal.capabilityRevisions.length === 0) {
+  if (
+    proposal.reviewItems.length + proposal.theoryRevisions.length + proposal.capabilityRevisionRequests.length ===
+    0
+  ) {
     throw new Error("Eligible evidence did not produce a bounded consolidation proposal");
   }
   return consolidationProposalSchema.parse(proposal);
@@ -308,7 +311,7 @@ export function projectedConsolidationReviewItems(proposals: ConsolidationPropos
     .flatMap((proposal) =>
       proposal.reviewItems.map((item) => ({
         ...item,
-        attemptEventId: proposal.triggerEventIds[0]
+        evidenceEventIds: proposal.triggerEventIds
       }))
     );
 }

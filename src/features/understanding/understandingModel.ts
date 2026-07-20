@@ -69,7 +69,9 @@ export function deriveUnderstandingNextAction(workspace: WorkspaceProjection): U
       ...world.reflections.map((item) => item.evidenceEventId)
     ])
   ]);
-  const consolidationReview = workspace.targetedReviewItems.find((item) => practicalEventIds.has(item.attemptEventId));
+  const consolidationReview = workspace.targetedReviewItems.find((item) =>
+    item.evidenceEventIds.some((eventId) => practicalEventIds.has(eventId))
+  );
   if (consolidationReview) {
     return {
       destination: { view: "learn", itemId: `check:${consolidationReview.checkId}` },

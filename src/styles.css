@@ -475,6 +475,16 @@ button {
     Consolas,
     monospace;
 }
+
+.view-loading {
+  padding: 32px;
+  color: var(--muted);
+  font:
+    var(--text-meta) "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
 .top-actions {
   display: flex;
   align-items: center;

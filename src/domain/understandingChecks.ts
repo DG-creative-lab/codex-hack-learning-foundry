@@ -242,7 +242,7 @@ export interface UnderstandingEvidenceVector {
 
 export interface ProjectedReviewItem extends z.infer<typeof targetedReviewItemSchema> {
   checkId: string;
-  attemptEventId: string;
+  evidenceEventIds: string[];
 }
 
 export interface UnderstandingChecksProjection {

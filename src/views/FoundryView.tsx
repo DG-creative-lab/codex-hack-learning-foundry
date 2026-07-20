@@ -144,11 +144,13 @@ export function FoundryView({
       proposal.theoryRevisions.some(
         (revision) => theoryElementIds.has(revision.id) || theoryElementIds.has(revision.revisesElementId)
       ) ||
-      proposal.capabilityRevisions.some(
-        (revision) => revision.id === manifest.id || revision.supersedesCapabilityId === manifest.id
-      )
+      proposal.capabilityRevisionRequests.some((request) => request.capabilityId === manifest.id)
   );
-  const usedTriggerIds = new Set(consolidationProposals.flatMap((proposal) => proposal.triggerEventIds));
+  const usedTriggerIds = new Set(
+    consolidationProposals
+      .filter((proposal) => proposal.status !== "rejected")
+      .flatMap((proposal) => proposal.triggerEventIds)
+  );
   const candidates = allCandidates.filter((candidate) => !usedTriggerIds.has(candidate.eventId));
 
   return (

@@ -79,7 +79,7 @@ function buildEvidenceProjection(checks: UnderstandingCheckProjection[]) {
         }
       }
       for (const item of attempt.evaluation.reviewItems) {
-        reviewItems.push({ ...item, checkId: check.id, attemptEventId: attempt.eventId });
+        reviewItems.push({ ...item, checkId: check.id, evidenceEventIds: [attempt.eventId] });
       }
     }
   }

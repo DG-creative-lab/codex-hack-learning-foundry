@@ -86,8 +86,8 @@ export function ConsolidationPanel({ candidates, proposals, onPropose, onReview 
               <dd>{proposal.theoryRevisions.length}</dd>
             </div>
             <div>
-              <dt>Capability revisions</dt>
-              <dd>{proposal.capabilityRevisions.length}</dd>
+              <dt>Capability requests</dt>
+              <dd>{proposal.capabilityRevisionRequests.length}</dd>
             </div>
           </dl>
           {proposal.theoryRevisions.map((revision) => (
@@ -96,12 +96,12 @@ export function ConsolidationPanel({ candidates, proposals, onPropose, onReview 
               <span>{revision.statement}</span>
             </p>
           ))}
-          {proposal.capabilityRevisions.map((revision) => (
-            <p key={revision.id}>
+          {proposal.capabilityRevisionRequests.map((request) => (
+            <p key={request.id}>
               <strong>
-                {revision.name} / {revision.version}
+                Revision request for {request.capabilityId} / {request.capabilityVersion}
               </strong>
-              <span>Draft revision of {revision.supersedesCapabilityId}</span>
+              <span>{request.requestedChanges}</span>
             </p>
           ))}
           {proposal.status === "pending" && (

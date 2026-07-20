@@ -55,46 +55,50 @@ export function reduceWorkspace(rawEvents: EvidenceEvent[]) {
   for (const event of events) requireKnownSources(`Evidence event ${event.id}`, event.sourceIds, knownSourceIds);
   requireKnownSources("Workspace theory", theoryMetadata.sourceIds, knownSourceIds);
   requireEventProvenance(configurationEvents[0], "Workspace theory", theoryMetadata.sourceIds);
-  const theory = deriveLivingTheory(events, { ...theoryMetadata, sourceIds: [...knownSourceIds] });
+  const baseTheory = deriveLivingTheory(events, { ...theoryMetadata, sourceIds: [...knownSourceIds] });
   const knownFragmentIds = new Set(sourcePipeline.fragments.map((fragment) => fragment.id));
+  const explainers = deriveExplainers(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(baseTheory.elements.map((element) => element.id))
+  });
+  const understanding = deriveUnderstandingChecks(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(baseTheory.elements.map((element) => element.id))
+  });
+  const microWorlds = deriveMicroWorlds(events, {
+    sourceIds: knownSourceIds,
+    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
+    theoryElementIds: new Set(baseTheory.elements.map((element) => element.id))
+  });
+  const capabilities = deriveCapabilities(events, {
+    sourceIds: knownSourceIds,
+    theoryElementIds: new Set(baseTheory.elements.map((element) => element.id)),
+    understandingChecks: understanding.checks
+  });
+  const consolidationProposals = deriveConsolidationProposals(events, {
+    theory: baseTheory,
+    capabilities,
+    understandingChecks: understanding.checks,
+    microWorlds
+  });
+  const theory = deriveLivingTheory(
+    events,
+    { ...theoryMetadata, sourceIds: [...knownSourceIds] },
+    consolidationProposals
+  );
   const theoryFragmentIds = [
     ...theory.elements.flatMap((element) => element.fragmentIds),
     ...theory.relationships.flatMap((relationship) => relationship.fragmentIds)
   ];
   const unknownTheoryFragmentId = theoryFragmentIds.find((fragmentId) => !knownFragmentIds.has(fragmentId));
   if (unknownTheoryFragmentId) throw new Error(`Living Theory references unknown fragment ${unknownTheoryFragmentId}`);
-  const explainers = deriveExplainers(events, {
-    sourceIds: knownSourceIds,
-    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
-    theoryElementIds: new Set(theory.elements.map((element) => element.id))
-  });
-  const understanding = deriveUnderstandingChecks(events, {
-    sourceIds: knownSourceIds,
-    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
-    theoryElementIds: new Set(theory.elements.map((element) => element.id))
-  });
-  const microWorlds = deriveMicroWorlds(events, {
-    sourceIds: knownSourceIds,
-    fragments: new Map(sourcePipeline.fragments.map((fragment) => [fragment.id, fragment])),
-    theoryElementIds: new Set(theory.elements.map((element) => element.id))
-  });
-  const capabilities = deriveCapabilities(events, {
-    sourceIds: knownSourceIds,
-    theoryElementIds: new Set(theory.elements.map((element) => element.id)),
-    understandingChecks: understanding.checks
-  });
   const practicalEvidence = derivePracticalEvidence(events, {
     sourceIds: knownSourceIds,
     theoryElementIds: new Set(theory.elements.map((element) => element.id)),
     capabilityIds: new Set(capabilities.map((capability) => capability.manifest.id)),
     microWorlds: new Map(microWorlds.map((world) => [world.id, world]))
-  });
-  const consolidationProposals = deriveConsolidationProposals(events, {
-    sourceIds: knownSourceIds,
-    fragmentIds: knownFragmentIds,
-    theoryElementIds: new Set(theory.elements.map((element) => element.id)),
-    capabilityIds: new Set(capabilities.map((capability) => capability.manifest.id)),
-    understandingCheckIds: new Set(understanding.checks.map((check) => check.id))
   });
   const memories = deriveMemoryProjections({
     theory,

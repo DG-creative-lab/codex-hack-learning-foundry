@@ -43,7 +43,7 @@ function proposalSourceIds(proposal: ConsolidationProposalProjection) {
     ...new Set([
       ...proposal.reviewItems.flatMap((item) => item.sourceIds),
       ...proposal.theoryRevisions.flatMap((revision) => revision.sourceIds),
-      ...proposal.capabilityRevisions.flatMap((revision) => revision.sourceIds)
+      ...proposal.capabilityRevisionRequests.flatMap((request) => request.sourceIds)
     ])
   ];
 }
@@ -156,7 +156,7 @@ export function createConsolidationWorkflow(dependencies: ConsolidationWorkflowD
         ...triggerEvents.flatMap((event) => event.sourceIds),
         ...proposal.reviewItems.flatMap((item) => item.sourceIds),
         ...proposal.theoryRevisions.flatMap((revision) => revision.sourceIds),
-        ...proposal.capabilityRevisions.flatMap((revision) => revision.sourceIds)
+        ...proposal.capabilityRevisionRequests.flatMap((request) => request.sourceIds)
       ])
     ];
     const event: EvidenceEvent = {

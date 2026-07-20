@@ -9,7 +9,6 @@ import {
   type FoundryCapability,
   foundryCapabilitySchema
 } from "./capability";
-import { consolidationProposedPayloadSchema, consolidationReviewPayloadSchema } from "./consolidation";
 import { practicalApplicationPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent } from "./types";
 import type { UnderstandingCheckProjection } from "./understandingChecks";
@@ -57,11 +56,6 @@ function withStatus(capability: FoundryCapability, status: FoundryCapability["ma
 
 export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityProjectionContext): FoundryCapability[] {
   const capabilities = new Map<string, FoundryCapability>();
-  const consolidationProposals = new Map<
-    string,
-    ReturnType<typeof consolidationProposedPayloadSchema.parse>["proposal"]
-  >();
-  const reviewedConsolidationIds = new Set<string>();
   const eventOrder = new Map(events.map((event, index) => [event.id, index]));
 
   for (const [eventIndex, event] of events.entries()) {
@@ -97,68 +91,6 @@ export function deriveCapabilities(events: EvidenceEvent[], context: CapabilityP
       };
       requireEventSources(event, capability);
       capabilities.set(manifest.id, capability);
-      continue;
-    }
-
-    if (event.type === "consolidation.proposed") {
-      if (event.actor !== "agent" || event.kind !== "agent_synthesis") {
-        throw new Error(`Consolidation proposal ${event.id} must be recorded as agent synthesis`);
-      }
-      const { proposal } = consolidationProposedPayloadSchema.parse(event.payload);
-      if (consolidationProposals.has(proposal.id)) {
-        throw new Error(`Consolidation proposal ID ${proposal.id} is duplicated`);
-      }
-      consolidationProposals.set(proposal.id, proposal);
-      continue;
-    }
-
-    if (event.type === "consolidation.reviewed") {
-      if (event.actor !== "human" || event.kind !== "user_interpretation") {
-        throw new Error(`Consolidation review ${event.id} must be recorded as a human interpretation`);
-      }
-      const review = consolidationReviewPayloadSchema.parse(event.payload);
-      const proposal = consolidationProposals.get(review.proposalId);
-      if (!proposal)
-        throw new Error(`Consolidation review ${event.id} references unknown proposal ${review.proposalId}`);
-      if (reviewedConsolidationIds.has(review.proposalId)) {
-        throw new Error(`Consolidation proposal ${review.proposalId} was already reviewed`);
-      }
-      reviewedConsolidationIds.add(review.proposalId);
-      if (review.decision === "approved") {
-        for (const manifest of proposal.capabilityRevisions) {
-          if (capabilities.has(manifest.id)) throw new Error(`Capability ID ${manifest.id} is duplicated`);
-          if (manifest.status !== "draft" || !manifest.supersedesCapabilityId) {
-            throw new Error(`Consolidated capability ${manifest.id} must be a draft revision`);
-          }
-          if (!capabilities.has(manifest.supersedesCapabilityId)) {
-            throw new Error(
-              `Capability ${manifest.id} supersedes unknown capability ${manifest.supersedesCapabilityId}`
-            );
-          }
-          requireKnownIds(`Capability ${manifest.id}`, manifest.sourceIds, context.sourceIds, "source");
-          requireKnownIds(
-            `Capability ${manifest.id}`,
-            manifest.theoryElementIds,
-            context.theoryElementIds,
-            "theory element"
-          );
-          const provisional = {
-            manifest,
-            registrationEventId: event.id,
-            evaluation: null,
-            evaluationHistory: [],
-            decision: null,
-            activation: null,
-            executions: 0
-          };
-          const revision: FoundryCapability = {
-            ...provisional,
-            gate: deriveCapabilityGate({ capability: provisional, understandingChecks: context.understandingChecks })
-          };
-          requireEventSources(event, revision);
-          capabilities.set(manifest.id, revision);
-        }
-      }
       continue;
     }
 

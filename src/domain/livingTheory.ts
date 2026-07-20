@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { consolidationProposedPayloadSchema, consolidationReviewPayloadSchema } from "./consolidation";
+import type { ConsolidationProposalProjection } from "./consolidation";
 import { synthesisReviewPayloadSchema } from "./sourcePipeline";
 import {
   type EvidenceEvent,
@@ -53,13 +53,15 @@ function relationshipFromPayload(raw: unknown, event: EvidenceEvent): TheoryRela
   };
 }
 
-export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingTheoryMetadata): LivingTheory {
+export function deriveLivingTheory(
+  rawEvents: EvidenceEvent[],
+  metadata: LivingTheoryMetadata,
+  consolidationProposals: ConsolidationProposalProjection[] = []
+): LivingTheory {
   const events = evidenceEventSchema.array().parse(rawEvents);
   const eventIds = new Set<string>();
   const elements = new Map<string, TheoryElement>();
   const relationships = new Map<string, TheoryRelationship>();
-  const consolidationProposals = new Map<string, z.infer<typeof consolidationProposedPayloadSchema>["proposal"]>();
-  const reviewedConsolidationIds = new Set<string>();
   const theoryEventIds: string[] = [];
 
   function recordElement(element: TheoryElement, event: EvidenceEvent, revision: boolean) {
@@ -119,35 +121,22 @@ export function deriveLivingTheory(rawEvents: EvidenceEvent[], metadata: LivingT
         }
       }
     }
+  }
 
-    if (event.type === "consolidation.proposed") {
-      if (event.actor !== "agent" || event.kind !== "agent_synthesis") {
-        throw new Error(`Consolidation proposal ${event.id} must be recorded as agent synthesis.`);
-      }
-      const { proposal } = consolidationProposedPayloadSchema.parse(event.payload);
-      if (consolidationProposals.has(proposal.id)) {
-        throw new Error(`Consolidation proposal ID ${proposal.id} is duplicated.`);
-      }
-      consolidationProposals.set(proposal.id, proposal);
-    }
-
-    if (event.type === "consolidation.reviewed") {
-      if (event.actor !== "human" || event.kind !== "user_interpretation") {
-        throw new Error(`Consolidation review ${event.id} must be recorded as a human interpretation.`);
-      }
-      const review = consolidationReviewPayloadSchema.parse(event.payload);
-      const proposal = consolidationProposals.get(review.proposalId);
-      if (!proposal)
-        throw new Error(`Consolidation review ${event.id} references unknown proposal ${review.proposalId}.`);
-      if (reviewedConsolidationIds.has(review.proposalId)) {
-        throw new Error(`Consolidation proposal ${review.proposalId} was already reviewed.`);
-      }
-      reviewedConsolidationIds.add(review.proposalId);
-      if (review.decision === "approved") {
-        for (const rawElement of proposal.theoryRevisions) {
-          recordElement(elementFromPayload(rawElement, event, true), event, true);
-        }
-      }
+  for (const proposal of consolidationProposals) {
+    if (proposal.status !== "approved" || !proposal.review) continue;
+    const reviewEvent: EvidenceEvent = {
+      id: proposal.review.evidenceEventId,
+      type: "consolidation.reviewed",
+      kind: "user_interpretation",
+      createdAt: proposal.review.createdAt,
+      actor: "human",
+      summary: proposal.review.reason,
+      sourceIds: proposal.review.sourceIds,
+      payload: proposal.review
+    };
+    for (const revision of proposal.theoryRevisions) {
+      recordElement(elementFromPayload(revision, reviewEvent, true), reviewEvent, true);
     }
   }
 

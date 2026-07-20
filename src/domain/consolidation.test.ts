@@ -106,7 +106,14 @@ function proposalEvent(events: EvidenceEvent[], trigger: EvidenceEvent) {
     createdAt: proposal.createdAt,
     actor: "agent",
     summary: "Proposed practical evidence consolidation.",
-    sourceIds: [...new Set([...trigger.sourceIds, ...proposal.capabilityRevisions.flatMap((item) => item.sourceIds)])],
+    sourceIds: [
+      ...new Set([
+        ...trigger.sourceIds,
+        ...proposal.reviewItems.flatMap((item) => item.sourceIds),
+        ...proposal.theoryRevisions.flatMap((item) => item.sourceIds),
+        ...proposal.capabilityRevisionRequests.flatMap((item) => item.sourceIds)
+      ])
+    ],
     payload: consolidationProposedPayloadSchema.parse({ proposal })
   };
   return { proposal, event };
@@ -141,9 +148,8 @@ describe("practical evidence consolidation", () => {
       expect.arrayContaining([expect.objectContaining({ eventId: correction.id })])
     );
     expect(pending.theory.elements.some((element) => element.id === proposal.theoryRevisions[0]?.id)).toBe(false);
-    expect(
-      pending.capabilities.some((capability) => capability.manifest.id === proposal.capabilityRevisions[0]?.id)
-    ).toBe(false);
+    expect(proposal.capabilityRevisionRequests).toHaveLength(1);
+    expect(pending.capabilities).toHaveLength(reduceWorkspace(events).capabilities.length);
   });
 
   it("rejects practical feedback that substitutes unrelated theory context", () => {
@@ -156,7 +162,55 @@ describe("practical evidence consolidation", () => {
     expect(() => reduceWorkspace(unrelated)).toThrow("does not match its subject theory context");
   });
 
-  it("applies approved revisions as new versions while preserving their predecessors", () => {
+  it("rejects ineligible triggers and trigger-derived payload drift during replay", () => {
+    const { events, correction } = practicalEvents();
+    const { event } = proposalEvent(events, correction);
+    const unrelated = structuredClone(event);
+    const unrelatedProposal = structuredClone(consolidationProposedPayloadSchema.parse(event.payload).proposal);
+    unrelatedProposal.triggerEventIds = ["evt-workspace-configuration-001"];
+    unrelated.payload = { proposal: unrelatedProposal };
+    expect(() => reduceWorkspace([...events, unrelated])).toThrow("is not eligible for consolidation");
+
+    const tampered = structuredClone(event);
+    const tamperedProposal = structuredClone(consolidationProposedPayloadSchema.parse(event.payload).proposal);
+    tamperedProposal.rationale = "A different but schema-valid rationale.";
+    tampered.payload = { proposal: tamperedProposal };
+    expect(() => reduceWorkspace([...events, tampered])).toThrow("does not match its canonical trigger-derived output");
+  });
+
+  it("preserves every trigger ID on projected review work", () => {
+    const { events, application, correction } = practicalEvents();
+    const workspace = reduceWorkspace(events);
+    const proposal = generateConsolidationProposal({
+      proposalId: "consolidation-multi-trigger-test",
+      createdAt: "2026-07-20T12:04:00.000Z",
+      triggerEvents: [application, correction],
+      theory: workspace.theory,
+      capabilities: workspace.capabilities,
+      checks: workspace.understandingChecks,
+      microWorlds: workspace.microWorlds
+    });
+    const event: EvidenceEvent = {
+      id: "evt-consolidation-multi-trigger-test",
+      type: "consolidation.proposed",
+      kind: "agent_synthesis",
+      createdAt: proposal.createdAt,
+      actor: "agent",
+      summary: "Proposed consolidation from an application and linked correction.",
+      sourceIds: [...new Set([...application.sourceIds, ...correction.sourceIds])],
+      payload: { proposal }
+    };
+    const projected = reduceWorkspace([...events, event]);
+    const projectedIds = new Set(proposal.reviewItems.map((item) => item.id));
+    const reviewItems = projected.targetedReviewItems.filter((item) => projectedIds.has(item.id));
+
+    expect(reviewItems.length).toBeGreaterThan(0);
+    for (const item of reviewItems) {
+      expect(item.evidenceEventIds).toEqual([application.id, correction.id]);
+    }
+  });
+
+  it("applies approved theory revisions while retaining capability changes as requests", () => {
     const { events, correction } = practicalEvents();
     const { proposal, event } = proposalEvent(events, correction);
     const review: EvidenceEvent = {
@@ -180,10 +234,7 @@ describe("practical evidence consolidation", () => {
     );
     const revisedTheory = approved.theory.elements.find((element) => element.id === proposal.theoryRevisions[0]?.id);
     const previousCapability = approved.capabilities.find(
-      (capability) => capability.manifest.id === proposal.capabilityRevisions[0]?.supersedesCapabilityId
-    );
-    const revisedCapability = approved.capabilities.find(
-      (capability) => capability.manifest.id === proposal.capabilityRevisions[0]?.id
+      (capability) => capability.manifest.id === proposal.capabilityRevisionRequests[0]?.capabilityId
     );
 
     expect(previousTheory?.status).toBe("superseded");
@@ -193,11 +244,11 @@ describe("practical evidence consolidation", () => {
       evidenceEventIds: expect.arrayContaining([correction.id, review.id])
     });
     expect(previousCapability?.manifest.status).toBe("active");
-    expect(revisedCapability?.manifest).toMatchObject({
-      status: "draft",
-      supersedesCapabilityId: previousCapability?.manifest.id
+    expect(approved.consolidationProposals[0].capabilityRevisionRequests[0]).toMatchObject({
+      capabilityId: previousCapability?.manifest.id,
+      reasonKind: "correction"
     });
-    expect(revisedCapability?.activation).toBeNull();
+    expect(approved.capabilities).toHaveLength(reduceWorkspace(events).capabilities.length);
     expect(reduceWorkspace(structuredClone(replayEvents))).toEqual(approved);
   });
 
@@ -223,9 +274,7 @@ describe("practical evidence consolidation", () => {
     expect(rejected.consolidationProposals[0]).toMatchObject({ status: "rejected" });
     expect(rejected.targetedReviewItems.some((item) => item.id === proposal.reviewItems[0]?.id)).toBe(false);
     expect(rejected.theory.elements.some((element) => element.id === proposal.theoryRevisions[0]?.id)).toBe(false);
-    expect(
-      rejected.capabilities.some((capability) => capability.manifest.id === proposal.capabilityRevisions[0]?.id)
-    ).toBe(false);
+    expect(rejected.capabilities).toHaveLength(reduceWorkspace(events).capabilities.length);
   });
 
   it("turns a recorded micro-world observation into targeted review without mutating the artifact", () => {
@@ -272,9 +321,13 @@ describe("practical evidence consolidation", () => {
       microWorlds: workspace.microWorlds
     });
 
-    expect(proposal.reviewItems).toHaveLength(1);
+    expect(proposal.reviewItems.length).toBeGreaterThan(0);
+    for (const item of proposal.reviewItems) {
+      const check = workspace.understandingChecks.find((candidate) => candidate.id === item.checkId);
+      expect(item.theoryElementIds.every((id) => check?.theoryElementIds.includes(id))).toBe(true);
+    }
     expect(proposal.theoryRevisions).toHaveLength(0);
-    expect(proposal.capabilityRevisions).toHaveLength(0);
+    expect(proposal.capabilityRevisionRequests).toHaveLength(0);
     expect(workspace.microWorlds[0]).toMatchObject({ id: world.id, title: world.title });
   });
 });

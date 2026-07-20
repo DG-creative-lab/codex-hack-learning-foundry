@@ -25,7 +25,7 @@ export function UnderstandingCheckInspector({
         <p className="eyebrow">Targeted review</p>
         {reviewItems.length > 0 ? (
           reviewItems.map((item) => (
-            <article key={`${item.attemptEventId}:${item.id}`}>
+            <article key={`${item.evidenceEventIds.join(":")}:${item.id}`}>
               <CornerDownRight size={14} />
               <div>
                 <strong>{item.title}</strong>
