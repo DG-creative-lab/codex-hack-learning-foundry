@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   EXECUTION_LIMITS,
@@ -37,20 +37,30 @@ function buildPrompt(request, promptBoundary) {
   ].join("\n");
 }
 
-export async function loadCapabilityPromptBoundary(request, capabilityRoot) {
+export async function loadCapabilityPromptBoundary(request, capabilityRoot, openFile = open) {
   const expectedSkillPath = `skills/${request.capabilityId}`;
   if (request.skillPath !== expectedSkillPath) throw new Error("Capability identity does not match its skill path");
   const skillFile = resolve(capabilityRoot, expectedSkillPath, "SKILL.md");
-  const file = await stat(skillFile);
-  if (!file.isFile() || file.size > EXECUTION_LIMITS.contextCharacters) {
-    throw new Error("Capability artifact exceeds the trusted prompt boundary");
+  const handle = await openFile(skillFile, "r");
+  try {
+    const file = await handle.stat();
+    if (!file.isFile() || file.size > EXECUTION_LIMITS.contextCharacters) {
+      throw new Error("Capability artifact exceeds the trusted prompt boundary");
+    }
+    const skill = await handle.readFile("utf8");
+    return {
+      instruction: `Apply capability ${request.capabilityId} version ${request.capabilityVersion} to the supplied task.`,
+      contextSections: [{ label: "Trusted capability artifact", content: skill }],
+      excludedContext: [
+        "API credentials",
+        "private desktop activity",
+        "unapproved sources",
+        "canonical ledger contents"
+      ]
+    };
+  } finally {
+    await handle.close();
   }
-  const skill = await readFile(skillFile, "utf8");
-  return {
-    instruction: `Apply capability ${request.capabilityId} version ${request.capabilityVersion} to the supplied task.`,
-    contextSections: [{ label: "Trusted capability artifact", content: skill }],
-    excludedContext: ["API credentials", "private desktop activity", "unapproved sources", "canonical ledger contents"]
-  };
 }
 
 export function runBoundedProcess(command, args, options = {}) {

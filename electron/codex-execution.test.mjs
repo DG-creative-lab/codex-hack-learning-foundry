@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCodexExecutionService } from "./codex-execution.mjs";
+import { createCodexExecutionService, loadCapabilityPromptBoundary } from "./codex-execution.mjs";
 
 const request = {
   consent: true,
@@ -16,6 +16,38 @@ const timing = {
 };
 
 describe("Codex execution service", () => {
+  it("validates and reads the trusted capability through one open file handle", async () => {
+    const handle = {
+      stat: vi.fn(async () => ({ isFile: () => true, size: 24 })),
+      readFile: vi.fn(async () => "# Trusted capability"),
+      close: vi.fn(async () => undefined)
+    };
+    const openFile = vi.fn(async () => handle);
+
+    const boundary = await loadCapabilityPromptBoundary(request, "/trusted/application", openFile);
+
+    expect(openFile).toHaveBeenCalledTimes(1);
+    expect(openFile).toHaveBeenCalledWith("/trusted/application/skills/value-density-reviewer/SKILL.md", "r");
+    expect(handle.stat).toHaveBeenCalledTimes(1);
+    expect(handle.readFile).toHaveBeenCalledWith("utf8");
+    expect(handle.close).toHaveBeenCalledTimes(1);
+    expect(boundary.contextSections[0].content).toBe("# Trusted capability");
+  });
+
+  it("closes the handle without reading when the opened capability is oversized", async () => {
+    const handle = {
+      stat: vi.fn(async () => ({ isFile: () => true, size: 2401 })),
+      readFile: vi.fn(),
+      close: vi.fn(async () => undefined)
+    };
+
+    await expect(loadCapabilityPromptBoundary(request, "/trusted/application", async () => handle)).rejects.toThrow(
+      "exceeds the trusted prompt boundary"
+    );
+    expect(handle.readFile).not.toHaveBeenCalled();
+    expect(handle.close).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a locally available CLI without making an execution request", async () => {
     const runProcess = vi.fn(async () => ({ ok: true, stdout: "codex 1.2.3", stderr: "", ...timing }));
     const service = createCodexExecutionService({ runProcess, command: "codex-test" });
