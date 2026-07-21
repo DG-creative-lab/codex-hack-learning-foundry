@@ -37,7 +37,7 @@ Self-directed professionals, researchers, students, and builders who need to tur
 7. Apply the skill to a new task through the deterministic prepared adapter.
 8. Record a focused correction and approve consolidation into a human review item, a traceable theory revision, and a structured capability revision request.
 
-The persistent journey register guides this path in under five minutes. Its first three inspection stages are local navigation state; prediction, interaction, reflection, transfer, capability decisions, application, and consolidation are durable ledger evidence. Restarting the journey restores the source-controlled seed ledger and clears local inspection state. The optional live Codex adapter requires explicit selection and fresh consent and is not required for the canonical demo.
+The persistent journey register guides this path in under five minutes. Its first three inspection stages are local navigation state; prediction, interaction, reflection, transfer, capability decisions, application, and consolidation are durable ledger evidence. Restarting permanently removes all runtime workspace activity, restores the source-controlled seed ledger, and clears local inspection state; the interface requires explicit confirmation of that scope. The optional live Codex adapter requires explicit selection and fresh consent and is not required for the canonical demo.
 
 ## Scope boundary
 

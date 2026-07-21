@@ -12,7 +12,7 @@ The journey register contains eight stages: Source, Theory, Explain, Explore, Tr
 4. Select the prepared adapter in Foundry. Do not enable live Codex for the primary take.
 5. Set the Electron window to at least 1440 × 900 and hide notifications, unrelated windows, and private material.
 
-The reset confirmation clears runtime demo evidence and restores the committed prepared seed. Use it only when restarting the take.
+The reset confirmation permanently clears all runtime workspace activity, including imported sources, learning activity, feedback, and capability work, then restores the committed prepared seed. Use it only when restarting the take and only after preserving any local work that matters.
 
 ## Five-minute script
 

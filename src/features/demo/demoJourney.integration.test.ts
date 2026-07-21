@@ -7,7 +7,7 @@ import { createLearningWorkflow } from "../../application/learningWorkflow";
 import { seedEvents } from "../../data/sample";
 import type { EvidenceEvent } from "../../domain/types";
 import { reduceWorkspace } from "../../domain/workspaceProjection";
-import { type DemoStageId, deriveDemoJourney } from "./demoJourney";
+import { type DemoStageId, deriveDemoJourney, designDensityPreparedDemo } from "./demoJourney";
 
 describe("design-density demo journey", () => {
   it("runs offline from exploration through transfer, application, and three-way revision", async () => {
@@ -29,12 +29,14 @@ describe("design-density demo journey", () => {
       createId,
       now
     });
-    const world = workspace().microWorlds.find((artifact) => artifact.id === "micro-world-density-queue");
+    const world = workspace().microWorlds.find(
+      (artifact) => artifact.id === designDensityPreparedDemo.artifacts.microWorldId
+    );
     if (!world) throw new Error("Prepared micro-world is missing");
     const variableValues = { "queue-spacing": 12, "queue-hierarchy": 80, "queue-information": 7 };
     const predictionEventId = await learning.recordMicroWorldPrediction(
       world.id,
-      "prediction-tradeoff",
+      designDensityPreparedDemo.artifacts.microWorldPredictionOptionId,
       variableValues
     );
     await learning.recordMicroWorldInteraction(world.id, predictionEventId, variableValues);
@@ -44,7 +46,9 @@ describe("design-density demo journey", () => {
       "More rows became visible, but hierarchy had to carry more of the scanning burden."
     );
 
-    const transfer = workspace().understandingChecks.find((check) => check.kind === "transfer");
+    const transfer = workspace().understandingChecks.find(
+      (check) => check.id === designDensityPreparedDemo.artifacts.transferCheckId
+    );
     if (!transfer) throw new Error("Prepared transfer check is missing");
     await learning.recordUnderstandingResponse(transfer.id, {
       answer:
@@ -54,7 +58,7 @@ describe("design-density demo journey", () => {
     });
     expect(workspace().understandingGaps.gaps.some((gap) => gap.kind === "low_transfer_evidence")).toBe(false);
 
-    const capabilityId = "value-density-reviewer";
+    const { capabilityId, revisionTheoryElementId } = designDensityPreparedDemo.artifacts;
     const capabilityWorkflow = createCapabilityWorkflow({
       append,
       resolveCapability: (id) => workspace().capabilities.find((capability) => capability.manifest.id === id),
@@ -94,7 +98,7 @@ describe("design-density demo journey", () => {
       applicationEventId,
       "correction",
       "Preserve spacing that communicates grouping; reduce only space that carries no meaning.",
-      "theory-concept-value-density"
+      revisionTheoryElementId
     );
     const proposalId = await consolidation.propose([correctionEventId]);
     await consolidation.review(
@@ -107,12 +111,8 @@ describe("design-density demo journey", () => {
     const proposal = finalWorkspace.consolidationProposals.find((candidate) => candidate.id === proposalId);
     expect(proposal).toMatchObject({
       status: "approved",
-      reviewItems: expect.arrayContaining([
-        expect.objectContaining({ theoryElementIds: ["theory-concept-value-density"] })
-      ]),
-      theoryRevisions: expect.arrayContaining([
-        expect.objectContaining({ revisesElementId: "theory-concept-value-density" })
-      ]),
+      reviewItems: expect.arrayContaining([expect.objectContaining({ theoryElementIds: [revisionTheoryElementId] })]),
+      theoryRevisions: expect.arrayContaining([expect.objectContaining({ revisesElementId: revisionTheoryElementId })]),
       capabilityRevisionRequests: expect.arrayContaining([expect.objectContaining({ capabilityId })])
     });
     expect(finalWorkspace.practicalEvidence.applications.at(-1)?.execution.completedAdapter).toBe("prepared");
@@ -126,5 +126,55 @@ describe("design-density demo journey", () => {
     const journey = deriveDemoJourney(finalWorkspace, visited);
     expect(journey.completedCount).toBe(journey.stages.length);
     expect(journey.stages.every((stage) => stage.state === "complete")).toBe(true);
+
+    const unrelatedWorldWorkspace = structuredClone(finalWorkspace);
+    const completedWorld = unrelatedWorldWorkspace.microWorlds.find(
+      (candidate) => candidate.id === designDensityPreparedDemo.artifacts.microWorldId
+    );
+    if (!completedWorld) throw new Error("Completed prepared micro-world is missing");
+    completedWorld.id = "micro-world-unrelated";
+    for (const record of [
+      ...completedWorld.predictions,
+      ...completedWorld.interactions,
+      ...completedWorld.reflections
+    ]) {
+      record.artifactId = completedWorld.id;
+    }
+    expect(
+      deriveDemoJourney(unrelatedWorldWorkspace, visited).stages.find((stage) => stage.id === "experiment")?.state
+    ).not.toBe("complete");
+
+    const unrelatedTransferWorkspace = structuredClone(finalWorkspace);
+    const completedTransfer = unrelatedTransferWorkspace.understandingChecks.find(
+      (candidate) => candidate.id === designDensityPreparedDemo.artifacts.transferCheckId
+    );
+    if (!completedTransfer) throw new Error("Completed prepared transfer check is missing");
+    completedTransfer.id = "check-unrelated-transfer";
+    expect(
+      deriveDemoJourney(unrelatedTransferWorkspace, visited).stages.find((stage) => stage.id === "transfer")?.state
+    ).not.toBe("complete");
+
+    const liveExecutionWorkspace = structuredClone(finalWorkspace);
+    const liveApplication = liveExecutionWorkspace.practicalEvidence.applications.find(
+      (candidate) => candidate.evidenceEventId === applicationEventId
+    );
+    if (!liveApplication) throw new Error("Prepared application is missing");
+    liveApplication.execution.requestedAdapter = "live_codex";
+    liveApplication.execution.completedAdapter = "live_codex";
+    liveApplication.execution.consent = "explicit";
+    liveApplication.execution.attempts[0].adapter = "live_codex";
+    expect(
+      deriveDemoJourney(liveExecutionWorkspace, visited).stages.find((stage) => stage.id === "application")?.state
+    ).not.toBe("complete");
+
+    const unrelatedRevisionWorkspace = structuredClone(finalWorkspace);
+    const approvedProposal = unrelatedRevisionWorkspace.consolidationProposals.find(
+      (candidate) => candidate.id === proposalId
+    );
+    if (!approvedProposal) throw new Error("Approved prepared consolidation is missing");
+    approvedProposal.capabilityRevisionRequests[0].capabilityId = "unrelated-capability";
+    expect(
+      deriveDemoJourney(unrelatedRevisionWorkspace, visited).stages.find((stage) => stage.id === "revision")?.state
+    ).not.toBe("complete");
   });
 });

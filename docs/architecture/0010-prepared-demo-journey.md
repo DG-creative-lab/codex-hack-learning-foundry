@@ -14,13 +14,14 @@ The same journey must work offline, recover quickly during recording, and preser
 
 Represent the prepared demonstration as an eight-stage derived projection: source inspection, theory inspection, explainer inspection, micro-world experiment, transfer, capability approval and activation, capability application, and practical-feedback consolidation.
 
+- A typed prepared-demo definition owns every required artifact ID, capability and adapter version, destination, and completion predicate. Missing prepared artifacts fail closed; the journey never falls back to the first item of a matching kind.
 - The journey register is persistent across product views and routes each stage through the shared workspace-destination contract.
 - Source, theory, and explainer inspection are local session state. They guide presentation but do not enter the evidence ledger.
 - Experiment, transfer, capability, application, and revision completion are derived from validated canonical events. A view visit alone cannot complete them.
 - Micro-world completion requires a recorded interaction with a reflection linked to that exact interaction. Temporary slider movement is not durable progress.
 - Revision completion requires an approved consolidation containing targeted review work, a theory revision, and a capability revision request.
-- Restart uses the ledger storage boundary to restore the committed prepared seed, clears local inspection and navigation selections, and returns to Understanding. If reset persistence fails, existing evidence is retained and the failure is shown.
-- Prepared execution remains the canonical demo adapter. Live Codex is an optional, explicitly selected and consented extension.
+- Restart uses the ledger storage boundary to remove all runtime workspace activity, restore the committed prepared seed, clear local inspection and navigation selections, and return to Understanding. The confirmation explicitly names this destructive scope. If reset persistence fails, existing evidence is retained and the failure is shown.
+- Prepared execution remains the canonical demo adapter and only a direct execution from its declared adapter version completes Apply. Live Codex and prepared fallback after a live failure remain optional, inspectable extensions outside canonical demo progress.
 
 ## Consequences
 

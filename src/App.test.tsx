@@ -76,6 +76,10 @@ describe("App understanding-gap intervention routing", () => {
     expect(requiredElement(view, ".micro-world-preview").textContent).toContain("Operational queue density lab");
 
     await act(async () => requiredElement<HTMLButtonElement>(view, 'button[title="Restart prepared journey"]').click());
+    expect(view.textContent).toContain("Erase all local workspace activity?");
+    expect(view.textContent).toContain(
+      "Imported sources, learning activity, feedback, and capability work will be permanently removed."
+    );
     await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-reset-confirm .secondary-button").click());
 
     expect(resetCount).toBe(1);

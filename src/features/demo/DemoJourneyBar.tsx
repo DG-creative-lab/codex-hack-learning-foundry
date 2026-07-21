@@ -55,8 +55,13 @@ export function DemoJourneyBar({ journey, onOpenStage, onReset }: DemoJourneyBar
 
       <div className="demo-journey-actions">
         {confirmingReset ? (
-          <fieldset className="demo-reset-confirm" aria-label="Confirm journey restart">
-            <span>Clear recorded demo evidence?</span>
+          <fieldset className="demo-reset-confirm" aria-label="Confirm full workspace reset">
+            <span>
+              <strong>Erase all local workspace activity?</strong>
+              <small>
+                Imported sources, learning activity, feedback, and capability work will be permanently removed.
+              </small>
+            </span>
             <button
               type="button"
               className="icon-button"
@@ -66,7 +71,7 @@ export function DemoJourneyBar({ journey, onOpenStage, onReset }: DemoJourneyBar
               <X size={14} />
             </button>
             <button type="button" className="secondary-button" disabled={resetting} onClick={() => void resetJourney()}>
-              <RotateCcw size={14} /> {resetting ? "Restarting..." : "Restart"}
+              <RotateCcw size={14} /> {resetting ? "Restarting..." : "Erase and restart"}
             </button>
           </fieldset>
         ) : (
@@ -79,9 +84,11 @@ export function DemoJourneyBar({ journey, onOpenStage, onReset }: DemoJourneyBar
             <RotateCcw size={15} />
           </button>
         )}
-        <button type="button" className="demo-open-step" onClick={() => onOpenStage(journey.current)}>
-          Open step <ArrowRight size={15} />
-        </button>
+        {!confirmingReset && (
+          <button type="button" className="demo-open-step" onClick={() => onOpenStage(journey.current)}>
+            Open step <ArrowRight size={15} />
+          </button>
+        )}
         {error && <p role="alert">{error}</p>}
       </div>
     </section>
