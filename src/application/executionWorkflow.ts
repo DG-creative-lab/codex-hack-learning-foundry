@@ -94,6 +94,7 @@ export function createExecutionWorkflow(dependencies: ExecutionWorkflowDependenc
       throw new Error(finalAttempt?.error?.message ?? "Capability execution did not produce a result.");
     }
     const fallbackUsed = attempts.length > 1;
+    const recordedBoundary = attempts[0].promptBoundary ?? boundary;
     const payload = practicalApplicationPayloadSchema.parse({
       capabilityId,
       capabilityVersion: capability.manifest.version,
@@ -106,7 +107,7 @@ export function createExecutionWorkflow(dependencies: ExecutionWorkflowDependenc
         completedAdapter: finalAttempt.adapter,
         consent: request.consent,
         fallbackUsed,
-        promptBoundary: boundary,
+        promptBoundary: recordedBoundary,
         inputProvenance: {
           origin: "user_supplied",
           sourceIds: capability.manifest.sourceIds,

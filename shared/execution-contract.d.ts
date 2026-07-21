@@ -24,25 +24,29 @@ export const liveExecutionRequestSchema: z.ZodType<{
   consent: true;
   capabilityId: string;
   capabilityVersion: string;
-  capabilityName: string;
   inputSummary: string;
-  sourceIds: string[];
-  theoryElementIds: string[];
-  promptBoundary: z.infer<typeof executionPromptBoundarySchema>;
+  skillPath: string;
 }>;
 export const liveExecutionResponseSchema: z.ZodType<
   | {
       ok: true;
       outputSummary: string;
+      promptBoundary: z.infer<typeof executionPromptBoundarySchema>;
       timing: { startedAt: string; completedAt: string; durationMs: number; adapterVersion: string };
     }
   | {
       ok: false;
       error: {
-        code: "codex_unavailable" | "codex_not_configured" | "codex_timeout" | "codex_failed";
+        code:
+          | "capability_unavailable"
+          | "codex_unavailable"
+          | "codex_not_configured"
+          | "codex_timeout"
+          | "codex_failed";
         message: string;
         recoverable: boolean;
       };
+      promptBoundary?: z.infer<typeof executionPromptBoundarySchema>;
       timing: { startedAt: string; completedAt: string; durationMs: number; adapterVersion: string };
     }
 >;

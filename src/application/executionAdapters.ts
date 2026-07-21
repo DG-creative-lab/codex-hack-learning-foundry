@@ -26,6 +26,7 @@ export interface ExecutionAttemptResult {
   completedAt: string;
   durationMs: number;
   adapterVersion: string;
+  promptBoundary?: z.infer<typeof executionPromptBoundarySchema>;
   outputSummary?: string;
   error?: { code: string; message: string; recoverable: boolean };
 }
@@ -115,17 +116,26 @@ export function createLiveCodexExecutionAdapter(
         consent: true,
         capabilityId: request.capability.manifest.id,
         capabilityVersion: request.capability.manifest.version,
-        capabilityName: request.capability.manifest.name,
         inputSummary: request.inputSummary,
-        sourceIds: request.capability.manifest.sourceIds,
-        theoryElementIds: request.capability.manifest.theoryElementIds,
-        promptBoundary: request.promptBoundary
+        skillPath: request.capability.manifest.skillPath
       });
       try {
         const response = liveExecutionResponseSchema.parse(await bridge.runLive(ipcRequest));
         return response.ok
-          ? { adapter: "live_codex", status: "succeeded", ...response.timing, outputSummary: response.outputSummary }
-          : { adapter: "live_codex", status: "failed", ...response.timing, error: response.error };
+          ? {
+              adapter: "live_codex",
+              status: "succeeded",
+              ...response.timing,
+              promptBoundary: response.promptBoundary,
+              outputSummary: response.outputSummary
+            }
+          : {
+              adapter: "live_codex",
+              status: "failed",
+              ...response.timing,
+              promptBoundary: response.promptBoundary,
+              error: response.error
+            };
       } catch {
         const timestamp = now().toISOString();
         return {

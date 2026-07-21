@@ -82,7 +82,6 @@ export function CapabilityPracticePanel({
       await command();
       if (kind === "execute") {
         setInputSummary("");
-        setLiveConsent(false);
       } else {
         setFeedbackContent("");
       }
@@ -169,9 +168,13 @@ export function CapabilityPracticePanel({
             disabled={
               inputSummary.trim().length < 3 || pending !== undefined || (adapterId === "live_codex" && !liveConsent)
             }
-            onClick={() =>
-              void execute("execute", () => onExecute(capability.manifest.id, inputSummary, adapterId, liveConsent))
-            }
+            onClick={() => {
+              const consentForRequest = liveConsent;
+              if (adapterId === "live_codex") setLiveConsent(false);
+              void execute("execute", () =>
+                onExecute(capability.manifest.id, inputSummary, adapterId, consentForRequest)
+              );
+            }}
           >
             <Play size={15} />{" "}
             {pending === "execute" ? "Executing..." : `Run ${adapterId === "prepared" ? "prepared" : "live"}`}

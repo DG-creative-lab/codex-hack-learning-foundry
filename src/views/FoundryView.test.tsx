@@ -247,7 +247,9 @@ describe("FoundryView", () => {
       ...workspace.capabilities[0],
       manifest: { ...workspace.capabilities[0].manifest, status: "active" as const }
     };
-    const onExecute = vi.fn(async () => "evt-execution-test");
+    const onExecute = vi.fn(async () => {
+      throw new Error("Ledger append rejected the execution event.");
+    });
     const onExecutionAvailability = vi.fn(async () => ({
       available: true as const,
       adapterVersion: "Codex CLI test"
@@ -303,5 +305,8 @@ describe("FoundryView", () => {
     expect(runLive.disabled).toBe(false);
     await act(async () => runLive.click());
     expect(onExecute).toHaveBeenCalledWith(capability.manifest.id, "Review the prepared queue.", "live_codex", true);
+    expect(requiredElement<HTMLInputElement>(view, ".foundry-live-consent input").checked).toBe(false);
+    expect(runLive.disabled).toBe(true);
+    expect(view.textContent).toContain("Ledger append rejected the execution event.");
   });
 });

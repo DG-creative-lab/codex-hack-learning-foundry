@@ -15,16 +15,6 @@ export const EXECUTION_LIMITS = {
 };
 
 const boundedId = z.string().trim().min(1).max(EXECUTION_LIMITS.idCharacters);
-const uniqueIds = (maximum) =>
-  z
-    .array(boundedId)
-    .min(1)
-    .max(maximum)
-    .superRefine((ids, context) => {
-      if (new Set(ids).size !== ids.length) {
-        context.addIssue({ code: z.ZodIssueCode.custom, message: "Execution provenance IDs must be unique." });
-      }
-    });
 
 export const executionAdapterIdSchema = z.enum(["prepared", "live_codex"]);
 
@@ -54,11 +44,8 @@ export const liveExecutionRequestSchema = z
     consent: z.literal(true),
     capabilityId: boundedId,
     capabilityVersion: z.string().trim().min(1).max(80),
-    capabilityName: z.string().trim().min(1).max(240),
     inputSummary: z.string().trim().min(3).max(EXECUTION_LIMITS.inputCharacters),
-    sourceIds: uniqueIds(EXECUTION_LIMITS.sourceIds),
-    theoryElementIds: uniqueIds(EXECUTION_LIMITS.theoryElementIds),
-    promptBoundary: executionPromptBoundarySchema
+    skillPath: z.string().trim().min(1).max(480)
   })
   .strict();
 
@@ -76,6 +63,7 @@ export const liveExecutionResponseSchema = z.discriminatedUnion("ok", [
     .object({
       ok: z.literal(true),
       outputSummary: z.string().trim().min(3).max(EXECUTION_LIMITS.outputCharacters),
+      promptBoundary: executionPromptBoundarySchema,
       timing: executionTimingSchema
     })
     .strict(),
@@ -84,11 +72,18 @@ export const liveExecutionResponseSchema = z.discriminatedUnion("ok", [
       ok: z.literal(false),
       error: z
         .object({
-          code: z.enum(["codex_unavailable", "codex_not_configured", "codex_timeout", "codex_failed"]),
+          code: z.enum([
+            "capability_unavailable",
+            "codex_unavailable",
+            "codex_not_configured",
+            "codex_timeout",
+            "codex_failed"
+          ]),
           message: z.string().trim().min(1).max(EXECUTION_LIMITS.errorCharacters),
           recoverable: z.boolean()
         })
         .strict(),
+      promptBoundary: executionPromptBoundarySchema.optional(),
       timing: executionTimingSchema
     })
     .strict()

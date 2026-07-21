@@ -59,6 +59,13 @@ export const executionAttemptSchema = z
         path: ["error"]
       });
     }
+    if (Date.parse(attempt.completedAt) < Date.parse(attempt.startedAt)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "An execution attempt cannot complete before it starts.",
+        path: ["completedAt"]
+      });
+    }
   });
 
 export const executionTraceSchema = z
@@ -91,17 +98,35 @@ export const executionTraceSchema = z
         message: "The completed adapter must identify the final success."
       });
     }
-    const isFallback =
+    const validFallback =
       trace.attempts.length === 2 &&
+      trace.requestedAdapter === "live_codex" &&
+      trace.completedAdapter === "prepared" &&
       first.adapter === "live_codex" &&
       first.status === "failed" &&
       final.adapter === "prepared" &&
       final.status === "succeeded";
-    if (trace.fallbackUsed !== isFallback) {
+    const validDirectExecution =
+      trace.attempts.length === 1 &&
+      first.status === "succeeded" &&
+      first.adapter === trace.requestedAdapter &&
+      first.adapter === trace.completedAdapter;
+    if ((trace.fallbackUsed && !validFallback) || (!trace.fallbackUsed && !validDirectExecution)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Fallback metadata does not match the attempt history."
+        message: "Execution attempts must be one direct success or one live-failure/prepared-success fallback."
       });
+    }
+    for (let index = 1; index < trace.attempts.length; index += 1) {
+      const previous = trace.attempts[index - 1];
+      const current = trace.attempts[index];
+      if (Date.parse(current.startedAt) < Date.parse(previous.completedAt)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Execution attempts must be ordered and non-overlapping.",
+          path: ["attempts", index, "startedAt"]
+        });
+      }
     }
     if (trace.requestedAdapter === "live_codex" && trace.consent !== "explicit") {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Live Codex execution requires explicit consent." });

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { seedEvents } from "../data/sample";
-import { parsePracticalApplicationEvent, practicalApplicationPayloadSchema } from "../domain/practicalEvidence";
+import {
+  executionTraceSchema,
+  parsePracticalApplicationEvent,
+  practicalApplicationPayloadSchema
+} from "../domain/practicalEvidence";
 import type { EvidenceEvent } from "../domain/types";
 import { reduceWorkspace } from "../domain/workspaceProjection";
 import {
@@ -27,6 +31,61 @@ function liveAdapter(result: ExecutionAttemptResult): ExecutionAdapter {
 }
 
 describe("execution workflow", () => {
+  it("rejects impossible or out-of-order execution histories", () => {
+    const directAttempt = {
+      adapter: "prepared" as const,
+      status: "succeeded" as const,
+      startedAt: "2026-07-20T10:00:00.000Z",
+      completedAt: "2026-07-20T10:00:01.000Z",
+      durationMs: 1000,
+      adapterVersion: "prepared-v1"
+    };
+    const baseTrace = {
+      requestedAdapter: "prepared" as const,
+      completedAdapter: "prepared" as const,
+      consent: "not_required" as const,
+      fallbackUsed: false,
+      promptBoundary: {
+        instruction: "Apply the prepared capability.",
+        contextSections: [{ label: "Capability", content: "Prepared capability" }],
+        excludedContext: ["API credentials"]
+      },
+      inputProvenance: {
+        origin: "user_supplied" as const,
+        sourceIds: ["source-one"],
+        theoryElementIds: ["theory-one"]
+      },
+      attempts: [directAttempt]
+    };
+
+    expect(executionTraceSchema.safeParse({ ...baseTrace, attempts: [directAttempt, directAttempt] }).success).toBe(
+      false
+    );
+    expect(
+      executionTraceSchema.safeParse({
+        ...baseTrace,
+        attempts: [{ ...directAttempt, startedAt: "2026-07-20T10:00:02.000Z", completedAt: directAttempt.startedAt }]
+      }).success
+    ).toBe(false);
+    expect(
+      executionTraceSchema.safeParse({
+        ...baseTrace,
+        requestedAdapter: "live_codex",
+        consent: "explicit",
+        fallbackUsed: true,
+        attempts: [
+          {
+            ...directAttempt,
+            adapter: "live_codex",
+            status: "failed",
+            error: { code: "codex_failed", message: "Live execution failed.", recoverable: true }
+          },
+          { ...directAttempt, startedAt: "2026-07-20T10:00:00.500Z" }
+        ]
+      }).success
+    ).toBe(false);
+  });
+
   it("keeps the prepared adapter deterministic and refuses inactive capabilities", async () => {
     const capability = workspaceCapability("evaluated");
     const append = vi.fn(async () => undefined);
@@ -105,6 +164,11 @@ describe("execution workflow", () => {
       completedAt: fixedDate.toISOString(),
       durationMs: 0,
       adapterVersion: "Codex CLI test",
+      promptBoundary: {
+        instruction: "Trusted main-process instruction.",
+        contextSections: [{ label: "Trusted capability artifact", content: "Canonical skill content." }],
+        excludedContext: ["API credentials"]
+      },
       error: { code: "codex_not_configured", message: "Codex is not configured.", recoverable: true }
     });
     const workflow = createExecutionWorkflow({
@@ -129,6 +193,7 @@ describe("execution workflow", () => {
       { adapter: "live_codex", status: "failed" },
       { adapter: "prepared", status: "succeeded" }
     ]);
+    expect(payload.execution.promptBoundary.contextSections[0].label).toBe("Trusted capability artifact");
   });
 
   it("projects application events written before adapter traces were introduced", () => {

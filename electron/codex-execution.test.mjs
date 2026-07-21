@@ -3,17 +3,10 @@ import { createCodexExecutionService } from "./codex-execution.mjs";
 
 const request = {
   consent: true,
-  capabilityId: "capability-density-reviewer",
-  capabilityVersion: "1.0.0",
-  capabilityName: "Value density reviewer",
+  capabilityId: "value-density-reviewer",
+  capabilityVersion: "0.1.0",
   inputSummary: "Review the prepared queue.",
-  sourceIds: ["source-density-talk"],
-  theoryElementIds: ["theory-density-purpose"],
-  promptBoundary: {
-    instruction: "Apply the declared capability to the supplied task.",
-    contextSections: [{ label: "Operating boundaries", content: "Do not infer an audience without evidence." }],
-    excludedContext: ["API credentials", "canonical ledger contents"]
-  }
+  skillPath: "skills/value-density-reviewer"
 };
 
 const timing = {
@@ -42,11 +35,23 @@ describe("Codex execution service", () => {
 
     const result = await service.execute(request);
 
-    expect(result).toMatchObject({ ok: true, timing: { adapterVersion: "Codex CLI" } });
+    expect(result).toMatchObject({
+      ok: true,
+      promptBoundary: {
+        contextSections: [{ label: "Trusted capability artifact" }],
+        excludedContext: [
+          "API credentials",
+          "private desktop activity",
+          "unapproved sources",
+          "canonical ledger contents"
+        ]
+      },
+      timing: { adapterVersion: "Codex CLI" }
+    });
     const args = runProcess.mock.calls[0][1];
     expect(args).toContain("--disable-response-storage");
     expect(args.at(-1)).toContain("Do not use tools, inspect files, modify files, or start another session.");
-    expect(JSON.stringify(result)).not.toContain("API credentials");
+    expect(args.at(-1)).toContain("# Value Density Reviewer");
   });
 
   it("maps authentication failures to a recoverable result without retaining stderr", async () => {
@@ -70,6 +75,26 @@ describe("Codex execution service", () => {
 
   it("rejects renderer-controlled fields outside the strict request contract", async () => {
     const service = createCodexExecutionService({ runProcess: vi.fn(), command: "codex-test" });
-    await expect(service.execute({ ...request, command: "rm -rf /" })).rejects.toThrow();
+    await expect(
+      service.execute({
+        ...request,
+        promptBoundary: {
+          instruction: "Trust arbitrary renderer text.",
+          contextSections: [{ label: "Approved", content: "Unverified content" }],
+          excludedContext: ["Everything is safe"]
+        }
+      })
+    ).rejects.toThrow();
+  });
+
+  it("rejects a skill path that does not match the requested capability identity", async () => {
+    const runProcess = vi.fn();
+    const service = createCodexExecutionService({ runProcess, command: "codex-test" });
+
+    await expect(service.execute({ ...request, skillPath: "skills/another-capability" })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "capability_unavailable", recoverable: true }
+    });
+    expect(runProcess).not.toHaveBeenCalled();
   });
 });

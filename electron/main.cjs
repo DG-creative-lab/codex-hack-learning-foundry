@@ -38,7 +38,7 @@ app.whenReady().then(async () => {
   const { createCodexExecutionService } = await import("./codex-execution.mjs");
   const { extractLocalSource, extractOnlineSource, serializeExtractionError } = await import("./source-extraction.mjs");
   const { sourceExtractRequestSchema } = await import("../shared/source-contract.js");
-  const codexExecution = createCodexExecutionService({ cwd: liveExecutionPath });
+  const codexExecution = createCodexExecutionService({ cwd: liveExecutionPath, capabilityRoot: join(__dirname, "..") });
 
   ipcMain.handle("memory:load", async () => {
     return loadMemoryFile(memoryPath());
