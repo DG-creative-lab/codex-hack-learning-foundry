@@ -5,33 +5,6 @@ import { reduceWorkspace } from "../domain/workspaceProjection";
 import { createConsolidationWorkflow } from "./consolidationWorkflow";
 
 describe("consolidation workflow", () => {
-  it("refuses application before explicit capability activation", async () => {
-    const workspace = reduceWorkspace(seedEvents);
-    const eventsById = new Map(seedEvents.map((event) => [event.id, event]));
-    const append = vi.fn(async () => undefined);
-    const workflow = createConsolidationWorkflow({
-      append,
-      resolveCapability: (id) => workspace.capabilities.find((capability) => capability.manifest.id === id),
-      resolveEvent: (id) => eventsById.get(id),
-      resolveMicroWorld: (id) => workspace.microWorlds.find((world) => world.id === id),
-      resolveProposal: (id) => workspace.consolidationProposals.find((proposal) => proposal.id === id),
-      theory: workspace.theory,
-      capabilities: workspace.capabilities,
-      checks: workspace.understandingChecks,
-      microWorlds: workspace.microWorlds
-    });
-
-    await expect(
-      workflow.applyCapability(
-        workspace.capabilities[0].manifest.id,
-        "Review the prepared queue.",
-        "A review result.",
-        "successful"
-      )
-    ).rejects.toThrow("cannot be applied from evaluated");
-    expect(append).not.toHaveBeenCalled();
-  });
-
   it("records categorized feedback against canonical eligible evidence", async () => {
     const workspace = reduceWorkspace(seedEvents);
     const world = workspace.microWorlds[0];
@@ -53,7 +26,6 @@ describe("consolidation workflow", () => {
     const append = vi.fn(async () => undefined);
     const workflow = createConsolidationWorkflow({
       append,
-      resolveCapability: () => undefined,
       resolveEvent: (id) => (id === subject.id ? subject : undefined),
       resolveMicroWorld: (id) => (id === world.id ? world : undefined),
       resolveProposal: () => undefined,

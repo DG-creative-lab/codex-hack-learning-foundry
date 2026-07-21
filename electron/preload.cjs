@@ -9,3 +9,8 @@ contextBridge.exposeInMainWorld("foundryMemory", {
 contextBridge.exposeInMainWorld("foundrySources", {
   extract: (request) => ipcRenderer.invoke("source:extract", request)
 });
+
+contextBridge.exposeInMainWorld("foundryExecution", {
+  liveAvailability: () => ipcRenderer.invoke("execution:live-availability"),
+  runLive: (request) => ipcRenderer.invoke("execution:live-run", request)
+});

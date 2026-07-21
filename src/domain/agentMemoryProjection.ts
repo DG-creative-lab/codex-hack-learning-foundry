@@ -6,7 +6,7 @@ import type {
   AgentTheoryMemoryItem,
   MemoryEvidenceReference
 } from "./memoryProjectionTypes";
-import { practicalApplicationPayloadSchema, practicalFeedbackPayloadSchema } from "./practicalEvidence";
+import { parsePracticalApplicationEvent, practicalFeedbackPayloadSchema } from "./practicalEvidence";
 import type { EvidenceEvent, LivingTheory, TheoryElement } from "./types";
 import type { UnderstandingSignal } from "./understandingChecks";
 import {
@@ -92,7 +92,7 @@ export function deriveAgentMemory(
       failures.push({ capabilityId: capabilityIdFromEvent(event), evidence: reference });
     }
     if (event.type === "practical.application_recorded") {
-      const application = practicalApplicationPayloadSchema.parse(event.payload);
+      const application = parsePracticalApplicationEvent(event);
       const signal: UnderstandingSignal = application.outcome === "successful" ? "supports" : "challenges";
       const reference = evidenceReference(
         event,

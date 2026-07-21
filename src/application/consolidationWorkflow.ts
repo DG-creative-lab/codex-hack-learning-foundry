@@ -12,8 +12,7 @@ import {
 } from "../domain/microWorld";
 import {
   type PracticalFeedbackKind,
-  type PracticalOutcome,
-  practicalApplicationPayloadSchema,
+  parsePracticalApplicationEvent,
   practicalFeedbackEventType,
   practicalFeedbackPayloadSchema
 } from "../domain/practicalEvidence";
@@ -22,7 +21,6 @@ import type { UnderstandingCheckProjection } from "../domain/understandingChecks
 
 interface ConsolidationWorkflowDependencies {
   append: (event: EvidenceEvent) => Promise<unknown>;
-  resolveCapability: (capabilityId: string) => FoundryCapability | undefined;
   resolveEvent: (eventId: string) => EvidenceEvent | undefined;
   resolveMicroWorld: (artifactId: string) => MicroWorldProjection | undefined;
   resolveProposal: (proposalId: string) => ConsolidationProposalProjection | undefined;
@@ -52,42 +50,9 @@ export function createConsolidationWorkflow(dependencies: ConsolidationWorkflowD
   const now = dependencies.now ?? (() => new Date().toISOString());
   const createId = dependencies.createId ?? defaultId;
 
-  async function applyCapability(
-    capabilityId: string,
-    inputSummary: string,
-    outputSummary: string,
-    outcome: PracticalOutcome
-  ) {
-    const capability = dependencies.resolveCapability(capabilityId);
-    if (!capability) throw new Error(`Cannot apply unknown capability ${capabilityId}`);
-    if (capability.manifest.status !== "active") {
-      throw new Error(`Capability ${capabilityId} cannot be applied from ${capability.manifest.status}`);
-    }
-    const payload = practicalApplicationPayloadSchema.parse({
-      capabilityId,
-      capabilityVersion: capability.manifest.version,
-      inputSummary,
-      outputSummary,
-      outcome,
-      theoryElementIds: capability.manifest.theoryElementIds
-    });
-    const event: EvidenceEvent = {
-      id: createId("evt-practical-application"),
-      type: "practical.application_recorded",
-      kind: "practical_observation",
-      createdAt: now(),
-      actor: "agent",
-      summary: `Applied ${capability.manifest.name} and recorded a ${outcome} result.`,
-      sourceIds: capability.manifest.sourceIds,
-      payload
-    };
-    await dependencies.append(event);
-    return event.id;
-  }
-
   function subjectContext(subject: EvidenceEvent) {
     if (subject.type === "practical.application_recorded") {
-      const application = practicalApplicationPayloadSchema.parse(subject.payload);
+      const application = parsePracticalApplicationEvent(subject);
       return {
         capabilityId: application.capabilityId,
         theoryElementIds: application.theoryElementIds,
@@ -191,7 +156,7 @@ export function createConsolidationWorkflow(dependencies: ConsolidationWorkflowD
     await dependencies.append(event);
   }
 
-  return { applyCapability, recordFeedback, propose, review };
+  return { recordFeedback, propose, review };
 }
 
 export type ConsolidationWorkflow = ReturnType<typeof createConsolidationWorkflow>;
