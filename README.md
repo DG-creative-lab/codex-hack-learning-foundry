@@ -6,7 +6,7 @@ Local literature, papers, transcripts, documentation, and online sources enter o
 
 ## Status
 
-Active OpenAI Build Week project. UI value density is the first prepared sample domain, not a product-level restriction.
+OpenAI Build Week hackathon project with a complete, resettable prepared vertical slice. UI value density is the first sample domain, not a product-level restriction.
 
 The current vertical slice includes:
 
@@ -18,6 +18,8 @@ The current vertical slice includes:
 - An append-only evidence ledger with deterministic human, agent, theory, and capability projections.
 - Evidence-backed understanding-gap signals with qualitative rationale, review actions, and recommended interventions rather than a cognitive-debt score.
 - A generated and evaluated `value-density-reviewer` Codex skill with explicit approval and revision states.
+- A resettable prepared journey from source inspection through human learning, capability application, and traceable revision.
+- An optional, explicitly consented live Codex execution adapter with deterministic prepared fallback.
 
 ## Run locally
 
@@ -29,6 +31,7 @@ pnpm dev
 ## Verify
 
 ```bash
+pnpm lint
 pnpm test
 pnpm build
 ```
@@ -48,4 +51,9 @@ Prepared sample evidence is committed. Personal learning memory, imported privat
 - [ADR 0004](docs/architecture/0004-learning-artifacts.md): bounded explainers, checks, and micro-worlds.
 - [ADR 0005](docs/architecture/0005-distinct-memory-projections.md): separate human, agent, and shared-theory memory projections.
 - [ADR 0006](docs/architecture/0006-evidence-backed-understanding-gaps.md): bounded cognitive-debt warning signals and append-only review state.
+- [ADR 0007](docs/architecture/0007-capability-activation-gates.md): explicit, evidence-gated capability approval and activation.
+- [ADR 0008](docs/architecture/0008-practical-evidence-consolidation.md): human-reviewed consolidation of practical feedback.
+- [ADR 0009](docs/architecture/0009-optional-live-codex-execution.md): prepared and consent-gated live capability execution.
+- [ADR 0010](docs/architecture/0010-prepared-demo-journey.md): derived demo progress, durable evidence, and reset behavior.
 - [Hackathon baseline](docs/hackathon/baseline.md): the repository state at the start of Build Week.
+- [Design-density demo](docs/hackathon/design-density-demo.md): five-minute script, prepared inputs, and recording recovery checklist.

@@ -545,8 +545,18 @@
   background: var(--paper);
 }
 
+.foundry-feedback-form select {
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
 .foundry-practice-form textarea,
 .foundry-feedback-form textarea,
+.foundry-feedback-form select,
 .foundry-practice-form .foundry-segmented,
 .foundry-feedback-form .foundry-segmented,
 .foundry-live-consent,

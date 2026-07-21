@@ -1,5 +1,5 @@
 import { AlertCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { UnderstandingContextBar } from "../components/UnderstandingContextBar";
 import type { ExplainerProjection } from "../domain/explainer";
 import { countMicroWorldEvidence, type MicroWorldProjection } from "../domain/microWorld";
@@ -84,15 +84,20 @@ export function LearnView({
         : artifacts[0]
           ? `artifact:${artifacts[0].id}`
           : "";
-  const availableItemIds = new Set([
-    ...explainers.map((item) => `explainer:${item.id}`),
-    ...checks.map((item) => `check:${item.id}`),
-    ...microWorlds.map((item) => `micro-world:${item.id}`),
-    ...artifacts.map((item) => `artifact:${item.id}`)
-  ]);
+  const availableItemIds = useMemo(
+    () =>
+      new Set([
+        ...explainers.map((item) => `explainer:${item.id}`),
+        ...checks.map((item) => `check:${item.id}`),
+        ...microWorlds.map((item) => `micro-world:${item.id}`),
+        ...artifacts.map((item) => `artifact:${item.id}`)
+      ]),
+    [artifacts, checks, explainers, microWorlds]
+  );
   const [selectedItemId, setSelectedItemId] = useState(
     requestedItemId && availableItemIds.has(requestedItemId) ? requestedItemId : firstItemId
   );
+  const viewRef = useRef<HTMLDivElement>(null);
   const fragmentsById = useMemo(() => new Map(fragments.map((fragment) => [fragment.id, fragment])), [fragments]);
   const sourcesById = useMemo(() => new Map(sources.map((source) => [source.id, source])), [sources]);
   const vectorsByTheoryId = useMemo(
@@ -134,6 +139,23 @@ export function LearnView({
     }))
   ];
 
+  useEffect(() => {
+    if (!requestedItemId || !availableItemIds.has(requestedItemId)) return;
+    setSelectedItemId(requestedItemId);
+  }, [availableItemIds, requestedItemId]);
+
+  useEffect(() => {
+    if (!requestedItemId || selectedItemId !== requestedItemId) return;
+    if (window.innerWidth > 980) return;
+    const preview = viewRef.current?.querySelector<HTMLElement>(
+      ".explainer-preview, .understanding-check-preview, .micro-world-preview, .artifact-preview"
+    );
+    if (!preview) return;
+    preview.tabIndex = -1;
+    preview.focus({ preventScroll: true });
+    preview.scrollIntoView({ block: "start" });
+  }, [requestedItemId, selectedItemId]);
+
   if (journeyItems.length === 0) {
     return (
       <div className="page-scroll learn-view">
@@ -143,7 +165,7 @@ export function LearnView({
   }
 
   return (
-    <div className="page-scroll learn-view">
+    <div className="page-scroll learn-view" ref={viewRef}>
       {onReturnToTheory && (
         <UnderstandingContextBar contextTitle={contextTitle ?? "Living Theory"} onReturnToTheory={onReturnToTheory} />
       )}

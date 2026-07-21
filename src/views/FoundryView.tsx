@@ -43,7 +43,12 @@ interface FoundryViewProps {
     consent: boolean
   ) => Promise<string>;
   onExecutionAvailability: (adapterId: ExecutionAdapterId) => Promise<ExecutionAvailability>;
-  onPracticalFeedback: (subjectEventId: string, kind: PracticalFeedbackKind, content: string) => Promise<string>;
+  onPracticalFeedback: (
+    subjectEventId: string,
+    kind: PracticalFeedbackKind,
+    content: string,
+    focusTheoryElementId?: string
+  ) => Promise<string>;
   onProposeConsolidation: (triggerEventIds: string[]) => Promise<string>;
   onReviewConsolidation: (proposalId: string, decision: "approved" | "rejected", reason: string) => Promise<void>;
 }
