@@ -6,6 +6,7 @@ A precise universal learning workbench: cool paper, black typographic structure,
 
 ## Content plan
 
+- A persistent eight-stage journey register that identifies the current action and why it matters without replacing the operational views.
 - A central Understanding workspace that keeps the current objective, Living Theory, evidence, open questions, and next action in context.
 - Focused Sources, Learn, Memory, and Foundry views for deeper operational work.
 - A source-processing surface where one knowledge stream branches into human and agent learning.
@@ -16,9 +17,12 @@ A precise universal learning workbench: cool paper, black typographic structure,
 ## Interaction thesis
 
 - Product-area changes slide the working surface into place without changing its frame.
+- Contextual destinations retain the selected theory element, source, learning item, or capability when the user moves between views.
+- View changes move keyboard focus to the destination heading; tab-like controls implement complete keyboard behavior and expose selected state.
 - Evidence-linked elements visibly connect claims to their sources.
 - Temporary exploration remains visually distinct from evidence that has been deliberately recorded.
 - Prediction precedes outcome reveal when seeing the result first would weaken the learning task.
 - Capability lifecycle transitions animate only when a real state change occurs.
+- Compact layouts preserve the journey and core controls through horizontal registers and stacked reading regions without text overlap or nested-card composition.
 
 The interface is operational rather than promotional. It begins with the work, not a landing-page hero.

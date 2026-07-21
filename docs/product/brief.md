@@ -28,23 +28,22 @@ Self-directed professionals, researchers, students, and builders who need to tur
 
 ## Hackathon vertical slice
 
-1. Capture or select an approved local or online source.
-2. Process it into source fragments, claims, knowledge atoms, and associations.
-3. Read a project-grounded explainer whose factual sections link to exact source fragments.
-4. Predict an outcome, explore a constrained micro-world, and record an interaction and reflection.
-5. Complete varied understanding checks and a transfer task that update an evidence vector rather than a mastery score.
-6. Generate a draft Codex skill from the same Living Theory.
-7. Inspect provenance, assumptions, boundaries, evaluation cases, and relevant understanding evidence.
-8. Approve the evaluated skill and apply it to a new task.
-9. Record feedback and create both a human review item, a traceable theory revision proposal, and a structured capability revision request.
+1. Inspect the approved design-density talk and supporting sources.
+2. Trace the synthesized Living Theory to exact source fragments and unresolved questions.
+3. Read a project-grounded explainer whose factual sections retain provenance.
+4. Predict an outcome, explore a constrained micro-world, and deliberately record an interaction and reflection.
+5. Complete a transfer task that updates a multidimensional evidence vector rather than a mastery score.
+6. Inspect and explicitly approve and activate the evaluated Codex skill from the same Living Theory.
+7. Apply the skill to a new task through the deterministic prepared adapter.
+8. Record a focused correction and approve consolidation into a human review item, a traceable theory revision, and a structured capability revision request.
 
-The prepared design-density workspace supplies the deterministic sample data for this flow.
+The persistent journey register guides this path in under five minutes. Its first three inspection stages are local navigation state; prediction, interaction, reflection, transfer, capability decisions, application, and consolidation are durable ledger evidence. Restarting the journey restores the source-controlled seed ledger and clears local inspection state. The optional live Codex adapter requires explicit selection and fresh consent and is not required for the canonical demo.
 
 ## Scope boundary
 
 The hackathon build produces one Codex skill and one reproducible prepared journey. It implements a narrow but real ingestion contract rather than a design-specific application. Universal parsing, generated tools, generated plugins, cloud sync, multi-user collaboration, and autonomous capability activation remain future work.
 
-## Target product surfaces
+## Product surfaces
 
 - **Understanding:** the Living Theory, current objective, evidence trail, open questions, and next meaningful learning or application action.
 - **Sources:** source capture, provenance, extraction status, source fragments, and synthesis review.

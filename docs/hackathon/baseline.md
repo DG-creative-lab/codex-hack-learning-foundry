@@ -1,5 +1,7 @@
 # Hackathon Baseline
 
+> Historical record. This document describes the repository before implementation. See the [README](../../README.md) for current status and the [demo guide](design-density-demo.md) for the completed vertical slice.
+
 Baseline commit: `2322af9`
 
 Recorded on 14 July 2026 after the OpenAI Build Week submission period began.
@@ -15,4 +17,3 @@ Recorded on 14 July 2026 after the OpenAI Build Week submission period began.
 ## Import policy
 
 The prototype is treated as research input only. Any later import will be identified explicitly. Private literature and personal-library indexes will not be copied into this repository.
-

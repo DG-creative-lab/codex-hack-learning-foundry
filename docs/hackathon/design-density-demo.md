@@ -2,6 +2,8 @@
 
 This is the deterministic five-minute path for demonstrating Learning Foundry. It uses only prepared local evidence and the prepared execution adapter. The live Codex adapter is optional and should not be part of the primary recording.
 
+The journey register contains eight stages: Source, Theory, Explain, Explore, Transfer, Approve, Apply, and Revise. Opening the first three records local inspection progress only. The remaining stages complete from durable ledger evidence, so browsing a screen cannot falsely claim participation or approval.
+
 ## Before recording
 
 1. Run `pnpm dev` and keep the terminal available only for recovery.
@@ -9,6 +11,8 @@ This is the deterministic five-minute path for demonstrating Learning Foundry. I
 3. Keep the workspace on **Understanding** with the first journey step active.
 4. Select the prepared adapter in Foundry. Do not enable live Codex for the primary take.
 5. Set the Electron window to at least 1440 × 900 and hide notifications, unrelated windows, and private material.
+
+The reset confirmation clears runtime demo evidence and restores the committed prepared seed. Use it only when restarting the take.
 
 ## Five-minute script
 
