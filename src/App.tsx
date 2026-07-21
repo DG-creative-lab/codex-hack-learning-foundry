@@ -16,6 +16,8 @@ import {
 import { AddSourceDialog, type SourceMode } from "./components/AddSourceDialog";
 import { Sidebar } from "./components/Sidebar";
 import { reduceWorkspace } from "./domain/workspaceProjection";
+import { DemoJourneyBar } from "./features/demo/DemoJourneyBar";
+import { type DemoJourneyStage, type DemoStageId, deriveDemoJourney } from "./features/demo/demoJourney";
 import { UnderstandingView } from "./features/understanding/UnderstandingView";
 import { useEvidenceLedger } from "./hooks/useEvidenceLedger";
 
@@ -35,7 +37,7 @@ const pageTitles: Record<WorkspaceView, [string, string]> = {
 };
 
 function App() {
-  const { events, append, ready, error: ledgerError, rejectedCount } = useEvidenceLedger();
+  const { events, append, reset, ready, error: ledgerError, rejectedCount } = useEvidenceLedger();
   const [view, setView] = useState<WorkspaceView>("understanding");
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [showAddSource, setShowAddSource] = useState(false);
@@ -44,7 +46,9 @@ function App() {
   const [requestedLearnItemId, setRequestedLearnItemId] = useState<string>();
   const [selectedTheoryElementId, setSelectedTheoryElementId] = useState<string>();
   const [requestedCapabilityId, setRequestedCapabilityId] = useState<string>();
+  const [visitedDemoStages, setVisitedDemoStages] = useState<Set<DemoStageId>>(() => new Set());
   const workspace = useMemo(() => reduceWorkspace(events), [events]);
+  const demoJourney = useMemo(() => deriveDemoJourney(workspace, visitedDemoStages), [workspace, visitedDemoStages]);
   const explainersById = useMemo(
     () => new Map(workspace.explainers.map((explainer) => [explainer.id, explainer])),
     [workspace.explainers]
@@ -167,6 +171,24 @@ function App() {
     setView(destination.view);
   }
 
+  function openDemoStage(stage: DemoJourneyStage) {
+    if (!stage.durableEvidence) {
+      setVisitedDemoStages((current) => new Set([...current, stage.id]));
+    }
+    navigate(stage.destination);
+  }
+
+  async function restartDemo() {
+    await reset();
+    setVisitedDemoStages(new Set());
+    setSelectedSourceId(undefined);
+    setSelectedTheoryElementId(undefined);
+    setRequestedLearnItemId(undefined);
+    setRequestedCapabilityId(undefined);
+    setShowAddSource(false);
+    setView("understanding");
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -196,6 +218,8 @@ function App() {
             </button>
           </div>
         </header>
+
+        <DemoJourneyBar journey={demoJourney} onOpenStage={openDemoStage} onReset={restartDemo} />
 
         {(ledgerError || rejectedCount > 0) && (
           <p className="ledger-alert" role="status">

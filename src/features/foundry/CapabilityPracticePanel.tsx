@@ -20,7 +20,12 @@ interface CapabilityPracticePanelProps {
     consent: boolean
   ) => Promise<string>;
   onExecutionAvailability: (adapterId: ExecutionAdapterId) => Promise<ExecutionAvailability>;
-  onFeedback: (subjectEventId: string, kind: PracticalFeedbackKind, content: string) => Promise<string>;
+  onFeedback: (
+    subjectEventId: string,
+    kind: PracticalFeedbackKind,
+    content: string,
+    focusTheoryElementId?: string
+  ) => Promise<string>;
 }
 
 const feedbackLabels: Record<PracticalFeedbackKind, string> = {
@@ -45,6 +50,11 @@ export function CapabilityPracticePanel({
   const [checkingLive, setCheckingLive] = useState(false);
   const [feedbackKind, setFeedbackKind] = useState<PracticalFeedbackKind>("observation");
   const [feedbackContent, setFeedbackContent] = useState("");
+  const [focusTheoryElementId, setFocusTheoryElementId] = useState(
+    capability.manifest.theoryElementIds.find((id) => id.includes("value-density")) ??
+      capability.manifest.theoryElementIds[0] ??
+      ""
+  );
   const [pending, setPending] = useState<"execute" | "feedback">();
   const [error, setError] = useState<string>();
   const latestApplication = applications.at(-1);
@@ -226,6 +236,23 @@ export function CapabilityPracticePanel({
             disabled={pending !== undefined}
             onChange={(event) => setFeedbackContent(event.target.value)}
           />
+          {feedbackKind === "correction" && (
+            <>
+              <label htmlFor={`feedback-focus-${capability.manifest.id}`}>Theory revision focus</label>
+              <select
+                id={`feedback-focus-${capability.manifest.id}`}
+                value={focusTheoryElementId}
+                disabled={pending !== undefined}
+                onChange={(event) => setFocusTheoryElementId(event.target.value)}
+              >
+                {capability.manifest.theoryElementIds.map((theoryElementId) => (
+                  <option key={theoryElementId} value={theoryElementId}>
+                    {theoryElementId.replace("theory-", "").replaceAll("-", " ")}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
           {latestFeedback && <p className="foundry-saved-evidence">Latest feedback: {latestFeedback.kind}</p>}
           <button
             type="button"
@@ -233,7 +260,12 @@ export function CapabilityPracticePanel({
             disabled={feedbackContent.trim().length < 3 || pending !== undefined}
             onClick={() =>
               void execute("feedback", () =>
-                onFeedback(latestApplication.evidenceEventId, feedbackKind, feedbackContent)
+                onFeedback(
+                  latestApplication.evidenceEventId,
+                  feedbackKind,
+                  feedbackContent,
+                  feedbackKind === "correction" ? focusTheoryElementId : undefined
+                )
               )
             }
           >

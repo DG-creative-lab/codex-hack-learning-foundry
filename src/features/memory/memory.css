@@ -1,5 +1,5 @@
 .memory-view {
-  height: calc(100vh - 112px);
+  height: calc(100vh - var(--workspace-chrome-height));
   padding: 30px 34px 56px;
 }
 
@@ -996,7 +996,7 @@
 
 @media (max-width: 680px) {
   .memory-view {
-    height: calc(100vh - 94px);
+    height: calc(100vh - var(--workspace-chrome-height));
     padding: 20px 16px 42px;
   }
 

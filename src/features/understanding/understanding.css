@@ -551,7 +551,7 @@
 
 .understanding-state-view {
   display: flex;
-  min-height: calc(100vh - 112px);
+  min-height: calc(100vh - var(--workspace-chrome-height));
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;

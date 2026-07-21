@@ -177,6 +177,7 @@ button {
 }
 
 .main-shell {
+  --workspace-chrome-height: 216px;
   min-width: 0;
   height: 100vh;
   min-height: 720px;
@@ -555,7 +556,7 @@ button {
 }
 
 .page-scroll {
-  height: calc(100vh - 112px);
+  height: calc(100vh - var(--workspace-chrome-height));
   overflow: auto;
   padding: 30px 34px 56px;
   animation: stage-enter 220ms ease both;
@@ -1228,7 +1229,7 @@ button {
 }
 
 .about-view {
-  height: calc(100vh - 112px);
+  height: calc(100vh - var(--workspace-chrome-height));
   padding: 30px 34px 56px;
 }
 .about-statement > p:last-child {
@@ -1411,6 +1412,10 @@ button {
 }
 
 @media (max-width: 680px) {
+  .main-shell {
+    --workspace-chrome-height: 184px;
+  }
+
   .app-shell {
     grid-template-columns: 52px minmax(0, 1fr);
   }
@@ -1440,7 +1445,7 @@ button {
     font-size: var(--text-compact);
   }
   .page-scroll {
-    height: calc(100vh - 94px);
+    height: calc(100vh - var(--workspace-chrome-height));
     padding: 22px 16px 44px;
   }
 }

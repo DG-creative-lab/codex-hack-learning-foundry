@@ -46,6 +46,43 @@ function setTextareaValue(textarea: HTMLTextAreaElement, value: string) {
 }
 
 describe("App understanding-gap intervention routing", () => {
+  it("guides inspection into durable learning and restarts the prepared journey", async () => {
+    let resetCount = 0;
+    window.foundryMemory = {
+      load: async () => ({ events: [], rejectedCount: 0 }),
+      append: async () => true,
+      reset: async () => {
+        resetCount += 1;
+        return true;
+      }
+    };
+    const view = document.createElement("div");
+    container = view;
+    document.body.append(view);
+    root = createRoot(view);
+    await act(async () => root?.render(<App />));
+
+    expect(requiredElement(view, ".demo-journey-current strong").textContent).toBe("Inspect the prepared sources");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-open-step").click());
+    expect(view.textContent).toContain("Source library");
+    expect(requiredElement(view, ".demo-journey-current strong").textContent).toBe("Inspect the Living Theory");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-open-step").click());
+    expect(view.textContent).toContain("Understanding");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-open-step").click());
+    expect(view.textContent).toContain("Density is a value equation");
+    expect(requiredElement(view, ".demo-journey-current strong").textContent).toBe("Predict, observe, and reflect");
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-open-step").click());
+    expect(requiredElement(view, ".micro-world-preview").textContent).toContain("Operational queue density lab");
+
+    await act(async () => requiredElement<HTMLButtonElement>(view, 'button[title="Restart prepared journey"]').click());
+    await act(async () => requiredElement<HTMLButtonElement>(view, ".demo-reset-confirm .secondary-button").click());
+
+    expect(resetCount).toBe(1);
+    expect(view.textContent).toContain("Understanding");
+    expect(requiredElement(view, ".demo-journey-current strong").textContent).toBe("Inspect the prepared sources");
+  });
+
   it("opens the exact prepared prediction check from its Memory signal", async () => {
     const view = document.createElement("div");
     container = view;

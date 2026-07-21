@@ -74,16 +74,24 @@ export function createConsolidationWorkflow(dependencies: ConsolidationWorkflowD
     throw new Error(`Evidence event ${subject.id} is not eligible for practical feedback`);
   }
 
-  async function recordFeedback(subjectEventId: string, kind: PracticalFeedbackKind, content: string) {
+  async function recordFeedback(
+    subjectEventId: string,
+    kind: PracticalFeedbackKind,
+    content: string,
+    focusTheoryElementId?: string
+  ) {
     const subject = dependencies.resolveEvent(subjectEventId);
     if (!subject) throw new Error(`Cannot record feedback for unknown evidence ${subjectEventId}`);
     const context = subjectContext(subject);
+    if (focusTheoryElementId && !context.theoryElementIds.includes(focusTheoryElementId)) {
+      throw new Error(`Theory element ${focusTheoryElementId} is outside the practical evidence context`);
+    }
     const payload = practicalFeedbackPayloadSchema.parse({
       subjectEventId,
       capabilityId: context.capabilityId,
       kind,
       content,
-      theoryElementIds: context.theoryElementIds
+      theoryElementIds: focusTheoryElementId ? [focusTheoryElementId] : context.theoryElementIds
     });
     const event: EvidenceEvent = {
       id: createId(`evt-practical-${kind}`),

@@ -18,6 +18,8 @@ The current vertical slice includes:
 - An append-only evidence ledger with deterministic human, agent, theory, and capability projections.
 - Evidence-backed understanding-gap signals with qualitative rationale, review actions, and recommended interventions rather than a cognitive-debt score.
 - A generated and evaluated `value-density-reviewer` Codex skill with explicit approval and revision states.
+- A resettable prepared journey from source inspection through human learning, capability application, and traceable revision.
+- An optional, explicitly consented live Codex execution adapter with deterministic prepared fallback.
 
 ## Run locally
 
@@ -49,3 +51,4 @@ Prepared sample evidence is committed. Personal learning memory, imported privat
 - [ADR 0005](docs/architecture/0005-distinct-memory-projections.md): separate human, agent, and shared-theory memory projections.
 - [ADR 0006](docs/architecture/0006-evidence-backed-understanding-gaps.md): bounded cognitive-debt warning signals and append-only review state.
 - [Hackathon baseline](docs/hackathon/baseline.md): the repository state at the start of Build Week.
+- [Design-density demo](docs/hackathon/design-density-demo.md): five-minute script, prepared inputs, and recording recovery checklist.
